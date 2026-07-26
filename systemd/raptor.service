@@ -1,0 +1,14 @@
+[Unit]
+Description=Raptor3000 — nightly dev increment
+Documentation=file:/home/cday/projects/raptor3000/PLAN.md
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=cday
+Group=cday
+Environment=HOME=/home/cday
+WorkingDirectory=/home/cday/projects/raptor3000
+ExecStart=/home/cday/projects/raptor3000/bin/run-job.sh dev /home/cday/projects/raptor3000/bin/raptor-run.sh
+TimeoutStartSec=3600

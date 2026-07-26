@@ -1,0 +1,17 @@
+[Unit]
+Description=Raptor3000 nightly dev — 02:30
+
+[Timer]
+# 02:30 sits in the one clear gap: Clyde 01:00, wisp 04:00, Watchtower 05:15,
+# Clipper 05:45, Scout 06:30.
+#
+# Nightly, but it stands down on a dirty tree — so on any day Carson is actually
+# working in here, it does nothing. In practice that makes the cadence "whenever
+# he has left it clean", which is the right coupling: automation fills the gaps
+# rather than competing for the file.
+OnCalendar=*-*-* 02:30:00
+Persistent=true
+AccuracySec=5min
+
+[Install]
+WantedBy=timers.target
