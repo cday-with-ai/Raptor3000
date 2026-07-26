@@ -1,0 +1,117 @@
+import type { ChunkParser } from '../FicsParser.js';
+import type { MovesMessage } from '../../models/messages/MovesMessage.js';
+import type { Style12Message } from '../../models/messages/Style12Message.js';
+import { Style12Parser } from './Style12Parser.js';
+import { RaptorTokenizer, timeToLong } from './tokenizer.js';
+
+/**
+ * `moves` command response. Direct port of Raptor's `MovesParser.java`
+ * (BSD). The block is eaten whole by `FicsParser.parseMovesMessage`
+ * before per-line game-event parsing runs.
+ *
+ * Shape:
+ *   \nMovelist for game N:
+ *   whitename (E) vs. blackname (E) --- <date>
+ *   <Un>rated <variant> match, initial time: T minutes, increment: I seconds.
+ *   [<12> ... if iv startpos is set and variant requires it]
+ *   Move  whitename           blackname
+ *   ---   ----------------    ----------------
+ *   1.  d4 (0:00.000) Nf6 (0:00.000)
+ *   ...
+ *   {Still in progress} | {<result>} <score>
+ */
+export class MovesParser implements ChunkParser<MovesMessage> {
+  readonly name = 'MovesParser';
+  static readonly EVENT_START = '\nMovelist for game ';
+  static readonly EVENT_START_2 = 'fics% \nMovelist for game ';
+
+  private readonly style12Parser = new Style12Parser();
+
+  parse(input: string): MovesMessage | null {
+    const startsWithEventStart = input.startsWith(MovesParser.EVENT_START);
+    if (!startsWithEventStart && !input.startsWith(MovesParser.EVENT_START_2)) {
+      return null;
+    }
+    const prefixLen = startsWithEventStart
+      ? MovesParser.EVENT_START.length
+      : MovesParser.EVENT_START_2.length;
+
+    const lastDash = input.lastIndexOf('--');
+    const firstColon = input.indexOf(':');
+    if (lastDash === -1 || firstColon === -1) return null;
+
+    const gameId = input.substring(prefixLen, firstColon);
+
+    let style12: Style12Message | null = null;
+    const s12Index = input.indexOf('<12>');
+    if (s12Index !== -1) {
+      const s12End = input.indexOf('\n', s12Index);
+      if (s12End !== -1) {
+        style12 = this.style12Parser.parse(input.substring(s12Index, s12End));
+      }
+    }
+
+    let gameType = '';
+    try {
+      const headerTok = new RaptorTokenizer(input.substring(firstColon), '\n');
+      headerTok.nextToken();                     // ":"
+      headerTok.nextToken();                     // "white (E) vs. black (E) --- <date>"
+      const descLine = headerTok.nextToken();    // "Rated <variant> match, initial..."
+      const descTok = new RaptorTokenizer(descLine, ' ');
+      descTok.nextToken();                       // Rated | Unrated
+      gameType = descTok.nextToken();            // variant
+    } catch {
+      return null;
+    }
+
+    const moves: string[] = [];
+    const timePerMove: number[] = [];
+
+    const afterDash = input.substring(lastDash);
+    const lineTok = new RaptorTokenizer(afterDash, '\n');
+    try {
+      lineTok.nextToken(); // consume the "----   -------- --------" separator
+    } catch {
+      return null;
+    }
+
+    while (lineTok.hasMoreTokens()) {
+      const line = lineTok.nextToken();
+      const trimmed = line.trim();
+      if (trimmed.startsWith('{')) break;
+
+      const tok = new RaptorTokenizer(line, ' ');
+
+      try {
+        if (!tok.hasMoreTokens()) continue;
+        tok.nextToken();                         // move number "1."
+
+        if (!tok.hasMoreTokens()) continue;
+        let token = tok.nextToken();
+        if (token !== '...') {
+          moves.push(token);
+          if (tok.hasMoreTokens()) {
+            timePerMove.push(timeToLong(tok.nextToken()));
+          }
+        } else if (tok.hasMoreTokens()) {
+          tok.nextToken();
+        }
+
+        if (!tok.hasMoreTokens()) continue;
+        token = tok.nextToken();
+        if (token !== '...') {
+          moves.push(token);
+          if (tok.hasMoreTokens()) {
+            timePerMove.push(timeToLong(tok.nextToken()));
+          }
+        } else if (tok.hasMoreTokens()) {
+          tok.nextToken();
+        }
+      } catch {
+        // Malformed move line — skip it.
+      }
+    }
+
+    return { gameId, moves, timePerMove, style12, gameType };
+  }
+}

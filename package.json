@@ -1,0 +1,21 @@
+{
+  "name": "raptor3000",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Modern web FICS chess client. Successor to Raptor (2016), event-driven architecture.",
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "yarn workspace @raptor3000/web dev",
+    "build": "yarn workspaces run build",
+    "test": "yarn workspaces run test",
+    "lint": "yarn workspaces run lint",
+    "typecheck": "yarn workspaces run typecheck"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.59.1",
+    "typescript": "^5.6.0"
+  },
+  "packageManager": "yarn@1.22.22"
+}

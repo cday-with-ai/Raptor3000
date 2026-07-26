@@ -1,0 +1,76 @@
+/**
+ * Theme palette. Every surface that wants to respect day/night/system
+ * reads these vars instead of hex literals.
+ *
+ * `html[data-theme="dark"]` is the default; an explicit `light` flip
+ * swaps the palette. The `system` preference in loginProfiles.ts
+ * resolves at runtime and writes the actual value back here.
+ */
+:root,
+html[data-theme="dark"] {
+  --bg:         #15181d;
+  --bg-raised:  #1b1f26;
+  --bg-sunken:  #0e1116;
+  --bg-input:   #2c3340;
+  --fg:         #e8eaef;
+  --fg-muted:   #a0a8b4;
+  --fg-dim:     #6a7280;
+  --border:     #2a313c;
+  --border-soft:#2a2f38;
+  --accent:     #7bb8ff;
+  --accent-soft:#3a5474;
+  --scroll-track:#0e1116;
+  --scroll-thumb:#2a2f38;
+  --scroll-thumb-hover:#3a4150;
+  color-scheme: dark;
+}
+
+html[data-theme="light"] {
+  --bg:         #f6f7f9;
+  --bg-raised:  #ffffff;
+  --bg-sunken:  #eceef2;
+  --bg-input:   #e7eaef;
+  --fg:         #15181d;
+  --fg-muted:   #4b5158;
+  --fg-dim:     #818792;
+  --border:     #d5dae0;
+  --border-soft:#dfe4ea;
+  --accent:     #2563eb;
+  --accent-soft:#c1d4f5;
+  --scroll-track:#eceef2;
+  --scroll-thumb:#c2c7cf;
+  --scroll-thumb-hover:#a6adb8;
+  color-scheme: light;
+}
+
+html,
+body,
+#root {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
+  background: var(--bg);
+  color: var(--fg);
+  -webkit-font-smoothing: antialiased;
+}
+
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-track {
+  background: var(--scroll-track);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--scroll-thumb);
+  border-radius: 5px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--scroll-thumb-hover);
+}

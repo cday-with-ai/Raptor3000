@@ -1,0 +1,756 @@
+import { observer } from 'mobx-react-lite';
+import { useEffect, useMemo, useState } from 'react';
+import type { RaptorContext } from './appContext.js';
+import { loginWithContext } from './appContext.js';
+import { getWindowManager } from './WindowManager.js';
+import { LoginScreen, type LoginSubmission } from './LoginScreen.js';
+import { SeekGraphTab } from './SeekGraphTab.js';
+import { loadProfile, loadSelection } from '../loginProfiles.js';
+import {
+  applyTheme,
+  loadThemeMode,
+  saveThemeMode,
+  watchSystemTheme,
+  type ThemeMode,
+} from '../theme.js';
+import {
+  loadPreferences,
+  savePreferences,
+  type AppPreferences,
+  type BoardTheme,
+  type PieceSet,
+  type SoundMode,
+} from '../preferences.js';
+
+/**
+ * Launcher window — minimal anchor that owns the RaptorContext and spawns
+ * the real functional windows (chat, seek, preferences).
+ *
+ * Before showing the launcher we gate on the FICS login screen (port of
+ * Raptor's IcsLoginDialog). Board windows are NOT opened from here —
+ * they pop in response to GameService events when games start.
+ *
+ * Auto-login: if the stored profile has auto-connect enabled and the
+ * creds look complete, we skip the login screen on page load.
+ */
+export const MainWindow = observer(function MainWindow({
+  context,
+}: {
+  context: RaptorContext;
+}) {
+  const wm = useMemo(() => getWindowManager(), []);
+  const [session, setSession] = useState<LoginSubmission | null>(
+    () => hydrateAutoLogin(),
+  );
+
+  // On login: connect the FicsConnector with the submitted creds, then
+  // auto-open the chat window. Browsers treat `window.open` called
+  // synchronously out of a click (or setTimeout 0) as user-gesture.
+  useEffect(() => {
+    if (!session) return;
+    loginWithContext(context, {
+      handle: session.creds.userName,
+      password: session.creds.password,
+      isGuest: session.creds.isNamedGuest || session.creds.isAnonGuest,
+    });
+    if (wm.isOpen({ kind: 'chat' })) return;
+    const t = setTimeout(() => wm.open({ kind: 'chat' }), 0);
+    return () => clearTimeout(t);
+  }, [wm, session, context]);
+
+  // Board-window lifecycle is owned by context.gameManager (the main
+  // window's dedicated GameManager instance), which registers its own
+  // GameServiceListener. No per-mount wiring needed here.
+
+  if (!session) {
+    return <LoginScreen onLogin={setSession} />;
+  }
+
+  return (
+    <PostLoginShell
+      context={context}
+      session={session}
+      sessionId={context.sessionId}
+      reopenChat={() => wm.open({ kind: 'chat' })}
+    />
+  );
+});
+
+type NavTab = 'options' | 'seek' | 'help';
+
+/**
+ * Post-login shell. `/` is not a window launcher — it's a settings +
+ * help surface. Top nav switches between Options (preferences) and Help
+ * (docs including how to install the chromeless `--app` shortcut).
+ */
+function PostLoginShell({
+  context,
+  session,
+  sessionId,
+  reopenChat,
+}: {
+  context: RaptorContext;
+  session: LoginSubmission;
+  sessionId: number;
+  reopenChat: () => void;
+}) {
+  const [tab, setTab] = useState<NavTab>('options');
+  const [themeMode, setThemeMode] = useState<ThemeMode>(() => loadThemeMode());
+
+  useEffect(() => {
+    applyTheme(themeMode);
+    saveThemeMode(themeMode);
+    if (themeMode === 'system') {
+      return watchSystemTheme(() => applyTheme('system'));
+    }
+    return undefined;
+  }, [themeMode]);
+
+  const who = session.creds.isAnonGuest
+    ? 'anonymous guest'
+    : session.creds.isNamedGuest
+      ? `${session.creds.userName} (guest)`
+      : session.creds.userName;
+
+  return (
+    <div style={pageShell}>
+      <header style={pageHeader}>
+        <div style={headerRow}>
+          <div>
+            <div style={brand}>Raptor3000</div>
+            <div style={tagline}>
+              Signed in as <strong>{who}</strong> · {session.creds.serverUrl}:
+              {session.creds.port} · profile {session.profile}
+            </div>
+          </div>
+          <nav style={navRow}>
+            <NavButton active={tab === 'options'} onClick={() => setTab('options')}>
+              Options
+            </NavButton>
+            <NavButton active={tab === 'seek'} onClick={() => setTab('seek')}>
+              Seek
+            </NavButton>
+            <NavButton active={tab === 'help'} onClick={() => setTab('help')}>
+              Help
+            </NavButton>
+            <ThemeToggle mode={themeMode} onChange={setThemeMode} />
+          </nav>
+        </div>
+      </header>
+
+      {tab === 'options' && <OptionsPage reopenChat={reopenChat} />}
+      {tab === 'seek' && <SeekGraphTab context={context} />}
+      {tab === 'help' && <HelpPage />}
+
+      <footer style={footer}>
+        session #{sessionId.toString(16).slice(-6)}
+      </footer>
+    </div>
+  );
+}
+
+function NavButton({
+  active,
+  onClick,
+  children,
+}: {
+  active: boolean;
+  onClick: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      style={{
+        padding: '6px 14px',
+        background: active ? 'var(--bg-input)' : 'transparent',
+        color: 'var(--fg)',
+        border: '1px solid var(--border)',
+        borderBottom: active
+          ? '2px solid var(--accent)'
+          : '1px solid var(--border)',
+        borderRadius: 3,
+        cursor: 'pointer',
+        fontSize: 13,
+        fontWeight: active ? 600 : 400,
+      }}
+    >
+      {children}
+    </button>
+  );
+}
+
+function ThemeToggle({
+  mode,
+  onChange,
+}: {
+  mode: ThemeMode;
+  onChange: (m: ThemeMode) => void;
+}) {
+  const next: Record<ThemeMode, ThemeMode> = {
+    light: 'dark',
+    dark: 'system',
+    system: 'light',
+  };
+  const label: Record<ThemeMode, string> = {
+    light: '\u2600\uFE0F Day',
+    dark: '\u{1F319} Night',
+    system: '\u{1F4BB} System',
+  };
+  return (
+    <button
+      aria-label={`Theme: ${mode}. Click to switch.`}
+      onClick={() => onChange(next[mode])}
+      style={{
+        marginLeft: 10,
+        padding: '6px 12px',
+        background: 'var(--bg-raised)',
+        color: 'var(--fg)',
+        border: '1px solid var(--border)',
+        borderRadius: 3,
+        cursor: 'pointer',
+        fontSize: 13,
+      }}
+    >
+      {label[mode]}
+    </button>
+  );
+}
+
+function OptionsPage({ reopenChat }: { reopenChat: () => void }) {
+  const [prefs, setPrefs] = useState<AppPreferences>(() => loadPreferences());
+
+  function update<K extends keyof AppPreferences>(k: K, v: AppPreferences[K]) {
+    setPrefs(p => {
+      const next = { ...p, [k]: v };
+      savePreferences(next);
+      return next;
+    });
+  }
+
+  return (
+    <main style={optionsGrid}>
+        <Section title="Session">
+          <Row label="Chat window">
+            <button style={linkBtn} onClick={reopenChat}>
+              Reopen
+            </button>
+            <Note>The chat window auto-opens at login; reopen here if closed.</Note>
+          </Row>
+        </Section>
+
+        <Section title="Board">
+          <Row label="Theme">
+            <Select<BoardTheme>
+              value={prefs.boardTheme}
+              onChange={v => update('boardTheme', v)}
+              options={[
+                ['slate', 'Slate'],
+                ['wood', 'Wood'],
+                ['blue', 'Blue'],
+              ]}
+            />
+          </Row>
+          <Row label="Piece set">
+            <Select<PieceSet>
+              value={prefs.pieceSet}
+              onChange={v => update('pieceSet', v)}
+              options={[
+                ['classic', 'Classic'],
+                ['alpha', 'Alpha'],
+                ['merida', 'Merida'],
+              ]}
+            />
+          </Row>
+          <Row label="Show coordinates">
+            <Toggle
+              checked={prefs.boardCoordinates}
+              onChange={v => update('boardCoordinates', v)}
+            />
+          </Row>
+          <Row label="Flip when playing as black">
+            <Toggle
+              checked={prefs.flipOnPlayAsBlack}
+              onChange={v => update('flipOnPlayAsBlack', v)}
+            />
+          </Row>
+          <Row label="Move list visible">
+            <Toggle
+              checked={prefs.moveListVisible}
+              onChange={v => update('moveListVisible', v)}
+            />
+          </Row>
+        </Section>
+
+        <Section title="Engine">
+          <Row label="Stockfish analysis available">
+            <Toggle
+              checked={prefs.showEngineAnalysis}
+              onChange={v => update('showEngineAnalysis', v)}
+            />
+            <Note>Only in observing, examining, and inactive modes — never while playing.</Note>
+          </Row>
+        </Section>
+
+        <Section title="Sound">
+          <Row label="Sounds">
+            <Select<SoundMode>
+              value={prefs.soundMode}
+              onChange={v => update('soundMode', v)}
+              options={[
+                ['on', 'On'],
+                ['off', 'Off'],
+              ]}
+            />
+          </Row>
+        </Section>
+
+        <Section title="Channels">
+          <Row label="Auto-join on login">
+            <input
+              style={textInput}
+              value={prefs.autoJoinChannels}
+              onChange={e => update('autoJoinChannels', e.target.value)}
+              placeholder="e.g. 1,4,53"
+            />
+            <Note>Comma-separated channel numbers.</Note>
+          </Row>
+        </Section>
+      </main>
+  );
+}
+
+function HelpPage() {
+  return (
+    <main style={helpContainer}>
+      <Section title="What is this page?">
+        <p style={helpP}>
+          This is the <strong>Options &amp; Help</strong> surface. It's not a
+          launcher — the chat window auto-opens when you sign in, and board
+          windows pop up automatically when you observe or play a game. Use
+          the <em>Options</em> tab to change app preferences.
+        </p>
+      </Section>
+
+      <Section title="Hide the browser address bar (app mode)">
+        <p style={helpP}>
+          Modern browsers require an address bar on regular tabs and popups for
+          security. But Chromium-based browsers (Chrome, Brave, Edge) support an{' '}
+          <code style={code}>--app=&lt;url&gt;</code> launch flag that opens a
+          given URL in a chromeless window — no URL bar, no tab strip, no menu.
+          Create a shortcut that passes the flag and pin it to your
+          taskbar/dock.
+        </p>
+        <p style={helpP}>
+          The URL for local dev is{' '}
+          <code style={code}>http://localhost:5173/</code>. Swap it for your
+          production URL later.
+        </p>
+
+        <h4 style={subHeading}>Linux (GNOME / Pop!_OS / KDE)</h4>
+        <ol style={helpOl}>
+          <li>
+            Create <code style={code}>~/.local/share/applications/raptor3000.desktop</code>{' '}
+            with this content:
+            <pre style={pre}>{DESKTOP_FILE_CONTENTS}</pre>
+          </li>
+          <li>
+            Refresh the app menu:{' '}
+            <code style={code}>
+              update-desktop-database ~/.local/share/applications/
+            </code>
+          </li>
+          <li>
+            Open Activities / app menu, search "Raptor3000", right-click → Pin
+            to Dash or drag to your taskbar.
+          </li>
+        </ol>
+        <p style={helpP}>
+          Substitute <code style={code}>brave-browser</code> with{' '}
+          <code style={code}>google-chrome</code> or{' '}
+          <code style={code}>microsoft-edge</code> if you use those instead.
+        </p>
+
+        <h4 style={subHeading}>Windows</h4>
+        <ol style={helpOl}>
+          <li>Right-click your desktop → New → Shortcut.</li>
+          <li>
+            For the location, paste (adjust the path if your browser lives
+            elsewhere):
+            <pre style={pre}>{WINDOWS_TARGET_BRAVE}</pre>
+            For Chrome instead:
+            <pre style={pre}>{WINDOWS_TARGET_CHROME}</pre>
+          </li>
+          <li>Name it "Raptor3000", click Finish.</li>
+          <li>Right-click the new shortcut → Pin to taskbar.</li>
+        </ol>
+        <p style={helpP}>
+          (Optional) Right-click the shortcut → Properties → Change Icon, point
+          at a <code style={code}>.ico</code> so it doesn't look like Brave.
+        </p>
+
+        <h4 style={subHeading}>macOS</h4>
+        <p style={helpP}>
+          macOS doesn't accept raw CLI flags on Dock shortcuts, so wrap the
+          launch in a tiny <strong>Automator</strong> app:
+        </p>
+        <ol style={helpOl}>
+          <li>
+            Open <strong>Automator</strong> → New Document → <strong>Application</strong>.
+          </li>
+          <li>
+            Add a <em>Run Shell Script</em> action. Paste (adjust the browser
+            path if needed):
+            <pre style={pre}>{MACOS_SHELL_BRAVE}</pre>
+            For Chrome:
+            <pre style={pre}>{MACOS_SHELL_CHROME}</pre>
+          </li>
+          <li>
+            Save as <code style={code}>Raptor3000.app</code> into{' '}
+            <code style={code}>/Applications</code>.
+          </li>
+          <li>
+            Drag <code style={code}>Raptor3000.app</code> into the Dock.
+          </li>
+        </ol>
+        <p style={helpP}>
+          (Optional) Right-click <code style={code}>Raptor3000.app</code> in
+          Finder → Get Info → drag a custom icon onto the icon well for a
+          distinct Dock look.
+        </p>
+      </Section>
+
+      <Section title="Troubleshooting">
+        <ul style={helpUl}>
+          <li>
+            <strong>Address bar still shows.</strong> Modern browsers show a
+            one-line origin strip at the top of popups regardless of features.
+            The <code style={code}>--app</code> mode above avoids it entirely
+            for the main window. Popups opened from inside an app-mode window
+            inherit the same chromeless treatment.
+          </li>
+          <li>
+            <strong>Popup blocker.</strong> Allow popups for{' '}
+            <code style={code}>localhost:5173</code> (or your prod host). In
+            Brave: Settings → Privacy and security → Site settings → Pop-ups.
+          </li>
+          <li>
+            <strong>Shortcut opens a regular tab, not an app window.</strong>{' '}
+            Make sure the flag is <code style={code}>--app=URL</code> with an{' '}
+            <code style={code}>=</code> and no space, and the browser isn't
+            already running with a profile that overrides it.
+          </li>
+        </ul>
+      </Section>
+    </main>
+  );
+}
+
+const DESKTOP_FILE_CONTENTS =
+  `[Desktop Entry]
+Type=Application
+Name=Raptor3000
+Exec=brave-browser --app=http://localhost:5173/
+Icon=brave-browser
+Terminal=false
+Categories=Network;Game;
+StartupWMClass=Raptor3000
+`;
+
+const WINDOWS_TARGET_BRAVE =
+  `"C:\\Program Files\\BraveSoftware\\Brave-Browser\\Application\\brave.exe" --app=http://localhost:5173/`;
+
+const WINDOWS_TARGET_CHROME =
+  `"C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe" --app=http://localhost:5173/`;
+
+const MACOS_SHELL_BRAVE =
+  `/Applications/Brave\\ Browser.app/Contents/MacOS/Brave\\ Browser --app=http://localhost:5173/`;
+
+const MACOS_SHELL_CHROME =
+  `/Applications/Google\\ Chrome.app/Contents/MacOS/Google\\ Chrome --app=http://localhost:5173/`;
+
+function Section({
+  title,
+  children,
+}: {
+  title: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <section style={sectionStyle}>
+      <h3 style={sectionTitle}>{title}</h3>
+      <div style={sectionBody}>{children}</div>
+    </section>
+  );
+}
+
+function Row({
+  label,
+  children,
+}: {
+  label: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div style={rowStyle}>
+      <span style={rowLabel}>{label}</span>
+      <div style={rowControl}>{children}</div>
+    </div>
+  );
+}
+
+function Note({ children }: { children: React.ReactNode }) {
+  return <div style={noteStyle}>{children}</div>;
+}
+
+function Toggle({
+  checked,
+  onChange,
+}: {
+  checked: boolean;
+  onChange: (v: boolean) => void;
+}) {
+  return (
+    <label style={{ display: 'inline-flex', alignItems: 'center', gap: 6, cursor: 'pointer' }}>
+      <input
+        type="checkbox"
+        checked={checked}
+        onChange={e => onChange(e.target.checked)}
+      />
+      <span style={{ fontSize: 13, opacity: 0.9 }}>{checked ? 'On' : 'Off'}</span>
+    </label>
+  );
+}
+
+function Select<T extends string>({
+  value,
+  onChange,
+  options,
+}: {
+  value: T;
+  onChange: (v: T) => void;
+  options: readonly (readonly [T, string])[];
+}) {
+  return (
+    <select
+      style={selectStyle}
+      value={value}
+      onChange={e => onChange(e.target.value as T)}
+    >
+      {options.map(([v, label]) => (
+        <option key={v} value={v}>
+          {label}
+        </option>
+      ))}
+    </select>
+  );
+}
+
+function hydrateAutoLogin(): LoginSubmission | null {
+  const sel = loadSelection();
+  if (!sel.autoConnect) return null;
+  const creds = loadProfile(sel.activeProfile);
+  const isGuest = creds.isNamedGuest || creds.isAnonGuest;
+  const handleOk = /^[a-zA-Z]*$/.test(creds.userName) &&
+    (creds.userName === '' ||
+      (creds.userName.length >= 3 && creds.userName.length <= 17));
+  const ready = handleOk &&
+    (isGuest || (creds.userName !== '' && creds.password !== ''));
+  if (!ready) return null;
+  return { profile: sel.activeProfile, creds, autoConnect: sel.autoConnect };
+}
+
+const pageShell = {
+  minHeight: '100vh',
+  display: 'flex',
+  flexDirection: 'column',
+  background: 'var(--bg)',
+  color: 'var(--fg)',
+  fontFamily: 'system-ui, -apple-system, sans-serif',
+} as const;
+
+const pageHeader = {
+  padding: '20px 32px 16px',
+  borderBottom: '1px solid var(--border)',
+  background: 'var(--bg-raised)',
+} as const;
+
+const brand = {
+  fontSize: 22,
+  fontWeight: 700,
+  letterSpacing: 1,
+} as const;
+
+const tagline = { opacity: 0.7, fontSize: 13, marginTop: 4 } as const;
+
+const headerRow = {
+  display: 'flex',
+  alignItems: 'flex-end',
+  justifyContent: 'space-between',
+  gap: 16,
+  flexWrap: 'wrap' as const,
+} as const;
+
+const navRow = {
+  display: 'flex',
+  gap: 6,
+} as const;
+
+const helpContainer = {
+  flex: 1,
+  display: 'flex',
+  flexDirection: 'column' as const,
+  gap: 16,
+  padding: 24,
+  maxWidth: 900,
+  margin: '0 auto',
+  width: '100%',
+  boxSizing: 'border-box' as const,
+} as const;
+
+const helpP = {
+  margin: '0 0 10px 0',
+  fontSize: 13,
+  lineHeight: 1.6,
+  opacity: 0.9,
+} as const;
+
+const helpOl = {
+  margin: '0 0 10px 20px',
+  padding: 0,
+  fontSize: 13,
+  lineHeight: 1.8,
+} as const;
+
+const helpUl = {
+  margin: '0 0 10px 20px',
+  padding: 0,
+  fontSize: 13,
+  lineHeight: 1.8,
+} as const;
+
+const subHeading = {
+  margin: '14px 0 6px 0',
+  fontSize: 13,
+  fontWeight: 600,
+  opacity: 0.95,
+} as const;
+
+const code = {
+  fontFamily: '"SF Mono", Consolas, monospace',
+  fontSize: 12,
+  background: 'var(--bg-sunken)',
+  padding: '1px 5px',
+  borderRadius: 3,
+  border: '1px solid var(--border)',
+} as const;
+
+const pre = {
+  fontFamily: '"SF Mono", Consolas, monospace',
+  fontSize: 12,
+  background: 'var(--bg-sunken)',
+  padding: 10,
+  borderRadius: 4,
+  border: '1px solid var(--border)',
+  overflow: 'auto' as const,
+  margin: '6px 0 10px',
+  whiteSpace: 'pre-wrap' as const,
+  wordBreak: 'break-all' as const,
+} as const;
+
+const optionsGrid = {
+  flex: 1,
+  display: 'grid',
+  gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))',
+  gap: 16,
+  padding: 24,
+  maxWidth: 1200,
+  margin: '0 auto',
+  width: '100%',
+  boxSizing: 'border-box' as const,
+} as const;
+
+const sectionStyle = {
+  background: 'var(--bg-raised)',
+  border: '1px solid var(--border)',
+  borderRadius: 6,
+  padding: 16,
+} as const;
+
+const sectionTitle = {
+  margin: '0 0 12px 0',
+  fontSize: 13,
+  textTransform: 'uppercase' as const,
+  letterSpacing: 0.8,
+  opacity: 0.7,
+  fontWeight: 600,
+} as const;
+
+const sectionBody = {
+  display: 'flex',
+  flexDirection: 'column' as const,
+  gap: 10,
+} as const;
+
+const rowStyle = {
+  display: 'flex',
+  flexDirection: 'column' as const,
+  gap: 4,
+} as const;
+
+const rowLabel = {
+  fontSize: 13,
+  opacity: 0.85,
+} as const;
+
+const rowControl = {
+  display: 'flex',
+  alignItems: 'center',
+  gap: 10,
+  flexWrap: 'wrap' as const,
+} as const;
+
+const noteStyle = {
+  fontSize: 11,
+  opacity: 0.5,
+  flexBasis: '100%',
+} as const;
+
+const textInput = {
+  flex: 1,
+  minWidth: 160,
+  padding: '6px 8px',
+  background: 'var(--bg-input)',
+  color: 'var(--fg)',
+  border: '1px solid var(--border)',
+  borderRadius: 3,
+  fontSize: 13,
+  fontFamily: 'inherit',
+} as const;
+
+const selectStyle = {
+  padding: '5px 8px',
+  background: 'var(--bg-input)',
+  color: 'var(--fg)',
+  border: '1px solid var(--border)',
+  borderRadius: 3,
+  fontSize: 13,
+} as const;
+
+const linkBtn = {
+  padding: '4px 10px',
+  background: 'var(--accent-soft)',
+  color: 'var(--fg)',
+  border: '1px solid var(--accent)',
+  borderRadius: 3,
+  cursor: 'pointer',
+  fontSize: 12,
+} as const;
+
+const footer = {
+  padding: '10px 32px',
+  borderTop: '1px solid var(--border)',
+  background: 'var(--bg-raised)',
+  fontSize: 11,
+  opacity: 0.5,
+} as const;
