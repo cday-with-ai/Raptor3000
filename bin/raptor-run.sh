@@ -26,7 +26,12 @@ count_skips() { grep -rho "\.skip\|\.todo" packages/*/src --include="*.test.ts" 
 # does `git add -A` would sweep his uncommitted work-in-progress into a commit
 # authored by "Raptor3000" — silently, at 02:30, mixed in with its own changes.
 # Nothing else on this machine shares a working tree with a human.
-if ! git diff --quiet || ! git diff --cached --quiet; then
+# `git status --porcelain`, not `git diff` — diff only sees TRACKED files, and
+# work in progress is untracked by definition. The first version used git diff,
+# was tested with a new scratch file, sailed straight past the check and
+# committed it. The failure mode it exists to prevent, demonstrated by its own
+# test on the first attempt.
+if [ -n "$(git status --porcelain)" ]; then
   say "working tree is dirty — Carson has work in progress. Standing down."
   say "  $(git status --porcelain | wc -l) file(s) uncommitted"
   exit 0
