@@ -240,10 +240,20 @@ export class FicsConnector extends BaseConnector implements Connector {
   private onLoggedIn(): void {
     // Sensible defaults on login. Disable interactive pagination / bell so
     // the stream is clean, and enable style 12 + ivariables we rely on.
+    //
+    // ORDER MATTERS. `iset lock 1` freezes interface variables, so anything
+    // after it is refused — it must be last. It used to sit third, and the
+    // server answered with exactly four `Cannot alter: Interface setting
+    // locked.` lines for startpos, pendinfo, gameinfo and nohighlight. Nothing
+    // in the client noticed: the errors arrive as ordinary server text, the
+    // connection stays up, and style 12 still works. What silently goes missing
+    // is the context around it — `gameinfo` carries the metadata sent when a
+    // game starts, `startpos` the initial position for non-standard games.
+    // A board that renders but is missing its game information looks like a
+    // board bug and is a login-ordering bug.
     const bootstrap = [
       'iset defprompt 1',
       'iset ms 1',
-      'iset lock 1',
       'iset startpos 1',
       'iset pendinfo 1',
       'iset gameinfo 1',
@@ -255,7 +265,13 @@ export class FicsConnector extends BaseConnector implements Connector {
       'set echo 0',
       'set ptime 0',
       'set width 240',
-      'set height 1000',
+      // FICS rejected `set height 1000` outright ("Bad value given for variable
+      // height"). Matching width is known-good in at least one direction; if the
+      // log shows this rejected too, the range is tighter than 240.
+      'set height 240',
+      // Last, deliberately. Everything above is already applied by the time the
+      // interface is sealed against further change.
+      'iset lock 1',
     ];
     for (const cmd of bootstrap) this.sendMessageHidden(cmd);
   }

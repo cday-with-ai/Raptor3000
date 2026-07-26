@@ -103,8 +103,24 @@ export class GameManager {
   protected openBoardWindow(gameId: string): void {
     if (this.disposed) return;
     this.openGames.add(gameId);
-    this.windowManager.open({ kind: 'board', id: gameId });
+    const win = this.windowManager.open({ kind: 'board', id: gameId });
+    if (!win) {
+      // Board windows are popups, and they are opened in response to a `<12>`
+      // arriving from the server — which is not a user gesture, so browsers
+      // block them by default. The return value used to be discarded, making a
+      // blocked popup identical to a broken board: `obs 25` succeeds, the game
+      // registers as open, and nothing appears or complains.
+      this.onBoardWindowBlocked?.(gameId);
+      // eslint-disable-next-line no-console
+      console.warn(
+        `[GameManager] board window for game ${gameId} was blocked by the browser. ` +
+          `Allow popups for this origin, or open it from a click.`,
+      );
+    }
   }
+
+  /** Set by the host app to surface a blocked popup to the user. */
+  onBoardWindowBlocked?: (gameId: string) => void;
 
   /**
    * Close a board window for `gameId`. Safe if the window is already
