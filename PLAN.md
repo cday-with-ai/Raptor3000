@@ -1,12 +1,22 @@
 # PLAN — FICS boards actually working
 
 Written 2026-07-26 from a live session against freechess.org; connector→board
-seam test added 2026-08-01.
+seam test added 2026-08-01; setting-rejection surfacing added 2026-08-02.
 
 ## Where this is
 
 The connector, the parser and the board renderer all exist and are wired
-together. 115 unit tests pass.
+together. 122 unit tests pass.
+
+FICS setting rejections no longer pass as ordinary chat. `FicsConnector` now
+intercepts UNKNOWN chunks whose lines start with `Cannot alter:` or `Bad value
+given for variable` (after stripping a buffered `fics% ` prefix) and publishes
+them as INTERNAL `FICS rejected a setting: …` errors instead; other lines in
+the same chunk still reach chat. It is session-wide, not bootstrap-scoped —
+FICS gives no end-of-bootstrap signal, and those two lines are errors whenever
+they occur. Patterns are line-anchored, so a tell quoting the phrase mid-line
+cannot trip it. Either 2026-07-26 login bug would now surface on the first
+connect, including the still-unconfirmed `set height 240`.
 
 The seam that let "boards don't work" and "everything is implemented" both be
 true — no test crossed from raw server bytes to the position a board would
@@ -72,10 +82,25 @@ browser; nothing offline can settle it.
   GameService→GameManager listener contract are all now covered by tests, which
   narrows "downstream" to WindowManager/BoardWindow themselves.
 
-After that, in rough order: check `set height 240` was accepted; treat
-`Cannot alter:` and `Bad value given for variable` as errors during bootstrap
-rather than chat (ten lines, would have caught two of the 2026-07-26 bugs on
-the first connect instead of three months later); then drag and drop.
+After that, in rough order: check `set height 240` was accepted (a rejection
+now announces itself as an INTERNAL error — just read the console); fix the
+chat-parser trim divergence below; then drag and drop.
+
+Found 2026-08-02, verified empirically and against Raptor's Java: **real-shape
+traffic defeats every anchored chat parser.** FICS blocks begin `\n\r`, so the
+chunk handed to the chat chain starts with a newline (or a buffered `fics% `
+prefix), and parsers like `TellEventParser` match `^user tells you:` against
+the untrimmed chunk — `parseStream('\nSomePlayer tells you: hi\nfics% ')`
+yields UNKNOWN, the bare line yields TELL. Raptor hands the chunk over
+untrimmed too, but *every Raptor chat parser begins `text = text.trim()`* and
+tokenizes on `" \r\n"` (checked `IcsParser.java` and `TellEventParser.java` on
+GitHub); our port kept the untrimmed hand-off but dropped the per-parser trim.
+Nobody noticed because UNKNOWN still prints in the console and per-type tab
+routing isn't built yet — misclassified is not invisible, so chat "worked".
+This is the natural next offline increment: restore the per-parser trim at
+Raptor parity across the 22 chat parsers, with real-shape (leading `\n`,
+prompt-prefixed) cases added to the existing parser tests. Touching all 22 is
+why it was not folded into the 2026-08-02 change.
 
 Offline work that remains available: `packages/web` already runs vitest in a
 node environment (the Engine* tests live there), and `GameManager` is
@@ -90,7 +115,8 @@ nightly one.
 
 The server tells you things and nothing listens. Both login bugs on 2026-07-26
 were reported by FICS in plain English during bootstrap and filed as ordinary
-chat. When something here doesn't work, read the raw stream before reading the
-code. There is still no recorded raw-traffic log in the repo; capturing one
+chat; as of 2026-08-02 those two rejection shapes are caught and surfaced as
+errors. When something here doesn't work, read the raw stream before reading
+the code. There is still no recorded raw-traffic log in the repo; capturing one
 live session to a file would make seam tests like the new one replay reality
 instead of a reconstruction.

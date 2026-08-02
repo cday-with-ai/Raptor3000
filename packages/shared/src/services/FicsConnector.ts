@@ -187,7 +187,44 @@ export class FicsConnector extends BaseConnector implements Connector {
 
     // Parse and dispatch.
     const events = this.options.parser.parseStream(normalized);
-    for (const e of events) this.options.chatService.publish(e);
+    for (const e of events) this.publishEvent(e);
+  }
+
+  /**
+   * Publish a parsed event, except that setting-rejection lines are surfaced
+   * as INTERNAL errors instead of scrolling by as ordinary server text.
+   *
+   * Both 2026-07-26 login bugs (`iset lock 1` ordered too early, `set height
+   * 1000` out of range) were reported by FICS in plain English during
+   * bootstrap — `Cannot alter: Interface setting locked.` and `Bad value
+   * given for variable height` — and filed as ordinary chat, where nothing
+   * noticed them for three months. These two shapes are errors whenever they
+   * occur, and FICS gives no end-of-bootstrap signal to scope a watch window
+   * to, so they are intercepted for the whole session. Only UNKNOWN events
+   * are inspected: a tell or shout quoting the phrase has already been
+   * claimed by its own parser and passes through untouched.
+   */
+  private publishEvent(e: ChatEvent): void {
+    if (e.type === ChatEventType.UNKNOWN) {
+      const { rejections, remainder } = splitSettingRejections(
+        e.raw,
+        this.options.parser.prompt,
+      );
+      if (rejections.length > 0) {
+        for (const line of rejections) {
+          this.publishInternal(`FICS rejected a setting: ${line}`);
+        }
+        if (remainder.trim().length > 0) {
+          this.options.chatService.publish(
+            makeChatEvent(ChatEventType.UNKNOWN, remainder, {
+              message: remainder,
+            }),
+          );
+        }
+        return;
+      }
+    }
+    this.options.chatService.publish(e);
   }
 
   private checkLoginProgress(text: string): void {
@@ -282,6 +319,37 @@ export class FicsConnector extends BaseConnector implements Connector {
     });
     this.options.chatService.publish(e);
   }
+}
+
+/** FICS responses that mean a `set`/`iset` command was refused. Matched at
+ *  line start, after any buffered `fics% ` prompt is stripped. */
+const SETTING_REJECTION_PATTERNS = [
+  /^Cannot alter:/,
+  /^Bad value given for variable/,
+] as const;
+
+/**
+ * Split a chunk of server text into setting-rejection lines and everything
+ * else. `remainder` preserves the chunk verbatim when nothing matched.
+ */
+export function splitSettingRejections(
+  chunk: string,
+  prompt = 'fics% ',
+): { rejections: string[]; remainder: string } {
+  const rejections: string[] = [];
+  const kept: string[] = [];
+  for (const line of chunk.split('\n')) {
+    const bare = line.startsWith(prompt) ? line.slice(prompt.length) : line;
+    if (SETTING_REJECTION_PATTERNS.some(p => p.test(bare))) {
+      rejections.push(bare);
+    } else {
+      kept.push(line);
+    }
+  }
+  return {
+    rejections,
+    remainder: rejections.length > 0 ? kept.join('\n') : chunk,
+  };
 }
 
 // ---------- Timeseal2 bits (port of SFI/Raptor implementation) ----------
