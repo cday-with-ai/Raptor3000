@@ -12,9 +12,10 @@ export class DrawOfferedEventParser implements ChatEventParser {
 
   parse(line: string): ChatEvent | null {
     if (line.length >= 600) return null;
-    if (!line.includes(DrawOfferedEventParser.IDENT)) return null;
-    return makeChatEvent(ChatEventType.DRAW_REQUEST, line, {
-      message: line.trim(),
+    const text = line.trim();
+    if (!text.includes(DrawOfferedEventParser.IDENT)) return null;
+    return makeChatEvent(ChatEventType.DRAW_REQUEST, text, {
+      message: text,
     });
   }
 }

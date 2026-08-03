@@ -16,16 +16,17 @@ export class ShoutEventParser implements ChatEventParser {
     /^--> ([A-Za-z]{3,17})(?:\([A-Z*]+\))*\s?(.*)$/;
 
   parse(line: string): ChatEvent | null {
-    let m = ShoutEventParser.SHOUT_RE.exec(line);
+    const text = line.trim();
+    let m = ShoutEventParser.SHOUT_RE.exec(text);
     if (m) {
-      return makeChatEvent(ChatEventType.SHOUT, line, {
+      return makeChatEvent(ChatEventType.SHOUT, text, {
         source: m[1],
         message: m[2],
       });
     }
-    m = ShoutEventParser.EMOTE_RE.exec(line);
+    m = ShoutEventParser.EMOTE_RE.exec(text);
     if (m) {
-      return makeChatEvent(ChatEventType.SHOUT, line, {
+      return makeChatEvent(ChatEventType.SHOUT, text, {
         source: m[1],
         message: m[1] + ' ' + m[2],
       });

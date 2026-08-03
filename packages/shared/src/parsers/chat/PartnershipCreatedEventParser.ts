@@ -17,25 +17,26 @@ export class PartnershipCreatedEventParser implements ChatEventParser {
 
   parse(line: string): ChatEvent | null {
     if (line.length >= 100) return null;
+    const text = line.trim();
     // Form A
-    const aIdx = line.indexOf(PartnershipCreatedEventParser.A);
+    const aIdx = text.indexOf(PartnershipCreatedEventParser.A);
     if (aIdx === 0 || aIdx === 1) {
-      const remainder = line.substring(aIdx + PartnershipCreatedEventParser.A.length).trim();
+      const remainder = text.substring(aIdx + PartnershipCreatedEventParser.A.length).trim();
       const m = /^([A-Za-z0-9]+)/.exec(remainder);
       if (m) {
-        return makeChatEvent(ChatEventType.PARTNERSHIP_CREATED, line, {
+        return makeChatEvent(ChatEventType.PARTNERSHIP_CREATED, text, {
           source: stripTitles(m[1]),
-          message: line,
+          message: text,
         });
       }
     }
     // Form B
-    if (line.includes(PartnershipCreatedEventParser.B)) {
-      const tokens = line.trim().split(/\s+/);
+    if (text.includes(PartnershipCreatedEventParser.B)) {
+      const tokens = text.split(/\s+/);
       if (tokens.length >= 2 && tokens[1] === 'agrees') {
-        return makeChatEvent(ChatEventType.PARTNERSHIP_CREATED, line, {
+        return makeChatEvent(ChatEventType.PARTNERSHIP_CREATED, text, {
           source: stripTitles(tokens[0]),
-          message: line.trim(),
+          message: text,
         });
       }
     }

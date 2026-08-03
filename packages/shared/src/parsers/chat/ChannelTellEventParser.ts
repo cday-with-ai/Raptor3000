@@ -15,9 +15,10 @@ export class ChannelTellEventParser implements ChatEventParser {
     /^([A-Za-z]{3,17})(?:\([A-Z*]+\))*\((\d+)\):\s?(.*)$/;
 
   parse(line: string): ChatEvent | null {
-    const m = ChannelTellEventParser.RE.exec(line);
+    const text = line.trim();
+    const m = ChannelTellEventParser.RE.exec(text);
     if (!m) return null;
-    return makeChatEvent(ChatEventType.CHANNEL_TELL, line, {
+    return makeChatEvent(ChatEventType.CHANNEL_TELL, text, {
       source: m[1],
       channel: m[2],
       message: m[3],

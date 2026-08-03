@@ -35,10 +35,11 @@ const WP = 1, WK = 6, BP = 7, BK = 12;
 // announcement, the <g1> metadata, then the first <12>. FICS terminates
 // lines with `\n\r`, trails a `fics% ` prompt (defprompt) with NO newline,
 // and begins every subsequent block with `\n\r` — which is what terminates
-// the buffered prompt line. That leading `\n\r` is load-bearing: a block
-// arriving without it would produce the line `fics% <12> ...`, which
-// neither we nor Raptor (startsWith('<12>'), no prompt stripping) would
-// parse. Raptor's decade of field use says FICS never sends that shape.
+// the buffered prompt line. That leading `\n\r` used to be load-bearing: a
+// block arriving without it produces the line `fics% <12> ...`, which
+// Style12Parser's startsWith('<12>') could not see. FicsParser now strips
+// prompt echoes first (Raptor's filterTrailingPrompts, which our port had
+// dropped), so that shape parses too — pinned below.
 const ANNOUNCE_AND_G1 =
   '\n\rGame 95: GuestFOO (++++) GuestBAR (++++) unrated blitz 3 0\n\r\n\r' +
   '<g1> 95 p=0 t=blitz r=1 u=0,0 it=5,5 i=8,8 pt=0 rt=1586E,2100 ts=1,0\n\r';
@@ -123,6 +124,23 @@ describe('connector → board seam (recorded observe session)', () => {
     expect(s12!.whiteRemainingTimeMillis).toBe(180000);
     expect(s12!.san).toBe('e4');
     expect(s12!.isWhiteOnTop).toBe(false);
+  });
+
+  it('parses a <12> glued to a buffered prompt, with no leading newline', () => {
+    const { feed, chat, openedWindows, gameService } = makeSession();
+
+    feed(ANNOUNCE_AND_G1);
+    // The shape that used to be fatal: the previous block's `fics% ` prompt
+    // is still buffered and the next block arrives without its leading
+    // `\n\r`, so the parser is handed the single line `fics% <12> ...`. The
+    // board froze while raw <12> text scrolled through chat.
+    feed('fics% ' + S12_AFTER_E4 + '\n\r');
+
+    expect(openedWindows).toEqual(['95']);
+    expect(gameService.getMode('95')).toBe(BoardMode.OBSERVING);
+    expect(gameService.getLatestStyle12('95')!.position[3][4]).toBe(WP); // e4
+    // And the control line still never reaches chat.
+    expect(chat.some(e => e.raw.includes('<12>'))).toBe(false);
   });
 
   it('updates the position on the next move without reopening the window', () => {

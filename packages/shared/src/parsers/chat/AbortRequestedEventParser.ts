@@ -13,9 +13,10 @@ export class AbortRequestedEventParser implements ChatEventParser {
 
   parse(line: string): ChatEvent | null {
     if (line.length >= 600) return null;
-    if (!line.includes(AbortRequestedEventParser.IDENT)) return null;
-    return makeChatEvent(ChatEventType.ABORT_REQUEST, line, {
-      message: line.trim(),
+    const text = line.trim();
+    if (!text.includes(AbortRequestedEventParser.IDENT)) return null;
+    return makeChatEvent(ChatEventType.ABORT_REQUEST, text, {
+      message: text,
     });
   }
 }

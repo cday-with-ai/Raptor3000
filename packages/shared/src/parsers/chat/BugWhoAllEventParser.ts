@@ -14,7 +14,8 @@ export class BugWhoAllEventParser implements ChatEventParser {
   private static readonly START = 'Bughouse games in progress';
   private static readonly END = '. (*) indicates system administrator.';
 
-  parse(text: string): ChatEvent | null {
+  parse(line: string): ChatEvent | null {
+    const text = line.trim();
     const startsAt0 = text.startsWith(BugWhoAllEventParser.START);
     const startsAt1 = startsWithAt(text, BugWhoAllEventParser.START, 1);
     const endsWithTerminator = text.endsWith(BugWhoAllEventParser.END);

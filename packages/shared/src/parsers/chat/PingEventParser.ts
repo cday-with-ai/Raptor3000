@@ -13,14 +13,15 @@ export class PingEventParser implements ChatEventParser {
 
   parse(line: string): ChatEvent | null {
     if (line.length >= 600) return null;
-    if (!line.includes('Average ping time for ')) return null;
-    const m = PingEventParser.RE.exec(line.trim());
+    const text = line.trim();
+    if (!text.includes('Average ping time for ')) return null;
+    const m = PingEventParser.RE.exec(text);
     if (!m) return null;
     const who = stripTitles(m[1].trim());
     const ms = parseInt(m[2], 10);
-    return makeChatEvent(ChatEventType.PING_RESPONSE, line, {
+    return makeChatEvent(ChatEventType.PING_RESPONSE, text, {
       source: who,
-      message: line.trim(),
+      message: text,
       pingMs: ms,
     });
   }

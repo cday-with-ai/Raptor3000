@@ -142,8 +142,14 @@ export class FicsParser {
   parse(inboundMessage: string): ChatEvent[] {
     const events: ChatEvent[] = [];
 
+    // 0. Strip prompt echoes before anything else looks at the text. Raptor
+    // does this in IcsConnector.parseMessage (filterTrailingPrompts) *before*
+    // calling IcsParser.parse, so every parser downstream sees prompt-free
+    // text. Our port called the parser on the raw chunk instead.
+    const filtered = this.filterPrompts(inboundMessage);
+
     // 1. Moves messages are eaten whole.
-    const afterMoves = this.parseMovesMessage(inboundMessage, events);
+    const afterMoves = this.parseMovesMessage(filtered, events);
     if (!isNotBlank(afterMoves)) return events;
 
     // 2. Game events are stripped per-line; remainder continues through chat.
@@ -188,6 +194,46 @@ export class FicsParser {
       );
     }
     return events;
+  }
+
+  /**
+   * Remove prompt echoes from the ends of a chunk. Port of Raptor's
+   * IcsConnector.filterTrailingPrompts (IcsConnector.java), which runs in
+   * parseMessage before IcsParser.parse ever sees the text.
+   *
+   * Two shapes, both real:
+   *
+   *   Leading. parseStream() flushes at the last `\n`, so a block's trailing
+   *   `fics% ` has no newline after it and stays in the line buffer — it
+   *   arrives glued to the front of the *next* chunk: `fics% \nGuestX tells
+   *   you: hi`. Raptor loops here (`while startsWith(prompt + " ")`) because
+   *   several prompts can stack up when the server is quiet.
+   *
+   *   Trailing. A chunk that ends mid-block, or one handed to parse()
+   *   directly, still carries `\nfics% ` on the end.
+   *
+   * This is also why the single line `fics% <12> ...` was unrecognizable:
+   * the prefix defeated Style12Parser's `startsWith("<12>")`, which is a
+   * check Raptor makes too — but Raptor had already stripped the prompt by
+   * then, so the question never reached its parser.
+   */
+  private filterPrompts(text: string): string {
+    const prompt = this.prompt; // "fics% ", trailing space included
+    const bare = prompt.trimEnd(); // "fics%"
+    let out = text;
+    while (out.startsWith(prompt)) {
+      out = out.substring(prompt.length);
+    }
+    if (out.endsWith('\n' + prompt)) {
+      return out.substring(0, out.length - prompt.length - 1);
+    }
+    if (out.endsWith('\n' + bare)) {
+      return out.substring(0, out.length - bare.length - 1);
+    }
+    if (out.endsWith(prompt)) {
+      return out.substring(0, out.length - prompt.length);
+    }
+    return out;
   }
 
   /**

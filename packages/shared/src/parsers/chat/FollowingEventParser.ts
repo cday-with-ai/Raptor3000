@@ -15,21 +15,22 @@ export class FollowingEventParser implements ChatEventParser {
 
   parse(line: string): ChatEvent | null {
     if (line.length >= 200) return null;
-    if (line.includes(FollowingEventParser.NOT_FOLLOW_IDENT)) {
-      return makeChatEvent(ChatEventType.NOT_FOLLOWING, line, {
-        message: line.trim(),
+    const text = line.trim();
+    if (text.includes(FollowingEventParser.NOT_FOLLOW_IDENT)) {
+      return makeChatEvent(ChatEventType.NOT_FOLLOWING, text, {
+        message: text,
       });
     }
-    const idx = line.indexOf(FollowingEventParser.FOLLOW_IDENT);
+    const idx = text.indexOf(FollowingEventParser.FOLLOW_IDENT);
     if (idx === -1) return null;
-    const after = line.substring(idx + FollowingEventParser.FOLLOW_IDENT.length).trimStart();
+    const after = text.substring(idx + FollowingEventParser.FOLLOW_IDENT.length).trimStart();
     // Split on space, apostrophe, or open-paren to extract just the handle
     // (before "'s games.").
     const m = /^([A-Za-z0-9_]+)/.exec(after);
     if (!m) return null;
-    return makeChatEvent(ChatEventType.FOLLOWING, line, {
+    return makeChatEvent(ChatEventType.FOLLOWING, text, {
       source: stripTitles(m[1]),
-      message: line,
+      message: text,
     });
   }
 }

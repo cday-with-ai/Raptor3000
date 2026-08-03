@@ -14,12 +14,13 @@ export class PartnershipEndedEventParser implements ChatEventParser {
 
   parse(line: string): ChatEvent | null {
     if (line.length >= 100) return null;
+    const text = line.trim();
     if (
-      line.includes(PartnershipEndedEventParser.A) ||
-      line.includes(PartnershipEndedEventParser.B)
+      text.includes(PartnershipEndedEventParser.A) ||
+      text.includes(PartnershipEndedEventParser.B)
     ) {
-      return makeChatEvent(ChatEventType.PARTNERSHIP_DESTROYED, line, {
-        message: line.trim(),
+      return makeChatEvent(ChatEventType.PARTNERSHIP_DESTROYED, text, {
+        message: text,
       });
     }
     return null;

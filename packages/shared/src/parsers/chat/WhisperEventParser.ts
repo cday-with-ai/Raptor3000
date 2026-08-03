@@ -14,22 +14,23 @@ export class WhisperEventParser implements ChatEventParser {
 
   parse(line: string): ChatEvent | null {
     if (line.length >= 600) return null;
-    const tokens = line.split(/\s+/);
+    const text = line.trim();
+    const tokens = text.split(/\s+/);
     if (tokens.length < 2) return null;
     if (tokens[1] !== 'whispers:') return null;
 
-    const openBracket = line.indexOf('[');
-    const closeBracket = line.indexOf(']');
+    const openBracket = text.indexOf('[');
+    const closeBracket = text.indexOf(']');
     const gameId =
       openBracket >= 0 && closeBracket > openBracket
-        ? line.substring(openBracket + 1, closeBracket)
+        ? text.substring(openBracket + 1, closeBracket)
         : null;
 
     const handle = /^([A-Za-z][A-Za-z0-9_]{1,16})/.exec(stripTitles(tokens[0]));
     if (!handle) return null;
-    return makeChatEvent(ChatEventType.WHISPER, line, {
+    return makeChatEvent(ChatEventType.WHISPER, text, {
       source: handle[1],
-      message: line.trim(),
+      message: text,
       gameId,
     });
   }

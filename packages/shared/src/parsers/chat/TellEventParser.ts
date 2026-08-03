@@ -15,9 +15,10 @@ export class TellEventParser implements ChatEventParser {
     /^([A-Za-z]{3,17})(?:\([A-Z*]+\))* tells you:\s?(.*)$/;
 
   parse(line: string): ChatEvent | null {
-    const m = TellEventParser.RE.exec(line);
+    const text = line.trim();
+    const m = TellEventParser.RE.exec(text);
     if (!m) return null;
-    return makeChatEvent(ChatEventType.TELL, line, {
+    return makeChatEvent(ChatEventType.TELL, text, {
       source: m[1],
       message: m[2],
     });

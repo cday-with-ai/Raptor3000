@@ -15,18 +15,19 @@ export class NotificationEventParser implements ChatEventParser {
 
   parse(line: string): ChatEvent | null {
     if (line.length >= 600 && !line.startsWith(NotificationEventParser.PREFIX, 1)) return null;
-    if (!startsWithOrOffset1(line, NotificationEventParser.PREFIX)) return null;
-    const tokens = line.trim().split(/\s+/);
+    const text = line.trim();
+    if (!startsWithOrOffset1(text, NotificationEventParser.PREFIX)) return null;
+    const tokens = text.split(/\s+/);
     // tokens[0] = "Notification:" tokens[1] = name
     if (tokens.length < 2) return null;
     const source = stripTitles(tokens[1]);
-    const isDeparture = line.includes(NotificationEventParser.DEPARTED);
+    const isDeparture = text.includes(NotificationEventParser.DEPARTED);
     return makeChatEvent(
       isDeparture
         ? ChatEventType.NOTIFICATION_DEPARTURE
         : ChatEventType.NOTIFICATION_ARRIVAL,
-      line,
-      { source, message: line.trim() },
+      text,
+      { source, message: text },
     );
   }
 }

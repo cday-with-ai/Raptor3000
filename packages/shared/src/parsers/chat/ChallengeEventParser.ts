@@ -12,9 +12,10 @@ export class ChallengeEventParser implements ChatEventParser {
 
   parse(line: string): ChatEvent | null {
     if (line.length >= 600) return null;
-    if (!line.includes(ChallengeEventParser.IDENT)) return null;
-    return makeChatEvent(ChatEventType.CHALLENGE, line, {
-      message: line.trim(),
+    const text = line.trim();
+    if (!text.includes(ChallengeEventParser.IDENT)) return null;
+    return makeChatEvent(ChatEventType.CHALLENGE, text, {
+      message: text,
     });
   }
 }

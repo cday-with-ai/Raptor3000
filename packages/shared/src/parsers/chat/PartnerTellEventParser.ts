@@ -31,7 +31,7 @@ export class PartnerTellEventParser implements ChatEventParser {
     }
     if (tokens[idx + 1] !== '(your') return null;
 
-    return makeChatEvent(ChatEventType.PARTNER_TELL, line, {
+    return makeChatEvent(ChatEventType.PARTNER_TELL, text, {
       source: stripTitles(source),
       message: text,
     });

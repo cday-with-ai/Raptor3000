@@ -102,9 +102,6 @@ describe('setting rejections surface as errors, not chat', () => {
 
   it('leaves a parsed tell quoting the phrase alone', () => {
     const { feed, chat } = makeSession();
-    // Bare line: with the leading \n\r of a real block, every anchored chat
-    // parser currently misses and the tell lands as UNKNOWN — see PLAN.md
-    // (Raptor trims inside each parser; our port does not yet).
     feed('SomePlayer tells you: Bad value given for variable "height".\n');
 
     expect(chat.filter(e => e.type === ChatEventType.INTERNAL)).toHaveLength(0);
@@ -113,17 +110,36 @@ describe('setting rejections surface as errors, not chat', () => {
     expect(tells[0].source).toBe('SomePlayer');
   });
 
-  it('never fires on a mid-line quote, even when the tell lands as UNKNOWN', () => {
+  it('never fires on a mid-line quote in a real-shaped block', () => {
     const { feed, chat } = makeSession();
-    // Real block shape: the leading \n\r defeats the anchored TELL parser
-    // today, so this chunk reaches the interceptor as UNKNOWN. The rejection
-    // patterns are line-anchored, so the quoted phrase must not trip them.
+    // Real block shape — leading \n\r, trailing prompt. This used to defeat
+    // the anchored TELL parser and land as UNKNOWN; since the per-parser trim
+    // and prompt filter it classifies as a TELL, which is the stronger
+    // guarantee: the phrase never reaches the interceptor at all.
     feed(
       '\n\rSomePlayer tells you: Bad value given for variable "height".\n\rfics% ',
     );
 
     expect(chat.filter(e => e.type === ChatEventType.INTERNAL)).toHaveLength(0);
-    expect(chat.filter(e => e.type === ChatEventType.UNKNOWN)).toHaveLength(1);
+    expect(chat.filter(e => e.type === ChatEventType.UNKNOWN)).toHaveLength(0);
+    const tells = chat.filter(e => e.type === ChatEventType.TELL);
+    expect(tells).toHaveLength(1);
+    expect(tells[0].source).toBe('SomePlayer');
+  });
+
+  it('never fires on a mid-line quote inside an UNKNOWN chunk', () => {
+    const { feed, chat } = makeSession();
+    // Server text no chat parser claims, quoting the phrase mid-line. This is
+    // the case the interceptor actually has to be careful about: it sees the
+    // chunk, and only line-anchoring keeps it from firing.
+    feed(
+      '\n\rYour seek matched: Bad value given for variable "height".\n\rfics% ',
+    );
+
+    expect(chat.filter(e => e.type === ChatEventType.INTERNAL)).toHaveLength(0);
+    const unknown = chat.filter(e => e.type === ChatEventType.UNKNOWN);
+    expect(unknown).toHaveLength(1);
+    expect(unknown[0].message).toContain('Bad value given for variable');
   });
 
   it('splitSettingRejections leaves non-matching chunks verbatim', () => {

@@ -11,12 +11,13 @@ export class CshoutEventParser implements ChatEventParser {
   readonly name = 'CshoutEventParser';
 
   parse(line: string): ChatEvent | null {
-    const tokens = line.split(/\s+/);
+    const text = line.trim();
+    const tokens = text.split(/\s+/);
     if (tokens.length < 2) return null;
     if (tokens[1] !== 'c-shouts:') return null;
-    return makeChatEvent(ChatEventType.CSHOUT, line, {
+    return makeChatEvent(ChatEventType.CSHOUT, text, {
       source: stripTitles(tokens[0]),
-      message: line.trim(),
+      message: text,
     });
   }
 }

@@ -12,16 +12,17 @@ export class JournalEventParser implements ChatEventParser {
   private static readonly PREFIX = 'Journal for ';
 
   parse(line: string): ChatEvent | null {
-    if (!startsWithOrOffset1(line, JournalEventParser.PREFIX)) return null;
-    const offset = line.startsWith(JournalEventParser.PREFIX)
+    const text = line.trim();
+    if (!startsWithOrOffset1(text, JournalEventParser.PREFIX)) return null;
+    const offset = text.startsWith(JournalEventParser.PREFIX)
       ? JournalEventParser.PREFIX.length
       : JournalEventParser.PREFIX.length + 1;
-    const after = line.substring(offset);
+    const after = text.substring(offset);
     const m = /^([A-Za-z0-9_()*]+)/.exec(after);
     if (!m) return null;
-    return makeChatEvent(ChatEventType.JOURNAL, line, {
+    return makeChatEvent(ChatEventType.JOURNAL, text, {
       source: m[1],
-      message: line,
+      message: text,
     });
   }
 }

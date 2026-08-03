@@ -16,16 +16,17 @@ export class FingerEventParser implements ChatEventParser {
   private static readonly PREFIX = 'Finger of ';
 
   parse(line: string): ChatEvent | null {
-    if (!startsWithOrOffset1(line, FingerEventParser.PREFIX)) return null;
-    const offset = line.startsWith(FingerEventParser.PREFIX)
+    const text = line.trim();
+    if (!startsWithOrOffset1(text, FingerEventParser.PREFIX)) return null;
+    const offset = text.startsWith(FingerEventParser.PREFIX)
       ? FingerEventParser.PREFIX.length
       : FingerEventParser.PREFIX.length + 1;
-    const after = line.substring(offset);
+    const after = text.substring(offset);
     const m = /^([A-Za-z0-9_()*]+)/.exec(after);
     if (!m) return null;
-    return makeChatEvent(ChatEventType.FINGER, line, {
+    return makeChatEvent(ChatEventType.FINGER, text, {
       source: stripTitles(m[1]),
-      message: line,
+      message: text,
     });
   }
 }

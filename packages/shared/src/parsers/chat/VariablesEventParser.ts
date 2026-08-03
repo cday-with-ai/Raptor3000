@@ -12,16 +12,17 @@ export class VariablesEventParser implements ChatEventParser {
   private static readonly PREFIX = 'Variable settings of ';
 
   parse(line: string): ChatEvent | null {
-    if (!startsWithOrOffset1(line, VariablesEventParser.PREFIX)) return null;
-    const offset = line.startsWith(VariablesEventParser.PREFIX)
+    const text = line.trim();
+    if (!startsWithOrOffset1(text, VariablesEventParser.PREFIX)) return null;
+    const offset = text.startsWith(VariablesEventParser.PREFIX)
       ? VariablesEventParser.PREFIX.length
       : VariablesEventParser.PREFIX.length + 1;
-    const after = line.substring(offset);
+    const after = text.substring(offset);
     const m = /^([A-Za-z0-9_()*]+)/.exec(after);
     if (!m) return null;
-    return makeChatEvent(ChatEventType.VARIABLES, line, {
+    return makeChatEvent(ChatEventType.VARIABLES, text, {
       source: m[1],
-      message: line,
+      message: text,
     });
   }
 }
