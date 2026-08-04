@@ -25,6 +25,38 @@ describe('TellEventParser', () => {
     expect(e.type).toBe(ChatEventType.TELL);
     expect(e.source).toBe('GMBob');
   });
+
+  // The in-game `say` form. Raptor's TellEventParser.java matches "says:" as
+  // its first branch and emits ChatType.TELL; this port had only "tells you:",
+  // so every `say` from an opponent fell through the chain to UNKNOWN.
+  it('classifies an in-game say as a tell', () => {
+    const e = p('GuestABCD says: good luck');
+    expect(e.type).toBe(ChatEventType.TELL);
+    expect(e.source).toBe('GuestABCD');
+    expect(e.message).toBe('good luck');
+  });
+  it('strips titles on says', () => {
+    const e = p('GMBob(*)(GM) says: your move');
+    expect(e.type).toBe(ChatEventType.TELL);
+    expect(e.source).toBe('GMBob');
+    expect(e.message).toBe('your move');
+  });
+  it('a partner say is still a PARTNER_TELL, not a TELL', () => {
+    // PartnerTellEventParser sits ahead of TellEventParser in the chain and
+    // keys on the literal `(your` token, so adding `says:` here cannot steal
+    // the bughouse form — which matters because `say` in bughouse is
+    // delivered to the partner too.
+    const e = p('GMBob (your partner) says: drop knight h4');
+    expect(e.type).toBe(ChatEventType.PARTNER_TELL);
+    expect(e.source).toBe('GMBob');
+  });
+  it('does not claim other verbs that end in a colon', () => {
+    // Guards the widened alternation: `(?:tells you|says):` must not become
+    // something that also swallows shouts, kibitzes or whispers.
+    expect(p('GuestABCD shouts: hello').type).toBe(ChatEventType.SHOUT);
+    expect(p('GuestABCD(1234)[42] kibitzes: nice').type).toBe(ChatEventType.KIBITZ);
+    expect(p('GuestABCD(1234)[17] whispers: watch').type).toBe(ChatEventType.WHISPER);
+  });
 });
 
 describe('ChannelTellEventParser', () => {

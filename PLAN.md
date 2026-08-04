@@ -2,12 +2,24 @@
 
 Written 2026-07-26 from a live session against freechess.org; connector→board
 seam test added 2026-08-01; setting-rejection surfacing added 2026-08-02;
-chat-parser trim + prompt filtering restored 2026-08-03.
+chat-parser trim + prompt filtering restored 2026-08-03; the `says:` tell form
+added 2026-08-04.
 
 ## Where this is
 
 The connector, the parser and the board renderer all exist and are wired
-together. 258 unit tests pass.
+together. 267 unit tests pass.
+
+`TellEventParser` now matches both forms FICS sends. `says:` — the in-game
+form, which `say` delivers to your opponent and, in bughouse, to both partners
+— classifies as TELL alongside `tells you:`, which is what Raptor does: its
+`TellEventParser.java` tests `s2.equals("says:")` as the *first* branch and
+emits `ChatType.TELL`, and there is no separate SAY anywhere in `ChatType`.
+Before this, every `say` from an opponent matched nothing in the chain and
+printed as UNKNOWN — the one chat form you are guaranteed to meet while
+actually playing a game. The real-shape table carries it through all four wire
+shapes, and a case pins that `GMBob (your partner) says: …` still reaches
+`PartnerTellEventParser`, which sits ahead in the chain and keys on `(your`.
 
 The chat chain now survives real-shape traffic. Two pieces of Raptor that the
 port had dropped are back, and they are separate fixes — each was verified to
@@ -28,7 +40,7 @@ be load-bearing on its own by reverting it and watching different tests fail:
   no newline after it, stays in the line buffer, and arrives glued to the
   *front* of the next chunk, where trimming cannot reach it.
 
-`packages/shared/src/parsers/__tests__/realShape.test.ts` is the table: 26
+`packages/shared/src/parsers/__tests__/realShape.test.ts` is the table: 27
 message samples covering all 22 parsers × 4 shapes each — bare line, leading
 newline, block with trailing prompt, buffered prompt glued to the front —
 plus direct-parser cases and prompt-filter edge cases. A new parser that
@@ -125,14 +137,41 @@ browser; nothing offline can settle it.
   narrows "downstream" to WindowManager/BoardWindow themselves.
 
 After that, in rough order: check `set height 240` was accepted (a rejection
-now announces itself as an INTERNAL error — just read the console); the
-`says:` gap noted below; then drag and drop.
+now announces itself as an INTERNAL error — just read the console); then drag
+and drop.
 
-Learned from reading Raptor's Java this run, and not yet acted on:
-**`TellEventParser.java` also matches `says:`** — the in-game form — and emits
-`ChatType.TELL` for it. Our port handles only `tells you:`, so a `says:` from
-an opponent mid-game currently falls through to UNKNOWN. Small, offline,
-testable; a good next increment.
+**Raptor's source is no longer at `/tmp/raptor`.** Comment headers all over
+this codebase cite paths like
+`/tmp/raptor/raptor/src/raptor/connector/ics/chat/ChatEventParser.java`, and
+that tree is gone — those are historical citations, not something to open.
+Upstream is readable at
+`raw.githubusercontent.com/fbergo/Raptor/master/raptor/src/raptor/...`, which
+is where `TellEventParser.java` was checked against this run rather than
+trusting the previous run's note about it. The note was right, but the layer
+mistake of 2026-08-01 is cheap to repeat and cheaper to avoid.
+
+**A divergence left open deliberately, now that it is understood.** Raptor's
+tell parser decides on tokens — `RaptorStringTokenizer(text, " \r\n")`, then
+token 2 is `says:`, or tokens 2–3 are `tells` `you:` — with a `length < 600`
+guard and no constraint at all on the handle token, `stripTitles` cleaning it
+afterwards. Our port is a line-anchored regex requiring a 3–17 letter handle
+and titles shaped `([A-Z*]+)`, with no length guard. Three consequences, none
+of which this run changed:
+
+- Raptor tolerates whatever decoration FICS hangs on the name; we do not. If a
+  `says:` ever shows up unclassified in the wild, this is the first suspect,
+  and the fix is to stop constraining the handle rather than to guess at the
+  decoration.
+- `FicsParser` hands the chat chain the **whole remaining chunk**, not a line
+  (step 7 of its flow, Raptor parity). Raptor's tokenizer therefore claims a
+  multi-line chunk on the strength of its first line; our `^…$` cannot. Ours
+  is the narrower and probably safer of the two, but they are not the same
+  parser and the difference only shows on multi-line traffic.
+- Widening the verb to `(?:tells you|says):` was chosen over porting the
+  tokenizer precisely because the tokenizer form is broader in these two ways
+  at once, and TellEventParser sits 7th of 22 in the chain where broadening is
+  how you quietly steal another parser's traffic. Every later parser keys on a
+  different token 2, so `says:` itself is safe — that was checked, not assumed.
 
 Also noted: `startsWithOrOffset1` (used by Finger/History/Journal/Variables/
 Told/Notification) existed to tolerate the single leading whitespace char that
@@ -159,3 +198,14 @@ errors. When something here doesn't work, read the raw stream before reading
 the code. There is still no recorded raw-traffic log in the repo; capturing one
 live session to a file would make seam tests like the new one replay reality
 instead of a reconstruction.
+
+Seen once on 2026-08-04 and worth recognising rather than chasing: `npx vitest
+run` printed all 267 passes and the duration line, then died with `FATAL
+ERROR: v8::ToLocalChecked Empty MaybeLocal` in `cjsPreparseModuleExports` —
+node's own ESM/CJS loader, during teardown, after the results. Three
+consecutive re-runs were clean and exited 0. It is not in this project's code
+and it did not affect the result, but note where it would hurt if it recurs:
+`count_tests` in `bin/raptor-run.sh` greps the output for the count, so a crash
+*before* the summary prints would yield an empty `after` and revert a
+perfectly good increment. If a night ever reverts for no visible reason, this
+is the thing to suspect first.

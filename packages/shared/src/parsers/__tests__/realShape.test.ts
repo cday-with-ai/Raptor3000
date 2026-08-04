@@ -79,6 +79,12 @@ const CASES: Case[] = [
     source: 'GuestABCD',
   },
   {
+    what: 'Tell (in-game say)',
+    line: 'GuestABCD says: good luck',
+    type: ChatEventType.TELL,
+    source: 'GuestABCD',
+  },
+  {
     what: 'Whisper',
     line: 'GuestABCD(1234)[17] whispers: watch the knight',
     type: ChatEventType.WHISPER,
