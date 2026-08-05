@@ -1,4 +1,10 @@
-import type { GameService, GameServiceListener } from '@raptor3000/shared';
+import {
+  ChatEventType,
+  makeChatEvent,
+  type ChatService,
+  type GameService,
+  type GameServiceListener,
+} from '@raptor3000/shared';
 import type { WindowManager } from '../windows/WindowManager.js';
 
 /**
@@ -119,7 +125,8 @@ export class GameManager {
     }
   }
 
-  /** Set by the host app to surface a blocked popup to the user. */
+  /** Set by the host app to surface a blocked popup to the user.
+   *  See `announceBlockedBoardWindows` for the standard wiring. */
   onBoardWindowBlocked?: (gameId: string) => void;
 
   /**
@@ -130,4 +137,34 @@ export class GameManager {
     this.openGames.delete(gameId);
     this.windowManager.close({ kind: 'board', id: gameId });
   }
+}
+
+/** The text a user sees when a board popup never appeared. */
+export function blockedBoardWindowMessage(gameId: string): string {
+  return (
+    `Board window for game ${gameId} was blocked by the browser. ` +
+    `Allow popups for this site, then re-issue the command.`
+  );
+}
+
+/**
+ * Route a GameManager's blocked-popup hook to the chat console.
+ *
+ * `onBoardWindowBlocked` was a hook nobody assigned: the blocked case wrote a
+ * `console.warn` and nothing else, so answering "is the popup being blocked?"
+ * meant having devtools open *before* the `obs` that triggered it. The same
+ * INTERNAL-event channel that surfaces FICS setting rejections carries this,
+ * and the main console tab accepts everything, so the answer now lands in the
+ * app itself — which is the whole content of the popup hypothesis.
+ */
+export function announceBlockedBoardWindows(
+  gameManager: GameManager,
+  chatService: ChatService,
+): void {
+  gameManager.onBoardWindowBlocked = gameId => {
+    const message = blockedBoardWindowMessage(gameId);
+    chatService.publish(
+      makeChatEvent(ChatEventType.INTERNAL, message, { message, gameId }),
+    );
+  };
 }

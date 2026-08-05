@@ -9,7 +9,10 @@ import {
   defaultGameLineParsers,
   type LoginCredentials,
 } from '@raptor3000/shared';
-import { GameManager } from '../game/GameManager.js';
+import {
+  GameManager,
+  announceBlockedBoardWindows,
+} from '../game/GameManager.js';
 import { EngineManager } from '../engine/EngineManager.js';
 import { getWindowManager } from './WindowManager.js';
 
@@ -72,6 +75,9 @@ export function createContext(): RaptorContext {
   const gameManager = main
     ? new GameManager(gameService, getWindowManager())
     : null;
+  // A blocked board popup is otherwise indistinguishable from a broken board;
+  // say so in the console tab rather than only in devtools.
+  if (gameManager) announceBlockedBoardWindows(gameManager, chatService);
   const engineManager = main ? new EngineManager(gameService) : null;
   const tabs = new TabStoreRegistry(chatService, connector);
   return {

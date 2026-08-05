@@ -3,12 +3,23 @@
 Written 2026-07-26 from a live session against freechess.org; connector→board
 seam test added 2026-08-01; setting-rejection surfacing added 2026-08-02;
 chat-parser trim + prompt filtering restored 2026-08-03; the `says:` tell form
-added 2026-08-04.
+added 2026-08-04; blocked board popups made visible 2026-08-05.
 
 ## Where this is
 
 The connector, the parser and the board renderer all exist and are wired
-together. 267 unit tests pass.
+together. 267 unit tests pass in `packages/shared`, 22 in `packages/web`.
+
+**A blocked board popup now announces itself in the app.**
+`onBoardWindowBlocked` was a hook nobody ever assigned — the blocked branch
+wrote a `console.warn` and stopped, so answering "is the popup being blocked?"
+required devtools to be open *before* the `obs` that triggered it, which is
+most of why the question has stayed open since 2026-07-26. `GameManager.ts`
+now exports `announceBlockedBoardWindows`, which routes the hook to an
+INTERNAL chat event — the same channel the setting rejections use, and the
+main console tab accepts everything — and `createContext` wires it for the
+main window. The board still doesn't paint when blocked; the difference is
+that the console tab says why.
 
 `TellEventParser` now matches both forms FICS sends. `says:` — the in-game
 form, which `say` delivers to your opponent and, in bughouse, to both partners
@@ -74,6 +85,23 @@ they occur. Patterns are line-anchored, so a tell quoting the phrase mid-line
 cannot trip it. Either 2026-07-26 login bug would now surface on the first
 connect, including the still-unconfirmed `set height 240`.
 
+`packages/web/src/game/__tests__/GameManager.test.ts` covers the segment past
+where the shared seam test stops. The shared test asserts against a listener
+*shaped like* GameManager's; this one uses the real GameManager with a stub
+`WindowManager` whose `open` returns null on demand, which is precisely how a
+browser reports a refused popup. Nine cases: one window per game and no
+reopen on later moves, all three of playing/examining/observing opening a
+board, observed games surviving game-end while examines close, dispose
+silencing it, and the blocked path both firing the hook and producing exactly
+one INTERNAL notice with the game id — plus a case pinning that a normal open
+says nothing. No DOM needed; the stub is two methods.
+
+Pinned deliberately rather than changed: when the popup is blocked the game
+still lands in `getOpenGameIds()`. GameManager tracks games it wants windows
+for, not windows that exist, and `WindowManager.open` focuses an existing
+window on a repeat call, so a retry works. If that set ever starts being read
+as "windows currently on screen", this is where it will lie.
+
 The seam that let "boards don't work" and "everything is implemented" both be
 true — no test crossed from raw server bytes to the position a board would
 paint — is now covered as far as it can be without a DOM.
@@ -123,18 +151,20 @@ than code:
 ## Next thing that would make sense
 
 **Confirm or kill the popup hypothesis**, because it's cheap and it decides
-where everything else looks. Open the console before `obs`, then check for
-`[GameManager] board window for game N was blocked by the browser`, or just look
-for the blocked-popup icon in the address bar. This needs a human with a
-browser; nothing offline can settle it.
+where everything else looks. It still needs a human with a browser — nothing
+offline can settle it — but as of 2026-08-05 it no longer needs devtools open
+in advance. Run `obs` on any game and read the main chat console: `Board
+window for game N was blocked by the browser` appears there if it was blocked.
+Silence in the console with no board means it was not blocked.
 
-- If blocked: allow popups for `localhost:5173` and the board should paint. The
-  real fix is surfacing `onBoardWindowBlocked` in the UI so it never fails
-  silently again.
-- If not blocked and still no board: the fault is downstream of GameService —
-  the transport, login sequence, Style 12 parsing, mode derivation and the
-  GameService→GameManager listener contract are all now covered by tests, which
-  narrows "downstream" to WindowManager/BoardWindow themselves.
+- If blocked: allow popups for `localhost:5173` and the board should paint.
+- If not blocked and still no board: the fault is downstream of GameService.
+  The transport, login sequence, Style 12 parsing, mode derivation, the
+  GameService→GameManager listener contract, and now GameManager's own
+  open/close/blocked behavior are all covered by tests, which narrows
+  "downstream" to `WindowManager.open` itself (URL, window features, the
+  position maths) and `BoardWindow`'s render. Neither has a test, and both
+  need a DOM.
 
 After that, in rough order: check `set height 240` was accepted (a rejection
 now announces itself as an INTERNAL error — just read the console); then drag
@@ -180,14 +210,23 @@ what it still permits is a *spurious* leading character — `XFinger of Bob`
 would match. It is Raptor's own idiom so it was left alone, but it is now
 tolerance without a purpose, and tightening it is a real if minor cleanup.
 
-Offline work that remains available: `packages/web` already runs vitest in a
-node environment (the Engine* tests live there), and `GameManager` is
-React-free — a test with a stub `WindowManager` could cover the blocked-popup
-path (`open` returns null → `onBoardWindowBlocked` fires) without installing
-jsdom. Note the web suite is outside `bin/raptor-run.sh`'s ratchet, which
-counts only `packages/shared`. A true `BoardWindow` render test would need
-jsdom + testing-library added to the lockfile — a daytime decision, not a
-nightly one.
+Offline work that remains available: `WindowManager` is the last React-free
+piece with no tests. `featuresFor`, `urlFor`, `storageKeyFor` and the cascade
+maths are pure string/number work; they need `window.screen` and
+`localStorage`, which are a few lines of stub, not jsdom. A true `BoardWindow`
+render test *would* need jsdom + testing-library added to the lockfile — a
+daytime decision, not a nightly one.
+
+Note the web suite is outside `bin/raptor-run.sh`'s ratchet, which counts only
+`packages/shared`. Tests added there are real but unguarded: nothing reverts a
+run that deletes them. `count_skips` does scan `packages/*/src`, so silencing
+one is still caught.
+
+`npx tsc --noEmit` in `packages/web` is red on two pre-existing unused-symbol
+errors in `EngineManager.test.ts` (an unused `BoardMode` import and an unused
+`_mgr` binding, both TS6133). They predate 2026-08-05 and were left alone
+rather than swept up mid-increment, but they mean `yarn typecheck` there
+cannot currently be used as a gate.
 
 ## Notes for whoever picks this up
 
