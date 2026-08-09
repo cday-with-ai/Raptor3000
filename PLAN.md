@@ -6,13 +6,47 @@ chat-parser trim + prompt filtering restored 2026-08-03; the `says:` tell form
 added 2026-08-04; blocked board popups made visible 2026-08-05; tab-prefix
 doubling fixed, the `/` panes made scrollable, theme changes taught to
 reach open popups, the dead board-toolbar buttons made to look dead, and
-`WindowManager` given its first tests, and restored window positions clamped
-to the screen that currently exists, 2026-08-09.
+`WindowManager` given its first tests, restored window positions clamped
+to the screen that currently exists, and the two window-position writers made
+to share one declaration of where they write, 2026-08-09.
 
 ## Where this is
 
 The connector, the parser and the board renderer all exist and are wired
-together. 289 unit tests pass in `packages/shared`, 105 in `packages/web`.
+together. 289 unit tests pass in `packages/shared`, 118 in `packages/web`.
+
+**The two writers of remembered window positions now share one module.**
+`packages/web/src/windows/windowPositionStore.ts` holds the storage key, the
+`StoredPosition` shape, `WindowKind`, `loadPositions`/`savePositions` and the
+`windowStorageKey` convention; `WindowManager` and `windowPosition.ts` both
+import it and neither declares any of that any more. They agreed before — this
+removes the way they could stop agreeing, which mattered because a divergence
+is silent: a board writes under one key, reopens from another, and simply
+forgets where it was.
+
+Both writers stay, and the reason is in the new module's header rather than in
+a comment on each side hoping the other is read: the manager's 1500ms poll is
+what records a window the user moved and left open, and the popup's own
+`pagehide` handler is what records a window being closed, which the poll cannot
+see because the next tick finds `closed`. `savePosition(key, record)` is the
+read-modify-write both now call, so neither can clobber the other's windows.
+
+The 13 tests in `packages/web/src/windows/__tests__/windowPositionStore.test.ts`
+are mostly ordinary round-trip and corrupt-storage cases; the four worth
+keeping are the seam ones, which drive the real tracker and the real
+`WindowManager` over one fake localStorage and assert a position written by one
+is what the other acts on — for a board, for the chat singleton, and in both
+directions. The first of them asserts *before* running the tracker's disposer,
+because the disposer also writes and would otherwise cover for a `pagehide`
+handler that had come unwired. Verified by sabotage: dropping the id from the
+key reddens 24 across both files, making `savePosition` overwrite the map
+instead of merging reddens 2, unwiring `pagehide` reddens 1.
+
+`windowStorageKey` now takes `WindowKind` rather than `string`, so `WindowKind`
+moved into the store module and `WindowManager` re-exports it. The `id` is
+still `string | null | undefined`, and a falsy one still yields the bare kind —
+unchanged behaviour, but it is now one line instead of two, and a test says
+plainly what would happen if a board popup ever loaded without `?id=`.
 
 **A remembered window position can no longer put a board somewhere the user
 cannot look.** This was found while writing last run's `WindowManager` tests
@@ -92,19 +126,8 @@ The behaviours now pinned, several of which read as accidents until you look:
   than a `focus()` on a null. That is the `WindowManager` half of the contract
   `GameManager` relies on when it keeps a blocked game in `getOpenGameIds()`.
 
-Two smaller things about the same file, both still left alone:
-
-- `windowPosition.ts` re-declares `STORAGE_KEY`, `StoredPosition`,
-  `loadMap`/`saveMap` and the key convention, with comments saying they must
-  match `WindowManager`'s. They do match. The apparent duplication of *writers*
-  is not duplication — the manager's 1500ms poll cannot catch the final
-  position before a window closes, and the popup's own `pagehide` handler is
-  what does; each covers the other's gap. The duplicated *constants* are a real
-  seam waiting to drift, and unifying them is a clean small job.
-- `windowStorageKey('board', gameId)` takes `string | null`, and `gameId` comes
-  from a URL param. A board popup that somehow loads without `id` would persist
-  under `board` while the manager reads `board:42`. Not reachable today, since
-  the manager always writes the id.
+Both of the loose ends this file used to carry — the duplicated constants and
+the `string | null` id — are folded into the store module described above.
 
 **`queue/suggestions.md` has a large 2026-08-05 note from Carson, answered
 2026-08-09 but only one item of it acted on.** That file now carries better
@@ -434,10 +457,7 @@ would match. It is Raptor's own idiom so it was left alone, but it is now
 tolerance without a purpose, and tightening it is a real if minor cleanup.
 
 Offline work that remains available, in rough order of what a night can
-finish: unifying the storage key and record shape that `WindowManager` and
-`windowPosition.ts` each declare separately — the duplicated constants are the
-real seam, and both files now have tests to land on. Then the smaller loose
-ends named elsewhere here: the stale `chessAlg.ts:122`
+finish, is now down to small named things: the stale `chessAlg.ts:122`
 comment, the Seek panel's hardcoded `#1b1f26`/`#2a313c` which stay dark in day
 mode, and `startsWithOrOffset1`'s now-purposeless offset branch. A true
 `BoardWindow` render test *would* need jsdom + testing-library added to the
@@ -451,10 +471,10 @@ kind of gap and not one a night without a browser closes.
 
 Note the web suite is outside `bin/raptor-run.sh`'s ratchet, which counts only
 `packages/shared`. Tests added there are real but unguarded: nothing reverts a
-run that deletes them — and six consecutive nights have now landed their
-increment there (34 → 105 web tests since 2026-08-05) while the ratcheted count
+run that deletes them — and seven consecutive nights have now landed their
+increment there (34 → 118 web tests since 2026-08-05) while the ratcheted count
 sat still at 289. That is not a fault in the work, but it does mean the gate
-has been watching an untouched suite for a working week, and the honest reading
+has been watching an untouched suite for over a working week, and the honest reading
 is no longer "a streak" but that the offline work left in this project is
 nearly all in `packages/web`. Pointing the ratchet at both packages is a
 one-line change to `count_tests` in `bin/raptor-run.sh` and would be worth

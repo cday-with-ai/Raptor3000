@@ -8,42 +8,23 @@
  * (RememberControllerListener / RememberPositionChatFrameListener in
  * `source/decaf/gui/`), adapted to browsers.
  *
- * The shape of the stored record is synced with WindowManager:
- *   { x: number; y: number; width: number; height: number }
+ * The key convention and the record shape are not declared here — both sides
+ * import them from `windowPositionStore.ts`, which is also where the reason
+ * for having two writers at all is written down.
  *
  * We also persist on each significant resize (not just unload) so a
  * crashed popup still has a reasonably recent position on record.
  */
 
-const STORAGE_KEY = 'raptor3000.windowPositions.v1';
+import {
+  savePosition,
+  windowStorageKey,
+  type StoredPosition,
+} from './windowPositionStore.js';
+
+export { windowStorageKey };
+
 const WRITE_DEBOUNCE_MS = 400;
-
-interface StoredPosition {
-  x: number;
-  y: number;
-  width: number;
-  height: number;
-}
-
-type PositionMap = Record<string, StoredPosition>;
-
-function loadMap(): PositionMap {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return {};
-    return JSON.parse(raw) as PositionMap;
-  } catch {
-    return {};
-  }
-}
-
-function saveMap(map: PositionMap): void {
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(map));
-  } catch {
-    // quota/disabled — silently skip
-  }
-}
 
 function snapshot(): StoredPosition {
   return {
@@ -63,9 +44,7 @@ export function installPositionTracker(key: string): () => void {
   let writeTimer: number | undefined;
 
   const persistNow = () => {
-    const map = loadMap();
-    map[key] = snapshot();
-    saveMap(map);
+    savePosition(key, snapshot());
   };
 
   const scheduleWrite = () => {
@@ -95,12 +74,4 @@ export function installPositionTracker(key: string): () => void {
     if (writeTimer != null) window.clearTimeout(writeTimer);
     persistNow();
   };
-}
-
-/**
- * Build the storage key for a popup from its window kind + optional id.
- * Must match WindowManager's `storageKeyFor` convention.
- */
-export function windowStorageKey(kind: string, id?: string | null): string {
-  return id ? `${kind}:${id}` : kind;
 }

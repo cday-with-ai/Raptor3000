@@ -19,12 +19,15 @@
  * up naturally with it.
  */
 
-export type WindowKind =
-  | 'main'
-  | 'chat'
-  | 'board'
-  | 'bugEar'
-  | 'preferences';
+import {
+  loadPosition,
+  savePosition,
+  windowStorageKey,
+  type StoredPosition,
+  type WindowKind,
+} from './windowPositionStore.js';
+
+export type { WindowKind };
 
 export interface OpenWindowSpec {
   kind: WindowKind;
@@ -36,13 +39,6 @@ export interface OpenWindowSpec {
   /** Optional explicit position; else cascaded. */
   x?: number;
   y?: number;
-}
-
-interface StoredPosition {
-  x: number;
-  y: number;
-  width: number;
-  height: number;
 }
 
 const CASCADE_STEP = 40;
@@ -67,8 +63,6 @@ const DEFAULT_ANCHOR: Record<WindowKind, { fx: number; fy: number }> = {
   preferences: { fx: 0.30, fy: 0.25 },
 };
 
-const STORAGE_KEY = 'raptor3000.windowPositions.v1';
-
 /**
  * How much of a window has to stay inside the available screen.
  *
@@ -82,28 +76,8 @@ const STORAGE_KEY = 'raptor3000.windowPositions.v1';
  */
 const MIN_VISIBLE = 120;
 
-type PositionMap = Record<string, StoredPosition>;
-
 function storageKeyFor(spec: OpenWindowSpec): string {
-  return spec.id ? `${spec.kind}:${spec.id}` : spec.kind;
-}
-
-function loadPositions(): PositionMap {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return {};
-    return JSON.parse(raw) as PositionMap;
-  } catch {
-    return {};
-  }
-}
-
-function savePositions(map: PositionMap): void {
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(map));
-  } catch {
-    // ignore quota / disabled-storage
-  }
+  return windowStorageKey(spec.kind, spec.id);
 }
 
 export class WindowManager {
@@ -164,7 +138,7 @@ export class WindowManager {
 
   private featuresFor(spec: OpenWindowSpec): string {
     const defaults = DEFAULTS[spec.kind];
-    const saved = loadPositions()[storageKeyFor(spec)];
+    const saved = loadPosition(storageKeyFor(spec));
     const width = spec.width ?? saved?.width ?? defaults.width;
     const height = spec.height ?? saved?.height ?? defaults.height;
     const pos = saved ?? this.defaultPosition(spec, width, height);
@@ -277,14 +251,12 @@ export class WindowManager {
   private attachPersistence(key: string, win: Window): void {
     const persist = () => {
       if (win.closed) return;
-      const positions = loadPositions();
-      positions[key] = {
+      savePosition(key, {
         x: win.screenX,
         y: win.screenY,
         width: win.outerWidth,
         height: win.outerHeight,
-      };
-      savePositions(positions);
+      });
     };
     // Poll — modern browsers don't fire reliable move events across windows.
     const interval = setInterval(() => {
