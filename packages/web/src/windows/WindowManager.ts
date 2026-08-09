@@ -8,7 +8,9 @@
  *   - Board windows are popups opened via `window.open(..., _blank, "...")`.
  *   - Each window URL carries its identity (`?window=board&id=42`). The param
  *     is `id`, not `game` — App.tsx reads `id` and hands it on as `gameId`.
- *   - Positions are cascaded if the user didn't persist a per-game layout.
+ *   - Positions are cascaded if the user didn't persist a per-game layout,
+ *     and are clamped onto a screen that currently exists before use — a
+ *     saved layout outlives the monitor it was made on.
  *   - Shared state: popups read `window.opener.raptor` — the main window
  *     hangs all stores + services on `window.raptor` at startup.
  *
@@ -66,6 +68,19 @@ const DEFAULT_ANCHOR: Record<WindowKind, { fx: number; fy: number }> = {
 };
 
 const STORAGE_KEY = 'raptor3000.windowPositions.v1';
+
+/**
+ * How much of a window has to stay inside the available screen.
+ *
+ * A saved position is replayed verbatim, so a monitor that has been unplugged
+ * — or a resolution that shrank — would otherwise hand `window.open` something
+ * like `left=2400` on a 1000px screen. The popup is not blocked, reports
+ * itself open, and is nowhere the user can see: indistinguishable, from the
+ * outside, from a board that never opened.
+ *
+ * 120px is enough of a frame to notice and to grab.
+ */
+const MIN_VISIBLE = 120;
 
 type PositionMap = Record<string, StoredPosition>;
 
@@ -153,8 +168,14 @@ export class WindowManager {
     const width = spec.width ?? saved?.width ?? defaults.width;
     const height = spec.height ?? saved?.height ?? defaults.height;
     const pos = saved ?? this.defaultPosition(spec, width, height);
-    const x = spec.x ?? pos.x;
-    const y = spec.y ?? pos.y;
+    // Clamped last, so nothing — saved record, explicit caller, or cascade —
+    // can hand the browser a position off the screen the user currently has.
+    const { x, y } = this.clampToScreen(
+      spec.x ?? pos.x,
+      spec.y ?? pos.y,
+      width,
+      height,
+    );
     // `popup` (canonical, no value) is what MDN documents and is the flag
     // Chrome/Firefox use to render a chromeless popup instead of a tab.
     // The explicit `=no` entries are legacy hints some older browsers
@@ -194,6 +215,42 @@ export class WindowManager {
     const x = baseX + cascade * CASCADE_STEP;
     const y = baseY + cascade * CASCADE_STEP;
     return { x, y, width, height };
+  }
+
+  /**
+   * Pull a position back onto a screen that exists right now.
+   *
+   * The two axes deliberately have different rules. Horizontally a window may
+   * hang off either edge as long as MIN_VISIBLE of it remains — overhang is an
+   * ordinary thing for a user to have arranged on purpose, and forcing the
+   * whole window into view would move windows nobody asked to move.
+   * Vertically the top edge is never allowed above the available area: a
+   * window is dragged by its top, so one that starts above the screen cannot
+   * be brought back, whereas one hanging off the side still can.
+   *
+   * Size is left alone. A window wider than the screen is awkward, not
+   * invisible, and shrinking a remembered size is a different decision.
+   */
+  private clampToScreen(
+    x: number,
+    y: number,
+    width: number,
+    height: number,
+  ): { x: number; y: number } {
+    const screen = this.availableScreen();
+    const keepX = Math.min(width, MIN_VISIBLE);
+    const keepY = Math.min(height, MIN_VISIBLE);
+
+    const minX = screen.left - (width - keepX);
+    const maxX = screen.left + screen.width - keepX;
+    const maxY = screen.top + screen.height - keepY;
+
+    // `max(lo, min(v, hi))` rather than the other order: if a screen is so
+    // small the bounds cross, the top-left corner is the half worth keeping.
+    return {
+      x: Math.max(minX, Math.min(x, maxX)),
+      y: Math.max(screen.top, Math.min(y, maxY)),
+    };
   }
 
   private availableScreen(): {

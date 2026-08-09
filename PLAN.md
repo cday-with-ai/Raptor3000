@@ -6,19 +6,62 @@ chat-parser trim + prompt filtering restored 2026-08-03; the `says:` tell form
 added 2026-08-04; blocked board popups made visible 2026-08-05; tab-prefix
 doubling fixed, the `/` panes made scrollable, theme changes taught to
 reach open popups, the dead board-toolbar buttons made to look dead, and
-`WindowManager` given its first tests, 2026-08-09.
+`WindowManager` given its first tests, and restored window positions clamped
+to the screen that currently exists, 2026-08-09.
 
 ## Where this is
 
 The connector, the parser and the board renderer all exist and are wired
-together. 289 unit tests pass in `packages/shared`, 94 in `packages/web`.
+together. 289 unit tests pass in `packages/shared`, 105 in `packages/web`.
+
+**A remembered window position can no longer put a board somewhere the user
+cannot look.** This was found while writing last run's `WindowManager` tests
+and left unfixed then; it is fixed now. `featuresFor` used to hand
+`window.open` whatever was in the saved record, so unplugging the monitor a
+board was last used on — or reopening at a smaller resolution — sent
+`left=2400` to a 1000px screen. The popup is not blocked, `open` returns a
+handle, `isOpen` says true, and nothing is visible: the fourth way to get "no
+board", and from the user's side identical to the other three.
+
+`clampToScreen` now runs last in `featuresFor`, on whatever the feature string
+is about to carry — saved record, cascade, or an explicit `spec.x`/`spec.y`.
+Nothing routes around it, which is the point of putting it there rather than
+in the saved branch.
+
+The rule is deliberately asymmetric, and the asymmetry is the part worth
+keeping:
+
+- **Horizontally** a window may hang off either edge as long as 120px of it
+  stays on screen. Overhang is an ordinary thing to have arranged on purpose,
+  and a rule that forces the whole window into view moves windows nobody asked
+  to move. Verified: forcing full containment reddens 13 tests, 4 of them
+  pre-existing ones that assert a saved position is restored as saved.
+- **Vertically** the top edge is never allowed above the available area at
+  all. You drag a window by its top; one that starts above the screen cannot
+  be brought back, whereas one hanging off the side still can.
+- It clamps against `availableScreen()`, not `0,0` — `availLeft`/`availTop` is
+  where a second monitor and a menu bar live, and clamping to the origin would
+  drop a window onto the wrong display.
+- **Size is untouched.** A window wider than the screen is awkward, not
+  invisible, and shrinking a remembered size is a separate decision.
+
+The clamp applies at open time and **does not rewrite the stored record** — the
+1500ms poll overwrites it once the popup reports where it actually landed. So
+`localStorage['raptor3000.windowPositions.v1']` can still read as off-screen
+after a successful open, and that is not a symptom. A test pins it.
+
+The 11 new tests are in the same file as the rest of `WindowManager`'s. All
+four halves were checked to bite by sabotage: dropping the clamp reddens 9,
+making the vertical rule symmetric reddens 2, clamping to `0,0` reddens 1,
+full containment reddens 13.
 
 **`WindowManager` is no longer untested.** It was the last React-free piece
 with no coverage, and it sat directly under the still-open "why doesn't the
 board appear" question: everything from the socket down to `GameManager.open`
 was pinned, and then the URL, the window name, the feature string and the
-position maths were not. The 35 tests in
-`packages/web/src/windows/__tests__/windowManager.test.ts` cover them.
+position maths were not. The 46 tests in
+`packages/web/src/windows/__tests__/windowManager.test.ts` cover them, 11 of
+which are the clamp described above.
 
 No jsdom was needed and none was added. What the class actually touches is
 `window.open`, `window.screen`, `location.pathname`, `localStorage` and two
@@ -36,7 +79,7 @@ The behaviours now pinned, several of which read as accidents until you look:
 
 - The board URL param is **`id`**, not `game`. The file's own header comment
   said `?window=board&game=42`; `App.tsx:26` reads `id`. The comment was the
-  wrong one and is the single production line this run changed.
+  wrong one, and correcting it was the only production line that run changed.
 - A saved position **short-circuits before `cascadeIndex++`**, so a board with
   a remembered spot does not consume a cascade slot and the next new board
   still opens at the first offset. That is the desirable behaviour and it is
@@ -49,19 +92,7 @@ The behaviours now pinned, several of which read as accidents until you look:
   than a `focus()` on a null. That is the `WindowManager` half of the contract
   `GameManager` relies on when it keeps a blocked game in `getOpenGameIds()`.
 
-**Found while writing it, and not fixed: nothing clamps a saved position to a
-screen that currently exists.** `featuresFor` takes `saved` verbatim. Unplug
-the monitor a board was last used on, or reopen at a smaller resolution, and
-`left=2400` is handed straight to `window.open` — the popup opens, is not
-blocked, reports itself open, and is not visible anywhere. That is a fourth
-way to get "no board" that looks exactly like the other three from the user's
-side, and it is now the strongest remaining suspect in the "not blocked and
-still no board" branch below, ahead of `BoardWindow`'s render. Clamping
-`x`/`y` into `availableScreen()` is a contained fix; it was left out because
-this run's increment was the tests, and a behaviour change bundled into them
-would have made both harder to review.
-
-Two smaller things about the same file, both left alone:
+Two smaller things about the same file, both still left alone:
 
 - `windowPosition.ts` re-declares `STORAGE_KEY`, `StoredPosition`,
   `loadMap`/`saveMap` and the key convention, with comments saying they must
@@ -347,15 +378,16 @@ Silence in the console with no board means it was not blocked.
 - If not blocked and still no board: the fault is downstream of GameService.
   The transport, login sequence, Style 12 parsing, mode derivation, the
   GameService→GameManager listener contract, GameManager's own
-  open/close/blocked behavior, and as of tonight the URL, window name, feature
-  string and position maths of `WindowManager.open` are all covered by tests.
-  What that leaves is two things. First, **the window may be opening off the
-  edge of the screen** — a remembered position is replayed unclamped, so a
-  monitor that is gone or a resolution that shrank puts the board somewhere
-  the user cannot see, with no error anywhere. Check that before anything
-  else: `localStorage['raptor3000.windowPositions.v1']` holds the coordinates,
-  and clearing that key restores the cascaded defaults. Second, `BoardWindow`'s
-  render, which has no test and needs a DOM.
+  open/close/blocked behavior, and the URL, window name, feature string and
+  position maths of `WindowManager.open` are all covered by tests. Opening off
+  the edge of the screen was the leading suspect as of last run and is now
+  closed: a remembered position is clamped at open time, so a gone monitor or
+  a shrunk resolution can no longer hide a board. Note the stored record is
+  *not* rewritten by the clamp, so
+  `localStorage['raptor3000.windowPositions.v1']` may still read as off-screen
+  while the window opens fine; clearing that key restores the cascaded
+  defaults, but it is no longer a fix for anything. What that leaves is
+  `BoardWindow`'s render, which has no test and needs a DOM.
 
 After that, in rough order: check `set height 240` was accepted (a rejection
 now announces itself as an INTERNAL error — just read the console); then drag
@@ -402,11 +434,10 @@ would match. It is Raptor's own idiom so it was left alone, but it is now
 tolerance without a purpose, and tightening it is a real if minor cleanup.
 
 Offline work that remains available, in rough order of what a night can
-finish: clamping a restored window position into the current
-`availableScreen()`, described above — small, self-contained, and the tests it
-needs are already sitting next to it. Then unifying the storage key and record
-shape that `WindowManager` and `windowPosition.ts` each declare separately.
-Then the smaller loose ends named elsewhere here: the stale `chessAlg.ts:122`
+finish: unifying the storage key and record shape that `WindowManager` and
+`windowPosition.ts` each declare separately — the duplicated constants are the
+real seam, and both files now have tests to land on. Then the smaller loose
+ends named elsewhere here: the stale `chessAlg.ts:122`
 comment, the Seek panel's hardcoded `#1b1f26`/`#2a313c` which stay dark in day
 mode, and `startsWithOrOffset1`'s now-purposeless offset branch. A true
 `BoardWindow` render test *would* need jsdom + testing-library added to the
@@ -414,14 +445,14 @@ lockfile — a daytime decision, not a nightly one, and it is now what stands
 between the toolbar tests and proof that a `disabled` button reaches the
 screen.
 
-The React-free-with-no-tests list is empty as of tonight. What has no coverage
+The React-free-with-no-tests list is empty as of 2026-08-09. What has no coverage
 now is React components and the two Playwright e2e specs, which is a different
 kind of gap and not one a night without a browser closes.
 
 Note the web suite is outside `bin/raptor-run.sh`'s ratchet, which counts only
 `packages/shared`. Tests added there are real but unguarded: nothing reverts a
-run that deletes them — and five consecutive nights have now landed their
-increment there (34 → 94 web tests since 2026-08-05) while the ratcheted count
+run that deletes them — and six consecutive nights have now landed their
+increment there (34 → 105 web tests since 2026-08-05) while the ratcheted count
 sat still at 289. That is not a fault in the work, but it does mean the gate
 has been watching an untouched suite for a working week, and the honest reading
 is no longer "a streak" but that the offline work left in this project is

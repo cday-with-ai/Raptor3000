@@ -477,6 +477,132 @@ describe('WindowManager — saved positions', () => {
   });
 });
 
+// ---- keeping a window on a screen that exists -------------------------------
+
+describe('WindowManager — clamping to the current screen', () => {
+  // The screen these run against is 1000 x 800 at (0, 0), and a board is
+  // 620 x 700, so the bounds are: x in [-500, 880], y in [0, 680].
+
+  it('pulls back a window saved on a monitor that is no longer there', () => {
+    // The failure this exists for: window.open succeeds, the popup is not
+    // blocked, it reports itself open, and it is nowhere the user can look.
+    storage.seedPositions({
+      'board:42': { x: 2400, y: 300, width: 620, height: 700 },
+    });
+    new WindowManager().open(board('42'));
+    expect(geometryOf(openCalls[0])).toMatchObject({ left: 880, top: 300 });
+  });
+
+  it('pulls back a window saved off the left of the screen', () => {
+    storage.seedPositions({
+      'board:42': { x: -1900, y: 300, width: 620, height: 700 },
+    });
+    new WindowManager().open(board('42'));
+    expect(geometryOf(openCalls[0])).toMatchObject({ left: -500, top: 300 });
+  });
+
+  it('never opens a window with its top edge above the screen', () => {
+    // Asymmetric on purpose: a window is dragged by its top, so one that
+    // starts above the screen cannot be brought back down.
+    storage.seedPositions({
+      'board:42': { x: 100, y: -300, width: 620, height: 700 },
+    });
+    new WindowManager().open(board('42'));
+    expect(geometryOf(openCalls[0])).toMatchObject({ left: 100, top: 0 });
+  });
+
+  it('pulls back a window saved below the bottom of the screen', () => {
+    storage.seedPositions({
+      'board:42': { x: 100, y: 1400, width: 620, height: 700 },
+    });
+    new WindowManager().open(board('42'));
+    expect(geometryOf(openCalls[0])).toMatchObject({ left: 100, top: 680 });
+  });
+
+  it('leaves an overhang the user arranged deliberately alone', () => {
+    // 800 + 620 runs 420px past the right edge and stays put — only the
+    // unreachable case is a bug, and moving windows nobody moved is worse.
+    storage.seedPositions({
+      'board:42': { x: 800, y: 600, width: 620, height: 700 },
+    });
+    new WindowManager().open(board('42'));
+    expect(geometryOf(openCalls[0])).toMatchObject({ left: 800, top: 600 });
+  });
+
+  it('clamps against the available area, not the raw screen', () => {
+    // availLeft/availTop is where a second monitor or a menu bar shows up;
+    // clamping to 0,0 would drop a window onto the wrong display.
+    uninstallGlobals();
+    installGlobals({ availLeft: 1000, availTop: 25 });
+    storage.seedPositions({
+      'board:42': { x: 0, y: 0, width: 620, height: 700 },
+    });
+    new WindowManager().open(board('42'));
+    expect(geometryOf(openCalls[0])).toMatchObject({ left: 500, top: 25 });
+  });
+
+  it('clamps an explicit caller position too', () => {
+    // Nothing gets to route around this: it is applied to whatever the
+    // feature string is about to carry, whoever chose it.
+    new WindowManager().open({ kind: 'board', id: '42', x: 9000, y: 9000 });
+    expect(geometryOf(openCalls[0])).toMatchObject({ left: 880, top: 680 });
+  });
+
+  it('clamps position without touching the remembered size', () => {
+    storage.seedPositions({
+      'board:42': { x: 3000, y: 3000, width: 1400, height: 1200 },
+    });
+    new WindowManager().open(board('42'));
+    // Bounds shift with the width: keep 120 visible of a 1400-wide window.
+    expect(geometryOf(openCalls[0])).toEqual({
+      left: 880,
+      top: 680,
+      width: 1400,
+      height: 1200,
+    });
+  });
+
+  it('keeps the top-left corner when the window is taller than the screen', () => {
+    uninstallGlobals();
+    installGlobals({ availWidth: 400, availHeight: 300, width: 400, height: 300 });
+    storage.seedPositions({
+      'board:42': { x: 0, y: 200, width: 620, height: 700 },
+    });
+    new WindowManager().open(board('42'));
+    // maxY (300 - 120) is above screen.top only in degenerate cases; here it
+    // is 180, so the saved 200 comes back to it rather than going negative.
+    expect(geometryOf(openCalls[0])).toMatchObject({ left: 0, top: 180 });
+  });
+
+  it('leaves default and cascaded placements untouched', () => {
+    // The clamp sits after the cascade, so it must not quietly become a
+    // second placement rule for windows that were already on screen.
+    const wm = new WindowManager();
+    wm.open(board('1'));
+    wm.open(board('2'));
+    wm.open({ kind: 'chat' });
+
+    expect(geometryOf(openCalls[0])).toMatchObject({ left: 320, top: 64 });
+    expect(geometryOf(openCalls[1])).toMatchObject({ left: 360, top: 104 });
+    expect(geometryOf(openCalls[2])).toMatchObject({ left: 20, top: 96 });
+  });
+
+  it('re-clamps on every open, so a shrunk resolution is noticed', () => {
+    // The saved record is not rewritten — the manager's own poll will do that
+    // once the popup reports where it actually landed.
+    storage.seedPositions({
+      'board:42': { x: 2400, y: 300, width: 620, height: 700 },
+    });
+    const wm = new WindowManager();
+    wm.open(board('42'));
+    wm.close(board('42'));
+    wm.open(board('42'));
+
+    expect(geometryOf(openCalls[1])).toMatchObject({ left: 880, top: 300 });
+    expect(storage.positions()['board:42']).toMatchObject({ x: 2400 });
+  });
+});
+
 // ---- position persistence ---------------------------------------------------
 
 describe('WindowManager — persisting where the user put a window', () => {
