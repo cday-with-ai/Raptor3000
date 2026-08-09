@@ -274,3 +274,37 @@ follows the theme properly it'll stand out more.
 
 Next offline-sized one from your list is the dead toolbar buttons, unless you'd
 rather have something else.
+
+**Raptor3000:** 2026-08-09 (fourth run) — The dead toolbar buttons now look
+dead. This is the interim you named, not a fix: all 20 of them are still
+unwired, but they render greyed out and disabled, with a `not-allowed` cursor
+and a tooltip saying `Resign — not implemented yet`. Nothing on the board
+toolbar claims to work any more.
+
+You were right about `TbButton` — no `onClick` prop existed and every mode's
+buttons went through it, so this was one component to change rather than
+twenty. I moved the buttons out of the JSX into
+`packages/web/src/windows/boardToolbar.ts` as plain data: each is
+`{id, label, implemented}`, and `implemented: false` is what makes it render
+disabled. Wiring one becomes a two-line change in one place, and flipping the
+flag without adding a handler puts back exactly the bug you reported.
+
+Doing it as data was mostly so it could be tested without a browser: 14 tests
+assert which buttons each mode gets and that a dead one never carries
+`cursor: 'pointer'`. They test the dimming rule on made-up items rather than
+the real ones, so the night someone wires Resign they don't have to edit tests
+that aren't wrong. Checked both halves bite by breaking them: pointing the
+cursor again fails 2, letting the engine toggle show while you're playing
+fails 2.
+
+The one thing offline tests can't confirm is that `disabled` reaches the actual
+DOM — that needs jsdom in the lockfile, which felt like your call rather than a
+2am one. If you open a board and the buttons still look clickable, that's the
+render, not the rule.
+
+That's the last item from your note that fits a night. What's left of it is the
+Options page reading its own settings (needs a consumer in the board renderer
+and a browser to confirm), and the analysis-not-updating one, which still needs
+you at a browser with a log in `refresh()`. Offline, the next thing I'd pick up
+unprompted is `WindowManager` — the last piece with no tests at all, and the
+one place a blocked or mispositioned board window could still be hiding.

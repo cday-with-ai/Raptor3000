@@ -16,6 +16,11 @@ import {
 } from '@raptor3000/shared';
 import type { RaptorContext } from './appContext.js';
 import { BoardLayout } from '../layout/BoardLayout.js';
+import {
+  toolbarButtonProps,
+  toolbarLayoutFor,
+  type ToolbarItem,
+} from './boardToolbar.js';
 import { installPositionTracker, windowStorageKey } from './windowPosition.js';
 import type { EngineAnalysis } from '../engine/EngineService.js';
 
@@ -745,82 +750,23 @@ function Section({
   );
 }
 
+/**
+ * The buttons themselves live in `boardToolbar.ts` as data, so the mode →
+ * buttons mapping and the dimming rule can be tested without a DOM. Every
+ * item there is currently `implemented: false`, which is what makes these
+ * render disabled — see that file before wiring a handler.
+ */
 function Toolbar({ mode }: { mode: BoardModeCode }) {
-  const navButtons = (
-    <>
-      <TbButton>⏮</TbButton>
-      <TbButton>◀</TbButton>
-      <TbButton>▶</TbButton>
-      <TbButton>⏭</TbButton>
-    </>
-  );
-  const engineToggle = engineAnalysisAllowed(mode) && (
-    <TbButton>Engine</TbButton>
-  );
-
-  let right: React.ReactNode;
-  switch (mode) {
-    case BoardMode.PLAYING:
-      right = (
-        <>
-          <TbButton>O-O</TbButton>
-          <TbButton>O-O-O</TbButton>
-          <TbButton>Draw</TbButton>
-          <TbButton>Abort</TbButton>
-          <TbButton>Adjourn</TbButton>
-          <TbButton>Resign</TbButton>
-        </>
-      );
-      break;
-    case BoardMode.OBSERVING:
-      right = (
-        <>
-          {engineToggle}
-          <TbButton>Update</TbButton>
-          <TbButton>Winners</TbButton>
-        </>
-      );
-      break;
-    case BoardMode.EXAMINING:
-      right = (
-        <>
-          {engineToggle}
-          <TbButton>Setup</TbButton>
-          <TbButton>Commit</TbButton>
-          <TbButton>Revert</TbButton>
-        </>
-      );
-      break;
-    case BoardMode.SETUP:
-      return (
-        <ToolbarShell>
-          <TbButton>Clear</TbButton>
-          <TbButton>FromFEN</TbButton>
-          <TbButton>Start</TbButton>
-          <span style={{ flex: 1 }} />
-          <TbButton>Done</TbButton>
-        </ToolbarShell>
-      );
-    case BoardMode.INACTIVE:
-      right = (
-        <>
-          {engineToggle}
-          <TbButton>Rematch</TbButton>
-          <TbButton>Save PGN</TbButton>
-        </>
-      );
-      break;
-    case BoardMode.BUGHOUSE_SUGGEST:
-      right = <TbButton>Update</TbButton>;
-      break;
-  }
-
+  const { left, right } = toolbarLayoutFor(mode);
   return (
     <ToolbarShell>
-      {navButtons}
+      {left.map((item) => (
+        <TbButton key={item.id} item={item} />
+      ))}
       <span style={{ flex: 1 }} />
-      <TbButton>Flip</TbButton>
-      {right}
+      {right.map((item) => (
+        <TbButton key={item.id} item={item} />
+      ))}
     </ToolbarShell>
   );
 }
@@ -841,20 +787,11 @@ function ToolbarShell({ children }: { children: React.ReactNode }) {
   );
 }
 
-function TbButton({ children }: { children: React.ReactNode }) {
+function TbButton({ item }: { item: ToolbarItem }) {
+  const { disabled, title, style } = toolbarButtonProps(item);
   return (
-    <button
-      style={{
-        padding: '4px 10px',
-        background: 'var(--bg-input)',
-        color: 'var(--fg)',
-        border: '1px solid #3a4150',
-        borderRadius: 4,
-        cursor: 'pointer',
-        fontSize: 12,
-      }}
-    >
-      {children}
+    <button disabled={disabled} title={title} style={style}>
+      {item.label}
     </button>
   );
 }

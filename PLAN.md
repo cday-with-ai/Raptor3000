@@ -4,13 +4,14 @@ Written 2026-07-26 from a live session against freechess.org; connector→board
 seam test added 2026-08-01; setting-rejection surfacing added 2026-08-02;
 chat-parser trim + prompt filtering restored 2026-08-03; the `says:` tell form
 added 2026-08-04; blocked board popups made visible 2026-08-05; tab-prefix
-doubling fixed, the `/` panes made scrollable, and theme changes taught to
-reach open popups 2026-08-09.
+doubling fixed, the `/` panes made scrollable, theme changes taught to
+reach open popups, and the dead board-toolbar buttons made to look dead
+2026-08-09.
 
 ## Where this is
 
 The connector, the parser and the board renderer all exist and are wired
-together. 289 unit tests pass in `packages/shared`, 45 in `packages/web`.
+together. 289 unit tests pass in `packages/shared`, 59 in `packages/web`.
 
 **`queue/suggestions.md` has a large 2026-08-05 note from Carson, answered
 2026-08-09 but only one item of it acted on.** That file now carries better
@@ -21,9 +22,38 @@ short: the Options page writes seven preferences that nothing reads
 (`loadPreferences` is called once, in `OptionsPage`), which is the root of both
 the piece-set and theme complaints; every board toolbar button is decorative
 because `TbButton` takes no `onClick`; theme changes never reach already-open
-popups. The pane-clipping and theme-propagation items on that list are done
-(below); **the dead toolbar buttons are the last nightly-sized one**, and the
-rest of the list needs either a browser or a consumer wired into the renderer.
+popups. The pane-clipping, theme-propagation and dead-toolbar items on that
+list are done (below); **what remains of it needs either a browser or a
+consumer wired into the renderer**, and the Options page talking only to
+itself is the biggest of them.
+
+**The board toolbar no longer advertises buttons that do nothing.** All 20 of
+them are still unwired — that part is unchanged — but they now render
+`disabled`, at 0.4 opacity, with a `not-allowed` cursor and a title saying
+`<label> — not implemented yet`. This is the interim Carson asked for, not a
+fix: a control that looks live and does nothing reads as a broken app, whereas
+a greyed one reads as an unfinished one, which is what this is.
+
+The buttons moved out of JSX and into `packages/web/src/windows/boardToolbar.ts`
+as data — `toolbarLayoutFor(mode)` returns `{left, right}` of
+`{id, label, implemented}`, and `toolbarButtonProps(item)` is the rule that
+turns an item into what `TbButton` renders. That split is what lets the mode →
+buttons mapping be asserted with no DOM; `Toolbar` is now a map over two arrays
+and `TbButton` takes an item instead of children. `implemented` is a claim
+about a handler existing and there is nothing that can check it — it is the
+wiring commit's job to flip it, and flipping it early gets you back the exact
+bug this removed.
+
+The 14 tests in `packages/web/src/windows/__tests__/boardToolbar.test.ts` pin
+the per-mode button sets (including SETUP replacing the toolbar rather than
+adding to it, and the engine toggle appearing exactly where
+`engineAnalysisAllowed` says), and pin the dimming rule on *synthetic* items
+with `implemented` both ways rather than on the real all-false ones — so the
+first commit that wires a button doesn't have to edit tests it didn't break.
+Both halves verified by sabotage: making the dead branch `cursor: 'pointer'`
+reddens 2, widening the engine toggle to "any mode but PLAYING" reddens 2.
+What they cannot see is the render — whether a `disabled` attribute actually
+reaches the DOM still needs jsdom.
 
 **A theme change now reaches windows that are already open.** `applyTheme`
 writes `document.documentElement.dataset.theme` on whichever document called
@@ -305,30 +335,37 @@ would match. It is Raptor's own idiom so it was left alone, but it is now
 tolerance without a purpose, and tightening it is a real if minor cleanup.
 
 Offline work that remains available, in rough order of what a night can
-finish: the **dead board-toolbar buttons** — `TbButton`
-(`BoardWindow.tsx:844`) takes only `children`, so every button in every mode
-renders a handler-less `<button>` while carrying `cursor: 'pointer'`; the
-honest interim Carson suggested is dimming or disabling the ones with nothing
-behind them, which is bounded and needs no DOM. Then `WindowManager`, the last
-React-free piece with no tests. `featuresFor`, `urlFor`, `storageKeyFor` and the cascade
-maths are pure string/number work; they need `window.screen` and
-`localStorage`, which are a few lines of stub, not jsdom. A true `BoardWindow`
-render test *would* need jsdom + testing-library added to the lockfile — a
-daytime decision, not a nightly one.
+finish: `WindowManager`, the last React-free piece with no tests.
+`featuresFor`, `urlFor`, `storageKeyFor` and the cascade maths are pure
+string/number work; they need `window.screen` and `localStorage`, which are a
+few lines of stub, not jsdom. Then the smaller loose ends named elsewhere here:
+the stale `chessAlg.ts:122` comment, the Seek panel's hardcoded
+`#1b1f26`/`#2a313c` which stay dark in day mode, and `startsWithOrOffset1`'s
+now-purposeless offset branch. A true `BoardWindow` render test *would* need
+jsdom + testing-library added to the lockfile — a daytime decision, not a
+nightly one, and it is now what stands between the toolbar tests and proof that
+a `disabled` button reaches the screen.
 
 Note the web suite is outside `bin/raptor-run.sh`'s ratchet, which counts only
 `packages/shared`. Tests added there are real but unguarded: nothing reverts a
-run that deletes them — and three consecutive nights have now landed their
-increment there (34 → 45 web tests since 2026-08-05) while the ratcheted count
+run that deletes them — and four consecutive nights have now landed their
+increment there (34 → 59 web tests since 2026-08-05) while the ratcheted count
 sat still at 289. That is not a fault in the work, but it does mean the gate
-has been watching an untouched suite. `count_skips` does scan `packages/*/src`, so silencing
-one is still caught.
+has been watching an untouched suite, and the streak is now long enough that
+the honest reading is that the offline work left in this project is nearly all
+in `packages/web`. `count_skips` does scan `packages/*/src`, so silencing one
+is still caught.
 
 `npx tsc --noEmit` in `packages/web` is red on two pre-existing unused-symbol
 errors in `EngineManager.test.ts` (an unused `BoardMode` import and an unused
 `_mgr` binding, both TS6133). They predate 2026-08-05 and were left alone
 rather than swept up mid-increment, but they mean `yarn typecheck` there
-cannot currently be used as a gate.
+cannot currently be used as a gate. It is still worth running: those two lines
+are the whole expected output, so anything else in it is yours.
+
+`yarn lint` in `packages/web` does not run at all — the script calls eslint 10,
+which wants a flat `eslint.config.js`, and there is no eslint config anywhere in
+the repo. Not worth fixing mid-increment; worth not mistaking for a clean lint.
 
 **Typechecking `packages/web` reads shared's `dist`, not its source, and
 `dist` is gitignored.** The tsconfig project reference `{ "path": "../shared" }`
