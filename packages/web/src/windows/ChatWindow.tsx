@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
+  applyTabPrefix,
   ChatEventType,
   type ChatEvent,
 } from '@raptor3000/shared';
@@ -20,7 +21,8 @@ import { installPositionTracker, windowStorageKey } from './windowPosition.js';
  *
  * When the user types a message, we prepend the active tab's prefix
  * (`tell 50 `, `tell alice `, `ptell `, or nothing for main) so the input
- * flows to the right place.
+ * flows to the right place — via `applyTabPrefix`, so typing the command out
+ * of habit doesn't send `tell 50 tell 50 ...`.
  */
 export const ChatWindow = function ChatWindow({
   context,
@@ -63,8 +65,7 @@ export const ChatWindow = function ChatWindow({
 
   const submit = (line: string) => {
     if (line.length === 0) return;
-    const prefixed = activeTab.prefix ? activeTab.prefix + line : line;
-    const sent = context.connector.sendMessage(prefixed);
+    const sent = context.connector.sendMessage(applyTabPrefix(activeTab.prefix, line));
     if (!sent) {
       // Not connected — synthesize an INTERNAL event so the user sees it.
       setEvents(prev =>

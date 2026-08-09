@@ -3,12 +3,44 @@
 Written 2026-07-26 from a live session against freechess.org; connector→board
 seam test added 2026-08-01; setting-rejection surfacing added 2026-08-02;
 chat-parser trim + prompt filtering restored 2026-08-03; the `says:` tell form
-added 2026-08-04; blocked board popups made visible 2026-08-05.
+added 2026-08-04; blocked board popups made visible 2026-08-05; tab-prefix
+doubling fixed 2026-08-09.
 
 ## Where this is
 
 The connector, the parser and the board renderer all exist and are wired
-together. 267 unit tests pass in `packages/shared`, 22 in `packages/web`.
+together. 289 unit tests pass in `packages/shared`, 22 in `packages/web`.
+
+**`queue/suggestions.md` has a large 2026-08-05 note from Carson, answered
+2026-08-09 but only one item of it acted on.** That file now carries better
+diagnosis of the UI layer than this plan does — read it before deciding what
+to do next, and prefer it to the "next" section below, which is about the
+board popup and has been blocked on a human since 2026-07-26. Its triage, in
+short: the Options page writes seven preferences that nothing reads
+(`loadPreferences` is called once, in `OptionsPage`), which is the root of both
+the piece-set and theme complaints; every board toolbar button is decorative
+because `TbButton` takes no `onClick`; the help and options panes clip their
+overflow; theme changes never reach already-open popups. The scroll fix and the
+theme `storage`-event plumbing are the two that look nightly-sized.
+
+**A tab no longer doubles a prefix the user typed.** Typing `tell 39 hi` in the
+channel-39 tab sent `tell 39 tell 39 hi`, because the prefix is applied at send
+time here rather than pre-inserted into the input widget as Raptor does it, so
+nothing could see that the user had already typed it. `applyTabPrefix` in
+`stores/TabPrefix.ts` now treats a leading copy of *this tab's own* command and
+target as the prefix. Two call sites were prepending independently —
+`ChatTabStore.sendInput` and `ChatWindow.tsx`'s `submit`, which is the one the
+popup actually uses; fixing only the store would have been invisible. Three
+bounds are deliberate and pinned by tests: one occurrence stripped, this tab's
+target only (`tell 40` in the 39 tab still doubles, visibly, rather than
+silently redirecting and then being dropped by the tab's own echo filter), and
+no abbreviation matching. A test asserts the de-duplicated outbound still
+satisfies `ChannelTabStore.accepts`, so the echo can't fall out of its own
+transcript.
+
+`TabPrefix` had no callers before this — `ChatTabStore` and `ChatWindow` each
+built the same strings inline. They still do for the tab's `prefix` field; only
+the application of it is shared now.
 
 **A blocked board popup now announces itself in the app.**
 `onBoardWindowBlocked` was a hook nobody ever assigned — the blocked branch
@@ -150,6 +182,10 @@ than code:
 
 ## Next thing that would make sense
 
+Carson's 2026-08-05 note (summarised above, in full in `queue/suggestions.md`)
+now describes more of the real state of the UI than this section does. What
+follows is still true and still blocked.
+
 **Confirm or kill the popup hypothesis**, because it's cheap and it decides
 where everything else looks. It still needs a human with a browser — nothing
 offline can settle it — but as of 2026-08-05 it no longer needs devtools open
@@ -227,6 +263,16 @@ errors in `EngineManager.test.ts` (an unused `BoardMode` import and an unused
 `_mgr` binding, both TS6133). They predate 2026-08-05 and were left alone
 rather than swept up mid-increment, but they mean `yarn typecheck` there
 cannot currently be used as a gate.
+
+**Typechecking `packages/web` reads shared's `dist`, not its source, and
+`dist` is gitignored.** The tsconfig project reference `{ "path": "../shared" }`
+makes `tsc` resolve `@raptor3000/shared` through the emitted declarations, so a
+symbol added to `packages/shared/src` shows up in web as `has no exported
+member` until `npx tsc -b` is run in `packages/shared`. Vite is not affected —
+`package.json` `main` points at `src/index.ts`, so the running app always sees
+source. Cost ten minutes on 2026-08-09 chasing an export that was already
+there. Anything that adds a shared export must rebuild shared before believing
+web's typecheck.
 
 ## Notes for whoever picks this up
 

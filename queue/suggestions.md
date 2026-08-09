@@ -139,3 +139,65 @@ observed game.
 
 Carson also said to pass on: good job, keep going, he's impressed with the
 progress.
+
+**Raptor3000:** 2026-08-09 — The `tell 39 tell 39` one is fixed. Everything
+else here is read and triaged below, untouched; one item per night.
+
+The fix is a new `applyTabPrefix(prefix, input)` in
+`packages/shared/src/stores/TabPrefix.ts`. If what you typed already opens with
+this tab's own command and target, that counts as the prefix instead of as
+message text. It covers the person tabs and `ptell` as you guessed, and
+`xwhisper` for game chat, since they all go through the one function.
+
+Two places were prepending, not one. `ChatTabStore.sendInput` is the shared
+one, but the chat popup you actually type into had its own copy at
+`ChatWindow.tsx:66` — fixing only the store would have changed nothing you
+could see. Both now call the shared function. 22 tests cover it.
+
+Three judgement calls in there, all deliberate:
+
+- It strips **one** occurrence. In an alice tab, `tell alice tell alice about
+  the bug` keeps the second one, because that is the sentence alice is meant to
+  read.
+- It matches **this tab's target only**. Type `tell 40 hi` in the 39 tab and
+  you still get `tell 39 tell 40 hi` — a line FICS will reject visibly. The
+  wider rule, suppressing any leading command, means a tab quietly sends
+  somewhere else *and* the tab's own echo filter drops it, so the line
+  disappears from the transcript with no error. If you want that behaviour
+  anyway, say so; the seam is one function.
+- Abbreviations are not matched. `t 39 hi` still doubles. FICS accepts `t` for
+  `tell`, but the abbreviation table isn't in this codebase and guessing at it
+  is how a prefix filter starts eating real messages.
+
+One accident of the fix worth knowing: `TELL   39   hi` now sends as
+`tell 39 hi`. The prefix is re-emitted canonically, so spacing you typed
+between the command and the target is normalised. Nothing after the target is
+touched.
+
+On the rest — your own notes here did most of the diagnostic work, and they
+hold up on re-reading. Rough order of what they imply, for whoever picks the
+next one:
+
+- **The Options page talking only to itself** is the biggest of these by some
+  distance. It makes seven settings look broken at once, and the piece set and
+  theme complaints are both downstream of it. Not a nightly-sized job: it needs
+  a consumer wired into the board renderer, and confirming that is real needs a
+  browser.
+- **cburnett** is right — it's lichess's default and it's GPL. That does mean
+  Raptor3000 taking on GPL-licensed assets, which is your call, not mine.
+- **The dead toolbar buttons** and **the two unscrollable panes** are both
+  offline-doable, small, and self-contained. The scroll one is a good next
+  nightly: your `overflow: 'auto'` *plus* `minHeight: 0` note is the actual
+  trap, and it applies to the Options grid identically.
+- **Theme not reaching open popups** — the `storage`-event design you sketched
+  is the right shape, and testable without a DOM at the subscribe/re-apply
+  boundary.
+- **SAN in the engine PV**: agreed, park it. Disambiguation needs legal-move
+  generation, the ChessAPI port is unstarted, and a from/to heuristic is wrong
+  exactly where notation earns its keep.
+- **Analysis not updating / position out of sync**: your inspection chain is
+  right and I have nothing to add statically. This is the one that genuinely
+  needs you at a browser with a log at `refresh()`.
+- The stale comment at `chessAlg.ts:122` is still there — it's a one-line
+  fix but it isn't tonight's, and swept-up extras are how an increment stops
+  being reviewable.

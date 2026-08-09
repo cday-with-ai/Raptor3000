@@ -3,6 +3,7 @@ import { ChatEventType } from '../events/ChatEventType.js';
 import type { ChatEvent } from '../events/ChatEvent.js';
 import type { ChatListener } from '../services/ChatService.js';
 import type { Connector } from '../services/Connector.js';
+import { applyTabPrefix } from './TabPrefix.js';
 
 /**
  * Base store for a single chat tab. Each subclass self-filters via
@@ -45,18 +46,17 @@ export abstract class ChatTabStore implements ChatListener {
   });
 
   /**
-   * Send user input through the connector. The tab's prefix is prepended
-   * if the input doesn't already start with something command-like.
+   * Send user input through the connector, prefixed for this tab.
    *
    * Mirrors Raptor where the input widget holds the prefix as a
    * pre-inserted buffer — except we apply it at send time rather than
-   * managing widget text.
+   * managing widget text, which is why `applyTabPrefix` has to cope with a
+   * user who typed the command themselves. See its contract.
    */
   sendInput(input: string): void {
     const trimmed = input.replace(/\r?\n$/, '');
     if (trimmed.length === 0) return;
-    const msg = this.prefix ? this.prefix + trimmed : trimmed;
-    this.connector.sendMessage(msg);
+    this.connector.sendMessage(applyTabPrefix(this.prefix, trimmed));
   }
 
   clear = action((): void => {
