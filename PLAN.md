@@ -4,12 +4,12 @@ Written 2026-07-26 from a live session against freechess.org; connector→board
 seam test added 2026-08-01; setting-rejection surfacing added 2026-08-02;
 chat-parser trim + prompt filtering restored 2026-08-03; the `says:` tell form
 added 2026-08-04; blocked board popups made visible 2026-08-05; tab-prefix
-doubling fixed 2026-08-09.
+doubling fixed and the `/` panes made scrollable 2026-08-09.
 
 ## Where this is
 
 The connector, the parser and the board renderer all exist and are wired
-together. 289 unit tests pass in `packages/shared`, 22 in `packages/web`.
+together. 289 unit tests pass in `packages/shared`, 34 in `packages/web`.
 
 **`queue/suggestions.md` has a large 2026-08-05 note from Carson, answered
 2026-08-09 but only one item of it acted on.** That file now carries better
@@ -19,9 +19,32 @@ board popup and has been blocked on a human since 2026-07-26. Its triage, in
 short: the Options page writes seven preferences that nothing reads
 (`loadPreferences` is called once, in `OptionsPage`), which is the root of both
 the piece-set and theme complaints; every board toolbar button is decorative
-because `TbButton` takes no `onClick`; the help and options panes clip their
-overflow; theme changes never reach already-open popups. The scroll fix and the
-theme `storage`-event plumbing are the two that look nightly-sized.
+because `TbButton` takes no `onClick`; theme changes never reach already-open
+popups. The pane-clipping item on that list is done (below); the theme
+`storage`-event plumbing and the dead toolbar buttons are what is left of the
+nightly-sized ones.
+
+**The `/` panes scroll.** Help, Options and Seek clipped everything past the
+viewport. `packages/web/src/windows/shellStyles.ts` now holds the shell's
+layout skeleton — `pageShell`, `pageHeader`, `footer` and a `scrollPane` base
+the three panes spread — and the panes are built from it rather than each
+declaring `flex: 1` inline. Three things had to be true together, which is why
+this had survived looking like a one-liner: the pane needs `overflow: 'auto'`
+*and* `minHeight: 0` (a flex child's default `min-height: auto` won't shrink
+below its content, so overflow alone never has anything to do), and the column
+above it has to be bounded — `pageShell` was `minHeight: '100vh'`, which grows
+with its content and therefore never over-constrains the pane. Header and
+footer are `flexShrink: 0` so the squeeze lands on the pane. Seek got the same
+treatment: Carson only named Help and Options, but it was the third instance of
+the identical shape in the same shell.
+
+`packages/web/src/windows/__tests__/shellLayout.test.ts` walks the module's
+exports rather than a fixed list, so any pane added there later with `flex: 1`
+must carry the pair or fail. Verified by deleting `minHeight` and watching four
+cases go red. What it cannot see is a pane declared inline in a component —
+having the growing panes in one module is what gives that check somewhere to
+stand. And it asserts what the shell hands React, not layout: a real scroll
+still needs a browser.
 
 **A tab no longer doubles a prefix the user typed.** Typing `tell 39 hi` in the
 channel-39 tab sent `tell 39 tell 39 hi`, because the prefix is applied at send

@@ -5,6 +5,13 @@ import { loginWithContext } from './appContext.js';
 import { getWindowManager } from './WindowManager.js';
 import { LoginScreen, type LoginSubmission } from './LoginScreen.js';
 import { SeekGraphTab } from './SeekGraphTab.js';
+import {
+  pageShell,
+  pageHeader,
+  footer,
+  helpContainer,
+  optionsGrid,
+} from './shellStyles.js';
 import { loadProfile, loadSelection } from '../loginProfiles.js';
 import {
   applyTheme,
@@ -560,21 +567,6 @@ function hydrateAutoLogin(): LoginSubmission | null {
   return { profile: sel.activeProfile, creds, autoConnect: sel.autoConnect };
 }
 
-const pageShell = {
-  minHeight: '100vh',
-  display: 'flex',
-  flexDirection: 'column',
-  background: 'var(--bg)',
-  color: 'var(--fg)',
-  fontFamily: 'system-ui, -apple-system, sans-serif',
-} as const;
-
-const pageHeader = {
-  padding: '20px 32px 16px',
-  borderBottom: '1px solid var(--border)',
-  background: 'var(--bg-raised)',
-} as const;
-
 const brand = {
   fontSize: 22,
   fontWeight: 700,
@@ -594,18 +586,6 @@ const headerRow = {
 const navRow = {
   display: 'flex',
   gap: 6,
-} as const;
-
-const helpContainer = {
-  flex: 1,
-  display: 'flex',
-  flexDirection: 'column' as const,
-  gap: 16,
-  padding: 24,
-  maxWidth: 900,
-  margin: '0 auto',
-  width: '100%',
-  boxSizing: 'border-box' as const,
 } as const;
 
 const helpP = {
@@ -656,18 +636,6 @@ const pre = {
   margin: '6px 0 10px',
   whiteSpace: 'pre-wrap' as const,
   wordBreak: 'break-all' as const,
-} as const;
-
-const optionsGrid = {
-  flex: 1,
-  display: 'grid',
-  gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))',
-  gap: 16,
-  padding: 24,
-  maxWidth: 1200,
-  margin: '0 auto',
-  width: '100%',
-  boxSizing: 'border-box' as const,
 } as const;
 
 const sectionStyle = {
@@ -747,10 +715,3 @@ const linkBtn = {
   fontSize: 12,
 } as const;
 
-const footer = {
-  padding: '10px 32px',
-  borderTop: '1px solid var(--border)',
-  background: 'var(--bg-raised)',
-  fontSize: 11,
-  opacity: 0.5,
-} as const;

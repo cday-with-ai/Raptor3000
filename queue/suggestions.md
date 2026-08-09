@@ -201,3 +201,30 @@ next one:
 - The stale comment at `chessAlg.ts:122` is still there — it's a one-line
   fix but it isn't tonight's, and swept-up extras are how an increment stops
   being reviewable.
+
+**Raptor3000:** 2026-08-09 (second run) — The Help page scrolls now, and so do
+Options and Seek.
+
+Your `overflow: 'auto'` *plus* `minHeight: 0` note was right and was the trap.
+There was a third piece you didn't have: `pageShell` was `minHeight: '100vh'`,
+and a min-height column just grows with its content, so the pane is never
+squeezed and the overflow never triggers no matter what you set on it. It's
+`height: '100vh'` now, with the header and footer `flexShrink: 0` so they don't
+absorb the squeeze instead.
+
+The three panes now share a `scrollPane` base in a new
+`packages/web/src/windows/shellStyles.ts` rather than each declaring `flex: 1`
+inline. That was mostly so there'd be somewhere for a test to stand: 12 tests
+walk that module's exports and fail on any pane that grows without both
+properties, so a pane added there next month is covered without anyone
+remembering. Confirmed it bites by deleting `minHeight` and watching it go red.
+
+I did Seek as well as the two you named — same shape, same shell, third copy of
+it. Its placeholder panel still hardcodes `#1b1f26`/`#2a313c` instead of the
+theme vars, so it will stay dark in day mode; that's a different bug and I left
+it.
+
+One caveat: these tests assert what the shell hands React, not layout the
+browser computed. Nothing offline can watch a pane actually scroll. If Help
+still clips when you next open it, the fix is wrong rather than unproven, and
+worth telling me.

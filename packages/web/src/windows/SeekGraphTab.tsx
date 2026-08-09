@@ -1,5 +1,6 @@
 import { observer } from 'mobx-react-lite';
 import type { RaptorContext } from './appContext.js';
+import { seekPane } from './shellStyles.js';
 
 /**
  * Inline seek graph — lives as a tab on `/`, not a popup. Will
@@ -13,18 +14,7 @@ export const SeekGraphTab = observer(function SeekGraphTab({
   context: RaptorContext;
 }) {
   return (
-    <main
-      style={{
-        flex: 1,
-        display: 'flex',
-        flexDirection: 'column',
-        padding: 24,
-        maxWidth: 1200,
-        margin: '0 auto',
-        width: '100%',
-        boxSizing: 'border-box',
-      }}
-    >
+    <main style={seekPane}>
       <h2 style={{ margin: 0, fontSize: 16 }}>Seek Graph</h2>
       <div style={{ opacity: 0.7, fontSize: 13, marginTop: 4 }}>
         time (log) × rating — click a seek to accept
