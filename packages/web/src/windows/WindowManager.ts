@@ -6,7 +6,8 @@
  *
  *   - One MainWindow (the anchor). If closed, all board popups go inert.
  *   - Board windows are popups opened via `window.open(..., _blank, "...")`.
- *   - Each window URL carries its identity (`?window=board&game=42`).
+ *   - Each window URL carries its identity (`?window=board&id=42`). The param
+ *     is `id`, not `game` — App.tsx reads `id` and hands it on as `gameId`.
  *   - Positions are cascaded if the user didn't persist a per-game layout.
  *   - Shared state: popups read `window.opener.raptor` — the main window
  *     hangs all stores + services on `window.raptor` at startup.
