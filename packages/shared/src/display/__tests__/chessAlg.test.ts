@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { squareName, parseSquare, parseLanMove, isWhitePiece, isBlackPiece, isKing, style12ToFen, Piece } from '../chessAlg.js';
+import { squareName, parseSquare, parseLanMove, lastMoveSquares, isWhitePiece, isBlackPiece, isKing, style12ToFen, Piece } from '../chessAlg.js';
 
 describe('chessAlg', () => {
   it('squareName converts rank/file to algebraic', () => {
@@ -19,18 +19,79 @@ describe('chessAlg', () => {
   });
 
   it('parseLanMove handles standard moves', () => {
-    expect(parseLanMove('P/e2-e4')).toEqual({ from: 'e2', to: 'e4', piece: 'P' });
-    expect(parseLanMove('N/b1-c3')).toEqual({ from: 'b1', to: 'c3', piece: 'N' });
+    expect(parseLanMove('P/e2-e4', true)).toEqual({ from: 'e2', to: 'e4', piece: 'P' });
+    expect(parseLanMove('N/b1-c3', true)).toEqual({ from: 'b1', to: 'c3', piece: 'N' });
   });
 
   it('parseLanMove handles "none"', () => {
-    expect(parseLanMove('none')).toBeNull();
-    expect(parseLanMove('')).toBeNull();
+    expect(parseLanMove('none', true)).toBeNull();
+    expect(parseLanMove('', true)).toBeNull();
   });
 
   it('parseLanMove handles castling', () => {
-    expect(parseLanMove('o-o')).toEqual({ from: 'e1', to: 'g1', piece: 'K' });
-    expect(parseLanMove('o-o-o')).toEqual({ from: 'e1', to: 'c1', piece: 'K' });
+    expect(parseLanMove('o-o', true)).toEqual({ from: 'e1', to: 'g1', piece: 'K' });
+    expect(parseLanMove('o-o-o', true)).toEqual({ from: 'e1', to: 'c1', piece: 'K' });
+  });
+
+  // FICS writes both castles as `o-o`/`o-o-o` with no colour in the field, so
+  // the mover's colour is the only thing that puts them on the right rank.
+  // Getting this wrong highlighted white's back rank when black castled.
+  it('parseLanMove puts black castling on the eighth rank', () => {
+    expect(parseLanMove('o-o', false)).toEqual({ from: 'e8', to: 'g8', piece: 'K' });
+    expect(parseLanMove('o-o-o', false)).toEqual({ from: 'e8', to: 'c8', piece: 'K' });
+  });
+
+  it('parseLanMove accepts the uppercase castling forms for either colour', () => {
+    expect(parseLanMove('O-O', true)).toEqual({ from: 'e1', to: 'g1', piece: 'K' });
+    expect(parseLanMove('O-O-O', false)).toEqual({ from: 'e8', to: 'c8', piece: 'K' });
+  });
+
+  it('parseLanMove ignores the mover colour for ordinary moves', () => {
+    // Only castling has no rank of its own; everything else carries both
+    // squares, so the flag must not be able to move them.
+    expect(parseLanMove('P/e7-e5', true)).toEqual(parseLanMove('P/e7-e5', false));
+    expect(parseLanMove('P/e7-e5', true)).toEqual({ from: 'e7', to: 'e5', piece: 'P' });
+  });
+
+  it('parseLanMove returns the squares of a promotion, without the new piece', () => {
+    // "P/e7-e8=Q" — the regex is unanchored on purpose so the from/to
+    // survive; the promoted piece is not reported and the board does not
+    // need it, since the position it paints comes from the grid.
+    expect(parseLanMove('P/e7-e8=Q', true)).toEqual({ from: 'e7', to: 'e8', piece: 'P' });
+    expect(parseLanMove('P/b2-a1=N', false)).toEqual({ from: 'b2', to: 'a1', piece: 'P' });
+  });
+
+  it('parseLanMove rejects malformed fields', () => {
+    expect(parseLanMove('e2-e4', true)).toBeNull();
+    expect(parseLanMove('P/e2e4', true)).toBeNull();
+    expect(parseLanMove('X/e2-e4', true)).toBeNull();
+    expect(parseLanMove('P/e9-e4', true)).toBeNull();
+  });
+
+  describe('lastMoveSquares', () => {
+    // `isWhitesMoveAfterMoveIsMade` is the turn AFTER the move, so the side
+    // that moved is the other one. Passing the flag straight through is the
+    // mistake this function exists to make impossible.
+    it('reads white as the mover when it is now black to move', () => {
+      expect(lastMoveSquares({ lan: 'o-o', isWhitesMoveAfterMoveIsMade: false }))
+        .toEqual({ from: 'e1', to: 'g1', piece: 'K' });
+      expect(lastMoveSquares({ lan: 'o-o-o', isWhitesMoveAfterMoveIsMade: false }))
+        .toEqual({ from: 'e1', to: 'c1', piece: 'K' });
+    });
+
+    it('reads black as the mover when it is now white to move', () => {
+      expect(lastMoveSquares({ lan: 'o-o', isWhitesMoveAfterMoveIsMade: true }))
+        .toEqual({ from: 'e8', to: 'g8', piece: 'K' });
+      expect(lastMoveSquares({ lan: 'o-o-o', isWhitesMoveAfterMoveIsMade: true }))
+        .toEqual({ from: 'e8', to: 'c8', piece: 'K' });
+    });
+
+    it('passes ordinary moves and "none" straight through', () => {
+      expect(lastMoveSquares({ lan: 'N/g8-f6', isWhitesMoveAfterMoveIsMade: true }))
+        .toEqual({ from: 'g8', to: 'f6', piece: 'N' });
+      expect(lastMoveSquares({ lan: 'none', isWhitesMoveAfterMoveIsMade: true }))
+        .toBeNull();
+    });
   });
 
   it('piece predicates', () => {

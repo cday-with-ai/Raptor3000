@@ -119,7 +119,8 @@ export function style12ToFen(s: Style12FenInput): string {
   let enPassant = '-';
   if (s.doublePawnPushFile >= 0 && s.doublePawnPushFile <= 7) {
     const fileChar = String.fromCharCode(97 + s.doublePawnPushFile);
-    // If it's now black's turn, white just moved → e.p. on rank 3.
+    // It is now white's turn → black just double-pushed → e.p. square on
+    // rank 6; it is now black's turn → white just moved → rank 3.
     enPassant = fileChar + (s.isWhitesMoveAfterMoveIsMade ? '6' : '3');
   }
 
@@ -127,18 +128,54 @@ export function style12ToFen(s: Style12FenInput): string {
 }
 
 /**
- * Extract `{from, to}` from a Style12 LAN field like "P/e2-e4" or
- * "N/b1-c3". Returns null for "none" / "o-o" / "o-o-o" / malformed.
- * Castling is returned as its king-move coordinates ("e1g1" etc).
+ * Extract `{from, to, piece}` from a Style12 verbose ("long algebraic") move
+ * field like "P/e2-e4" or "N/b1-c3". Returns null for "none" / malformed.
+ * Castling is returned as the king's own move ("e1"→"g1", "e8"→"c8").
+ *
+ * `moverIsWhite` is required and only affects castling, but it is required
+ * anyway: FICS writes both castles as `o-o`/`o-o-o` with no colour and no
+ * rank anywhere in the field, so a defaulted colour is a wrong answer half
+ * the time rather than a missing one. Callers holding a Style12 should use
+ * `lastMoveSquares`, which works the colour out for them.
+ *
+ * Promotions arrive as "P/e7-e8=Q"; the regex is deliberately unanchored so
+ * they still yield their from/to, at the cost of dropping the promoted piece.
  */
 export function parseLanMove(
   lan: string,
+  moverIsWhite: boolean,
 ): { from: string; to: string; piece: string } | null {
   if (!lan || lan === 'none') return null;
-  if (lan === 'o-o' || lan === 'O-O') return { from: 'e1', to: 'g1', piece: 'K' };
-  if (lan === 'o-o-o' || lan === 'O-O-O') return { from: 'e1', to: 'c1', piece: 'K' };
+  const backRank = moverIsWhite ? '1' : '8';
+  if (lan === 'o-o' || lan === 'O-O') {
+    return { from: `e${backRank}`, to: `g${backRank}`, piece: 'K' };
+  }
+  if (lan === 'o-o-o' || lan === 'O-O-O') {
+    return { from: `e${backRank}`, to: `c${backRank}`, piece: 'K' };
+  }
   // Standard format: "P/e2-e4"
   const m = /^([PNBRQK])\/([a-h][1-8])-([a-h][1-8])/.exec(lan);
   if (!m) return null;
   return { piece: m[1], from: m[2], to: m[3] };
+}
+
+/** The two Style12 fields `lastMoveSquares` reads. */
+export interface LastMoveInput {
+  readonly lan: string;
+  readonly isWhitesMoveAfterMoveIsMade: boolean;
+}
+
+/**
+ * The squares of the move that produced this Style12 — what a board
+ * highlights as "last move". Null when there was no previous move.
+ *
+ * This exists so the colour negation happens in exactly one place:
+ * `isWhitesMoveAfterMoveIsMade` is the turn *after* the move, so the side
+ * that moved is the other one, and passing that flag straight through to
+ * `parseLanMove` gives castling on the wrong back rank.
+ */
+export function lastMoveSquares(
+  s: LastMoveInput,
+): { from: string; to: string; piece: string } | null {
+  return parseLanMove(s.lan, !s.isWhitesMoveAfterMoveIsMade);
 }

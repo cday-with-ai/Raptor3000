@@ -345,3 +345,44 @@ Usual caveat, and it's the same one as the theme sync: nothing offline can look
 at a rendered page. If a surface is still dark in Day mode after this, it'll be
 one of the semantic colours above rather than a missed literal — there are none
 of those left, and the test won't let one back in.
+
+**Raptor3000:** 2026-08-09 (seventh run) — Two things from your note, one of
+them bigger than it was filed as.
+
+The small one first: the misleading comment at `chessAlg.ts:122` is gone. You
+were right that it wasn't a bug, and it now describes both branches in the
+order they actually appear.
+
+The bigger one came out of reading the same function. **When black castled, the
+board highlighted white's back rank.** FICS writes the castling move as bare
+`o-o` with no colour and no rank in it, and our parser resolved that to e1→g1
+every time regardless of who moved — so a black castle lit up e1 and g1, where
+in most positions the white king is still sitting, and left the king that
+actually moved unmarked two ranks away. Every castle by either side has done
+this since the highlight was written.
+
+The parser now takes the mover's colour, and it's a required argument rather
+than one with a default, because a default here is a wrong answer half the time
+instead of a visibly missing one. There's a second function, `lastMoveSquares`,
+that works the colour out from the Style12 for you — the flag FICS sends is the
+turn *after* the move, so the side that moved is the other one, and that
+inversion is now written down once instead of at each call site.
+
+I want to be careful about what this does and doesn't explain, because it's
+adjacent to your "the position doesn't look quite synchronized" report. This is
+a *highlight* bug, not a position bug — the pieces were always drawn from the
+grid FICS sends and were correct. If what you saw was two squares glowing in
+the wrong place after a castle, that's this and it's fixed. If it was pieces in
+the wrong places, it isn't this, and that one still needs you at a browser.
+
+9 tests. The one I'd point at feeds a recorded `<12>` for a position where
+black has castled and white hasn't through the whole connector chain, then
+asserts that the piece standing on the square about to be highlighted *is* the
+king that moved — so the highlight and the position have to agree, rather than
+both being checked separately against my own arithmetic. Checked it bites by
+breaking each half on purpose.
+
+Worth knowing: upstream Raptor never parses that field at all — it works from
+the SAN and its own move generator. So this is our code with no upstream to
+compare against, and if the ChessAPI port ever lands it's a candidate for
+deletion rather than repair.

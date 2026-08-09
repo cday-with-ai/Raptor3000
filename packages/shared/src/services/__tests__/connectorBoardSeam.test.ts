@@ -9,6 +9,7 @@ import {
   defaultChunkParsers,
 } from '../../parsers/defaultParsers.js';
 import { BoardMode } from '../../models/BoardMode.js';
+import { lastMoveSquares, parseSquare } from '../../display/chessAlg.js';
 import type { ChatEvent } from '../../events/ChatEvent.js';
 
 /**
@@ -29,7 +30,7 @@ import type { ChatEvent } from '../../events/ChatEvent.js';
 
 // Piece codes at Raptor GameConstants parity (see Style12Parser).
 const EMPTY = 0;
-const WP = 1, WK = 6, BP = 7, BK = 12;
+const WP = 1, WK = 6, BP = 7, BR = 10, BK = 12;
 
 // Recorded shape of an observe session against freechess.org: the game
 // announcement, the <g1> metadata, then the first <12>. FICS terminates
@@ -49,6 +50,15 @@ const S12_AFTER_E4 =
   '<12> rnbqkbnr pppppppp -------- -------- ----P--- -------- PPPP-PPP RNBQKBNR' +
   ' B 4 1 1 1 1 0 95 GuestFOO GuestBAR 0 3 0 39 39 180000 180000 1' +
   ' P/e2-e4 (0:00.000) e4 0 1 0';
+
+// After 1.e4 e5 2.Nf3 Nf6 3.Bc4 Bc5 4.d3 O-O — black has castled and white
+// has not, so the two back ranks disagree about where a king is. FICS writes
+// the verbose move as bare `o-o` for either colour; this is the position that
+// tells them apart.
+const S12_AFTER_BLACK_CASTLES =
+  '<12> rnbq-rk- pppp-ppp -----n-- --b-p--- --B-P--- ---P-N-- PPP--PPP RNBQK--R' +
+  ' W -1 1 1 0 0 1 95 GuestFOO GuestBAR 0 3 0 39 39 175000 176000 5' +
+  ' o-o (0:03.100) O-O 0 1 0';
 
 // After 1...c5.
 const S12_AFTER_C5 =
@@ -141,6 +151,31 @@ describe('connector → board seam (recorded observe session)', () => {
     expect(gameService.getLatestStyle12('95')!.position[3][4]).toBe(WP); // e4
     // And the control line still never reaches chat.
     expect(chat.some(e => e.raw.includes('<12>'))).toBe(false);
+  });
+
+  it('highlights the castling king on the rank it actually stands on', () => {
+    const { feed, gameService } = makeSession();
+
+    feed(ANNOUNCE_AND_G1 + S12_AFTER_BLACK_CASTLES + '\n\rfics% ');
+    const s12 = gameService.getLatestStyle12('95')!;
+
+    // The grid says black castled: e8 empty, king on g8, rook on f8.
+    expect(s12.position[7][4]).toBe(EMPTY);
+    expect(s12.position[7][6]).toBe(BK);
+    expect(s12.position[7][5]).toBe(BR);
+    // ...and white's king has not moved.
+    expect(s12.position[0][4]).toBe(WK);
+
+    const last = lastMoveSquares(s12)!;
+    expect(last).toEqual({ from: 'e8', to: 'g8', piece: 'K' });
+
+    // The assertion that ties the highlight to the position it is drawn over:
+    // whatever square the board lights up as the destination must be the one
+    // holding the king that just moved. This failed before — `o-o` resolved
+    // to e1→g1 for both colours, so a black castle lit up white's back rank,
+    // where in this position the white king is still sitting.
+    const to = parseSquare(last.to)!;
+    expect(s12.position[to.rank][to.file]).toBe(BK);
   });
 
   it('updates the position on the next move without reopening the window', () => {

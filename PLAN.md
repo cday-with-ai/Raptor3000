@@ -9,13 +9,65 @@ reach open popups, the dead board-toolbar buttons made to look dead, and
 `WindowManager` given its first tests, restored window positions clamped
 to the screen that currently exists, the two window-position writers made
 to share one declaration of where they write, the prefix parsers' leading-
-character tolerance narrowed to whitespace, and the theme-var migration
-finished across the UI, 2026-08-09.
+character tolerance narrowed to whitespace, the theme-var migration
+finished across the UI, and black's castling taught to highlight its own
+back rank, 2026-08-09.
 
 ## Where this is
 
 The connector, the parser and the board renderer all exist and are wired
-together. 306 unit tests pass in `packages/shared`, 144 in `packages/web`.
+together. 315 unit tests pass in `packages/shared`, 144 in `packages/web`.
+
+**A black castle no longer highlights white's back rank.** `parseLanMove`
+resolved both `o-o` and `o-o-o` to `e1`→`g1` / `e1`→`c1` unconditionally, and
+its one caller — `BoardWindow.tsx:268`, the last-move highlight — took it at
+its word. So every time either side castled, the two lit squares were white's,
+which for a black castle means lighting a square the white king is very
+probably still standing on while the piece that actually moved sits unmarked
+two ranks away. It is the one field in Style12 that carries no rank of its
+own: FICS writes the verbose move as bare `o-o` for both colours, and the
+`(0:03.100)` and SAN fields after it say nothing about who moved either.
+
+`parseLanMove(lan, moverIsWhite)` now takes the colour, and it is **required**
+rather than defaulted. A default here is a wrong answer half the time instead
+of a missing one, and the wrongness is silent — the board simply highlights
+the wrong two squares. Since the only information a caller needs is one flag
+it already holds, requiring it costs nothing and closes the shape of the bug.
+
+`lastMoveSquares(s12)` is the second half, and the more important one:
+`isWhitesMoveAfterMoveIsMade` is the turn *after* the move, so the mover is
+the other colour, and a caller that passes the flag straight through gets
+exactly the original bug back with a plausible-looking argument at the call
+site. The negation now happens in one function that takes the Style12 itself.
+`BoardWindow` calls that, not `parseLanMove`.
+
+The 9 new tests are 6 in `chessAlg.test.ts` — both castles for both colours,
+the uppercase forms, that the colour flag cannot move an ordinary move's
+squares, promotions (`P/e7-e8=Q` yields e7→e8; the regex is unanchored on
+purpose, which is also why the promoted piece is dropped), malformed fields,
+and the polarity of `lastMoveSquares` in both directions — plus 3 assertions
+folded into a new seam case. The seam one is the one worth keeping: it feeds a
+recorded `<12>` for the position after 1.e4 e5 2.Nf3 Nf6 3.Bc4 Bc5 4.d3 O-O
+through the whole connector chain and asserts that the piece standing on the
+square the board is about to highlight *is* the king that moved. Black has
+castled and white has not in that position, so the two back ranks disagree and
+the old behaviour cannot pass. Both halves verified by sabotage: hardcoding
+the back rank to `1` reddens 4, dropping the `!` in `lastMoveSquares` reddens
+3.
+
+Checked upstream rather than assumed, and it changed the reasoning: **Raptor
+never parses `lan` at all.** `IcsUtils.java` works from `san` through
+`game.makeSanMove`, and `Style12Message.lan` has no reader. So there is no
+Raptor behaviour to be at parity with here — `parseLanMove` is ours, and the
+reason Raptor never hit this bug is that it has a move generator and we do
+not. If the ChessAPI port ever lands, this function is a candidate for
+deletion rather than extension.
+
+Also fixed while in the file, since it is the same "who just moved" reasoning:
+the comment above the en-passant rank in `style12ToFen`, which described the
+`'3'` branch while sitting above a line that yields `'6'` first. Carson flagged
+it on 2026-08-05 as reading like a bug and not being one. It now describes both
+branches in the order they appear.
 
 **Day mode now actually reaches the UI.** The theme sync landed three runs ago
 and worked; what it could not do was repaint a property that was never written
@@ -111,9 +163,20 @@ prefix sits at offset 1. That is Raptor's operator precedence showing through �
 long notification starting at offset 0 is discarded upstream too. A test says so
 in case it later looks like a local typo.
 
-Noticed and left: `startsWithAt` in the same file has **no callers anywhere**,
-and is exported from the package index. It is dead rather than merely
-purposeless, and deleting it is a one-liner someone can take.
+**Correction to last run's note, which was wrong.** `startsWithAt` in the same
+file was recorded here as having "no callers anywhere" and being safe to
+delete. It has one: `BugWhoAllEventParser.ts:20`. Deleting it would have broken
+the build, and the note was written confidently enough to be acted on. Grep
+before believing a previous run's dead-code claim, including this one.
+
+What that caller means is more interesting than the correction: `BugWhoAll` is
+the **23rd chat parser**, missed by last run's sweep of the other six, and it
+still carries the any-character offset-1 tolerance those six lost. Its shape is
+also the `NotificationEventParser` shape — `(startsAt0 && endsWithTerminator)
+|| startsAt1`, so a block that starts at offset 1 skips the terminator check
+entirely, which is Raptor's operator precedence showing through again. Worth
+reading `BugWhoAllEventParser.java` upstream before touching it; unlike the six,
+this one has not been checked against Raptor.
 
 **The two writers of remembered window positions now share one module.**
 `packages/web/src/windows/windowPositionStore.ts` holds the storage key, the
@@ -554,11 +617,13 @@ of which this run changed:
   different token 2, so `says:` itself is safe — that was checked, not assumed.
 
 Offline work that remains available, in rough order of what a night can
-finish, is now down to small named things: the stale `chessAlg.ts:122`
-comment, the unreferenced `startsWithAt` export, and — larger, and a design
-call rather than a mechanical one — the semantic colours the theme-var pass
-deliberately left alone, of which `colorFor`'s chat greens and ambers are the
-ones a user meets. A true
+finish: `BugWhoAllEventParser`'s offset-1 tolerance and terminator precedence,
+described above, which is the tail of the 2026-08-09 prefix work and wants an
+upstream read first; the two TS6133 errors in `EngineManager.test.ts`, whose
+removal is what would let `npx tsc --noEmit` in `packages/web` be used as a
+gate; and — larger, and a design call rather than a mechanical one — the
+semantic colours the theme-var pass deliberately left alone, of which
+`colorFor`'s chat greens and ambers are the ones a user meets. A true
 `BoardWindow` render test *would* need jsdom + testing-library added to the
 lockfile — a daytime decision, not a nightly one, and it is now what stands
 between the toolbar tests and proof that a `disabled` button reaches the
@@ -570,11 +635,11 @@ kind of gap and not one a night without a browser closes.
 
 Note the web suite is outside `bin/raptor-run.sh`'s ratchet, which counts only
 `packages/shared`. Tests added there are real but unguarded: nothing reverts a
-run that deletes them — and eight of the last nine nights landed their
+run that deletes them — and eight of the last ten nights landed their
 increment there (34 → 144 web tests since 2026-08-05) while the ratcheted count
-moved once, from 289 to 306. That one move was a parser cleanup and not a
-change in where the remaining offline work lives, which is still almost
-entirely `packages/web`. Pointing the ratchet at both packages is a one-line change to
+moved twice, 289 → 306 → 315. Both of those moves were `packages/shared` work
+that surfaced from reading `packages/web`, which is where the remaining offline
+work still mostly lives. Pointing the ratchet at both packages is a one-line change to
 `count_tests` in `bin/raptor-run.sh` and would be worth Carson making.
 `count_skips` does scan `packages/*/src`, so silencing a test is still caught
 either way.

@@ -4,7 +4,7 @@ import {
   BoardMode,
   engineAnalysisAllowed,
   modeFromRelation,
-  parseLanMove,
+  lastMoveSquares,
   parseSquare,
   squareName,
   isWhitePiece,
@@ -265,7 +265,7 @@ function Board({
     setSelected(null);
   }, [s12]);
 
-  const lastMove = s12 ? parseLanMove(s12.lan) : null;
+  const lastMove = s12 ? lastMoveSquares(s12) : null;
 
   const kingInCheckSq = s12 && s12.san.includes('+') ? findKingSquareInCheck(s12) : null;
 
