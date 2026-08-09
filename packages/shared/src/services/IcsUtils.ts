@@ -17,12 +17,28 @@ export function stripTitles(handle: string): string {
 }
 
 /**
- * Java-style startsWith-at-offset. Many Raptor parsers use
- * `str.startsWith(X) || str.startsWith(X, 1)` to tolerate a single leading
- * whitespace char from the server. Replicate that exactly.
+ * Match `prefix` at the start of `text`, tolerating a single leading
+ * whitespace character, and return the index just past the prefix — or -1 if
+ * `text` does not start with it.
+ *
+ * Raptor writes this as `str.startsWith(X) || str.startsWith(X, 1)` at each
+ * call site and then recomputes the payload offset separately. The offset-1
+ * branch is there because Raptor does *not* trim before the check:
+ * FingerEventParser.java runs `text.startsWith(BEGINING_MESSAGE, 1)` on the
+ * raw block, whose first character may be a newline. (Checked against upstream
+ * on 2026-08-09 rather than assumed.)
+ *
+ * Every chat parser here trims first, so the character being skipped can only
+ * ever be whitespace — and a bare offset-1 `startsWith`, which is what this
+ * used to be, skips *any* character, so `XFinger of Bob` classified as a
+ * finger. Hence the whitespace test. Returning the offset rather than a
+ * boolean is so the match and the "where does the payload start" arithmetic
+ * cannot disagree; they were written out separately at six call sites before.
  */
-export function startsWithOrOffset1(text: string, prefix: string): boolean {
-  return text.startsWith(prefix) || (text.length > 1 && text.startsWith(prefix, 1));
+export function offsetAfterPrefix(text: string, prefix: string): number {
+  if (text.startsWith(prefix)) return prefix.length;
+  if (/^\s/.test(text) && text.startsWith(prefix, 1)) return prefix.length + 1;
+  return -1;
 }
 
 /** Java-style startsWith at a specific offset. */

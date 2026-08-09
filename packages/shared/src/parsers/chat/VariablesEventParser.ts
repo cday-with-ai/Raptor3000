@@ -1,6 +1,6 @@
 import { ChatEventType } from '../../events/ChatEventType.js';
 import { makeChatEvent, type ChatEvent } from '../../events/ChatEvent.js';
-import { startsWithOrOffset1 } from '../../services/IcsUtils.js';
+import { offsetAfterPrefix } from '../../services/IcsUtils.js';
 import type { ChatEventParser } from '../ChatEventParser.js';
 
 /**
@@ -13,10 +13,8 @@ export class VariablesEventParser implements ChatEventParser {
 
   parse(line: string): ChatEvent | null {
     const text = line.trim();
-    if (!startsWithOrOffset1(text, VariablesEventParser.PREFIX)) return null;
-    const offset = text.startsWith(VariablesEventParser.PREFIX)
-      ? VariablesEventParser.PREFIX.length
-      : VariablesEventParser.PREFIX.length + 1;
+    const offset = offsetAfterPrefix(text, VariablesEventParser.PREFIX);
+    if (offset < 0) return null;
     const after = text.substring(offset);
     const m = /^([A-Za-z0-9_()*]+)/.exec(after);
     if (!m) return null;

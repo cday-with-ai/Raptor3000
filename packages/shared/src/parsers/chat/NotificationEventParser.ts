@@ -1,6 +1,6 @@
 import { ChatEventType } from '../../events/ChatEventType.js';
 import { makeChatEvent, type ChatEvent } from '../../events/ChatEvent.js';
-import { stripTitles, startsWithOrOffset1 } from '../../services/IcsUtils.js';
+import { stripTitles, offsetAfterPrefix } from '../../services/IcsUtils.js';
 import type { ChatEventParser } from '../ChatEventParser.js';
 
 /**
@@ -16,7 +16,7 @@ export class NotificationEventParser implements ChatEventParser {
   parse(line: string): ChatEvent | null {
     if (line.length >= 600 && !line.startsWith(NotificationEventParser.PREFIX, 1)) return null;
     const text = line.trim();
-    if (!startsWithOrOffset1(text, NotificationEventParser.PREFIX)) return null;
+    if (offsetAfterPrefix(text, NotificationEventParser.PREFIX) < 0) return null;
     const tokens = text.split(/\s+/);
     // tokens[0] = "Notification:" tokens[1] = name
     if (tokens.length < 2) return null;

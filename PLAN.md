@@ -7,13 +7,55 @@ added 2026-08-04; blocked board popups made visible 2026-08-05; tab-prefix
 doubling fixed, the `/` panes made scrollable, theme changes taught to
 reach open popups, the dead board-toolbar buttons made to look dead, and
 `WindowManager` given its first tests, restored window positions clamped
-to the screen that currently exists, and the two window-position writers made
-to share one declaration of where they write, 2026-08-09.
+to the screen that currently exists, the two window-position writers made
+to share one declaration of where they write, and the prefix parsers' leading-
+character tolerance narrowed to whitespace, 2026-08-09.
 
 ## Where this is
 
 The connector, the parser and the board renderer all exist and are wired
-together. 289 unit tests pass in `packages/shared`, 118 in `packages/web`.
+together. 306 unit tests pass in `packages/shared`, 118 in `packages/web`.
+
+**Six chat parsers no longer classify a line that opens with a spurious
+character.** `XFinger of Bob` was a FINGER event, `X(told alice)` a TOLD, and so
+on for History, Journal, Variables and Notification. The cause was the
+`startsWithOrOffset1` helper this file flagged last run as "tolerance without a
+purpose": Raptor's parsers test `startsWith(X) || startsWith(X, 1)` because
+Raptor does **not** trim before the check — `FingerEventParser.java` runs it on
+the raw block, whose first character may be a newline; that was read upstream
+this run rather than assumed, and it is the same layer mistake as 2026-08-01,
+caught early this time. Our parsers each trim first, so the only character the
+offset-1 branch could ever have skipped was one trim had already declined to
+remove, which is to say never whitespace.
+
+`offsetAfterPrefix(text, prefix)` replaces it in `IcsUtils.ts`: skip one
+*whitespace* character and nothing else, and return the index past the prefix,
+or -1. Returning the offset is the other half of the change — each of the six
+call sites used to decide "did it match" and then recompute "where does the
+payload start" from a second `startsWith`, five of them with an identical
+ternary, and those two could disagree. They are now two lines each and cannot.
+The whitespace branch is unreachable through `FicsParser` (the trim gets there
+first) and is kept because a parser is contractually correct when called
+directly, which is where untrimmed text can still arrive.
+
+The 17 tests are in
+`packages/shared/src/services/__tests__/prefixTolerance.test.ts`: the helper's
+offsets both ways, the six spurious-character lines falling to UNKNOWN through
+the chain, the same six standalone, and the positives so this doesn't read as
+the parsers getting stricter about whitespace — they didn't, the trim still
+handles it. Both halves verified by sabotage: restoring the any-character skip
+reddens 8, dropping the `+ 1` from the whitespace offset reddens 3.
+
+Pinned rather than changed while in there: `NotificationEventParser` has a
+second check on the *untrimmed* line that drops anything ≥ 600 chars unless the
+prefix sits at offset 1. That is Raptor's operator precedence showing through —
+`text.length() < 600 && startsWith(N) || startsWith(N, 1)` — so a genuinely
+long notification starting at offset 0 is discarded upstream too. A test says so
+in case it later looks like a local typo.
+
+Noticed and left: `startsWithAt` in the same file has **no callers anywhere**,
+and is exported from the package index. It is dead rather than merely
+purposeless, and deleting it is a one-liner someone can take.
 
 **The two writers of remembered window positions now share one module.**
 `packages/web/src/windows/windowPositionStore.ts` holds the storage key, the
@@ -422,9 +464,13 @@ this codebase cite paths like
 that tree is gone — those are historical citations, not something to open.
 Upstream is readable at
 `raw.githubusercontent.com/fbergo/Raptor/master/raptor/src/raptor/...`, which
-is where `TellEventParser.java` was checked against this run rather than
-trusting the previous run's note about it. The note was right, but the layer
-mistake of 2026-08-01 is cheap to repeat and cheaper to avoid.
+is where `TellEventParser.java` was checked on 2026-08-04, and
+`FingerEventParser.java`, `ToldEventParser.java` and
+`NotificationEventParser.java` on 2026-08-09, rather than trusting a previous
+run's note. Those notes were right, but the layer mistake of 2026-08-01 is
+cheap to repeat and cheaper to avoid — and the Finger one was decisive:
+"does Raptor trim before this check" was the whole question, and the answer
+(no) is not something the port's own comments recorded.
 
 **A divergence left open deliberately, now that it is understood.** Raptor's
 tell parser decides on tokens — `RaptorStringTokenizer(text, " \r\n")`, then
@@ -449,17 +495,10 @@ of which this run changed:
   how you quietly steal another parser's traffic. Every later parser keys on a
   different token 2, so `says:` itself is safe — that was checked, not assumed.
 
-Also noted: `startsWithOrOffset1` (used by Finger/History/Journal/Variables/
-Told/Notification) existed to tolerate the single leading whitespace char that
-the trim now removes. Its offset-1 branch is no longer doing that job, and
-what it still permits is a *spurious* leading character — `XFinger of Bob`
-would match. It is Raptor's own idiom so it was left alone, but it is now
-tolerance without a purpose, and tightening it is a real if minor cleanup.
-
 Offline work that remains available, in rough order of what a night can
 finish, is now down to small named things: the stale `chessAlg.ts:122`
 comment, the Seek panel's hardcoded `#1b1f26`/`#2a313c` which stay dark in day
-mode, and `startsWithOrOffset1`'s now-purposeless offset branch. A true
+mode, and the unreferenced `startsWithAt` export. A true
 `BoardWindow` render test *would* need jsdom + testing-library added to the
 lockfile — a daytime decision, not a nightly one, and it is now what stands
 between the toolbar tests and proof that a `disabled` button reaches the
@@ -471,15 +510,15 @@ kind of gap and not one a night without a browser closes.
 
 Note the web suite is outside `bin/raptor-run.sh`'s ratchet, which counts only
 `packages/shared`. Tests added there are real but unguarded: nothing reverts a
-run that deletes them — and seven consecutive nights have now landed their
-increment there (34 → 118 web tests since 2026-08-05) while the ratcheted count
-sat still at 289. That is not a fault in the work, but it does mean the gate
-has been watching an untouched suite for over a working week, and the honest reading
-is no longer "a streak" but that the offline work left in this project is
-nearly all in `packages/web`. Pointing the ratchet at both packages is a
-one-line change to `count_tests` in `bin/raptor-run.sh` and would be worth
-Carson making. `count_skips` does scan `packages/*/src`, so silencing a test
-is still caught either way.
+run that deletes them — and seven consecutive nights landed their increment
+there (34 → 118 web tests since 2026-08-05) while the ratcheted count sat still
+at 289 for over a working week. This run moved shared (289 → 306), so the gate
+is watching something again, but that was one parser cleanup and not a change
+in where the remaining offline work lives, which is still mostly
+`packages/web`. Pointing the ratchet at both packages is a one-line change to
+`count_tests` in `bin/raptor-run.sh` and would be worth Carson making.
+`count_skips` does scan `packages/*/src`, so silencing a test is still caught
+either way.
 
 `npx tsc --noEmit` in `packages/web` is red on two pre-existing unused-symbol
 errors in `EngineManager.test.ts` (an unused `BoardMode` import and an unused

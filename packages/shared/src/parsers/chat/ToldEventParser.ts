@@ -1,6 +1,6 @@
 import { ChatEventType } from '../../events/ChatEventType.js';
 import { makeChatEvent, type ChatEvent } from '../../events/ChatEvent.js';
-import { startsWithOrOffset1 } from '../../services/IcsUtils.js';
+import { offsetAfterPrefix } from '../../services/IcsUtils.js';
 import type { ChatEventParser } from '../ChatEventParser.js';
 
 /**
@@ -16,10 +16,10 @@ export class ToldEventParser implements ChatEventParser {
   parse(line: string): ChatEvent | null {
     const text = line.trim();
     const PREFIX = '(told ';
-    if (!startsWithOrOffset1(text, PREFIX)) return null;
+    const offset = offsetAfterPrefix(text, PREFIX);
+    if (offset < 0) return null;
 
     // Find the source between "(told " and the first space/comma/paren.
-    const offset = text.startsWith(PREFIX) ? PREFIX.length : PREFIX.length + 1;
     const remainder = text.substring(offset);
     const m = /^([^\s,)]+)/.exec(remainder);
     if (!m) return null;

@@ -1,6 +1,6 @@
 import { ChatEventType } from '../../events/ChatEventType.js';
 import { makeChatEvent, type ChatEvent } from '../../events/ChatEvent.js';
-import { stripTitles, startsWithOrOffset1 } from '../../services/IcsUtils.js';
+import { stripTitles, offsetAfterPrefix } from '../../services/IcsUtils.js';
 import type { ChatEventParser } from '../ChatEventParser.js';
 
 /**
@@ -17,10 +17,8 @@ export class FingerEventParser implements ChatEventParser {
 
   parse(line: string): ChatEvent | null {
     const text = line.trim();
-    if (!startsWithOrOffset1(text, FingerEventParser.PREFIX)) return null;
-    const offset = text.startsWith(FingerEventParser.PREFIX)
-      ? FingerEventParser.PREFIX.length
-      : FingerEventParser.PREFIX.length + 1;
+    const offset = offsetAfterPrefix(text, FingerEventParser.PREFIX);
+    if (offset < 0) return null;
     const after = text.substring(offset);
     const m = /^([A-Za-z0-9_()*]+)/.exec(after);
     if (!m) return null;
