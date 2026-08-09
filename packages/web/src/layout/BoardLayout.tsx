@@ -42,8 +42,8 @@ export function BoardLayout(props: BoardLayoutProps) {
         gridTemplateColumns: 'minmax(0, 1fr) 220px',
         height: '100vh',
         width: '100vw',
-        background: '#15181d',
-        color: '#e8eaef',
+        background: 'var(--bg)',
+        color: 'var(--fg)',
         fontFamily: 'system-ui, -apple-system, sans-serif',
         overflow: 'hidden',
       }}
@@ -93,7 +93,7 @@ const boardSquareStyle = {
 
 const sidePanelStyle = {
   padding: 8,
-  borderLeft: '1px solid #2a2f38',
+  borderLeft: '1px solid var(--border-soft)',
   overflow: 'auto',
   display: 'flex',
   flexDirection: 'column',

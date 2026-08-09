@@ -5,6 +5,17 @@
  * `html[data-theme="dark"]` is the default; an explicit `light` flip
  * swaps the palette. The `system` preference in loginProfiles.ts
  * resolves at runtime and writes the actual value back here.
+ *
+ * Three border weights, because the app was already using three:
+ * `--border` divides panes, `--border-soft` divides rows inside one, and
+ * `--border-strong` outlines a control (button, input, popover) that has
+ * to read as raised against the surface behind it.
+ *
+ * Every var declared here must be declared in *both* blocks. A var present
+ * only in the dark block still resolves in light mode — `:root` is the same
+ * selector — so it silently keeps its dark value instead of failing loudly.
+ * `__tests__/themeVars.test.ts` checks that, and checks no source file has
+ * gone back to writing one of these values as a hex literal.
  */
 :root,
 html[data-theme="dark"] {
@@ -17,6 +28,7 @@ html[data-theme="dark"] {
   --fg-dim:     #6a7280;
   --border:     #2a313c;
   --border-soft:#2a2f38;
+  --border-strong:#3a4150;
   --accent:     #7bb8ff;
   --accent-soft:#3a5474;
   --scroll-track:#0e1116;
@@ -35,6 +47,7 @@ html[data-theme="light"] {
   --fg-dim:     #818792;
   --border:     #d5dae0;
   --border-soft:#dfe4ea;
+  --border-strong:#b9c0c9;
   --accent:     #2563eb;
   --accent-soft:#c1d4f5;
   --scroll-track:#eceef2;

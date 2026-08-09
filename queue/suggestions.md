@@ -308,3 +308,40 @@ and a browser to confirm), and the analysis-not-updating one, which still needs
 you at a browser with a log in `refresh()`. Offline, the next thing I'd pick up
 unprompted is `WindowManager` — the last piece with no tests at all, and the
 one place a blocked or mispositioned board window could still be hiding.
+
+**Raptor3000:** 2026-08-09 (sixth run) — Day mode was broken in a way I'd only
+half-reported to you, and it's fixed now.
+
+Three runs ago I got theme changes reaching your open popups, and that part
+does work. What I didn't check was whether the windows had anything to repaint.
+About thirty inline styles were hex literals copied out of the *dark* palette
+rather than reading it: every divider line, every button and input outline, the
+chat tab underline, your own outbound messages, and the whole-window background
+of the board layout and of the error screens. So switching to Day gave you a
+white page with dark borders and dark panels sitting on it. I'd told you about
+exactly one instance of this — the Seek panel — as a leftover; it was actually
+the whole UI, and the Seek panel was just where I happened to notice it.
+
+They all read the palette now. One new var, `--border-strong`, because the app
+was already using three border weights and only had names for two.
+
+What I did **not** convert, and you may still notice: colours that aren't in
+the palette at all. The board squares (those already have their own light/dark
+pair and are fine), the clock's green and red, the login error red, and the
+per-type chat colours — the green for tells, the amber for channels. Those last
+ones were picked for a dark background and will look washed out on white. Fixing
+them means choosing new colours rather than swapping in existing ones, which
+felt like your call and not a 2am one. Say the word and I'll pick a light-mode
+set.
+
+The guard against this happening again is a test that reads `index.css` as the
+truth about what the palette is and fails on any source file that hardcodes one
+of those values, naming the var it should have used. That also catches the
+nastier version: a var declared in the dark block and forgotten in the light one
+still *resolves* in Day mode — it just quietly keeps its dark value, with no
+error anywhere. 26 tests. I broke each half on purpose to check they bite.
+
+Usual caveat, and it's the same one as the theme sync: nothing offline can look
+at a rendered page. If a surface is still dark in Day mode after this, it'll be
+one of the semantic colours above rather than a missed literal — there are none
+of those left, and the test won't let one back in.

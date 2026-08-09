@@ -344,9 +344,9 @@ function TabBar({
             style={{
               padding: '6px 14px',
               background: active ? 'var(--bg-sunken)' : 'transparent',
-              borderRight: '1px solid #2a2f38',
+              borderRight: '1px solid var(--border-soft)',
               borderBottom: active
-                ? '2px solid #7bb8ff'
+                ? '2px solid var(--accent)'
                 : '2px solid transparent',
               cursor: 'pointer',
               fontSize: 13,
@@ -380,7 +380,7 @@ function TabBar({
 function colorFor(e: ChatEvent): string {
   switch (e.type) {
     case ChatEventType.INTERNAL: return '#888';
-    case ChatEventType.OUTBOUND: return '#7bb8ff';
+    case ChatEventType.OUTBOUND: return 'var(--accent)';
     case ChatEventType.TELL:
     case ChatEventType.TOLD:
     case ChatEventType.PARTNER_TELL:
@@ -437,7 +437,7 @@ const shell = {
 const tabBar = {
   display: 'flex',
   alignItems: 'stretch',
-  borderBottom: '1px solid #2a2f38',
+  borderBottom: '1px solid var(--border-soft)',
   background: 'var(--bg-raised)',
   overflowX: 'auto',
 } as const;
@@ -465,7 +465,7 @@ const inputRow = {
   display: 'flex',
   gap: 6,
   padding: 8,
-  borderTop: '1px solid #2a2f38',
+  borderTop: '1px solid var(--border-soft)',
   background: 'var(--bg-raised)',
   alignItems: 'center',
 } as const;
@@ -483,7 +483,7 @@ const inputBox = {
   fontSize: 14,
   background: 'var(--bg-sunken)',
   color: 'var(--fg)',
-  border: '1px solid #2a2f38',
+  border: '1px solid var(--border-soft)',
   borderRadius: 4,
   fontFamily: '"SF Mono", Consolas, monospace',
 } as const;
@@ -492,7 +492,7 @@ const btn = {
   padding: '6px 12px',
   background: 'var(--bg-input)',
   color: 'var(--fg)',
-  border: '1px solid #3a4150',
+  border: '1px solid var(--border-strong)',
   borderRadius: 4,
   cursor: 'pointer',
   fontSize: 13,

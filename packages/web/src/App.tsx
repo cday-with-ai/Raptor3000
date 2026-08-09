@@ -74,7 +74,7 @@ function Orphaned({ kind, inPopup }: { kind: string; inPopup: boolean }) {
           </p>
         ) : (
           <p style={{ opacity: 0.7 }}>
-            Visit <a href="/" style={{ color: '#7bb8ff' }}>the app root</a> to
+            Visit <a href="/" style={{ color: 'var(--accent)' }}>the app root</a> to
             start a new session.
           </p>
         )}
@@ -97,7 +97,7 @@ const centered = {
   display: 'flex',
   alignItems: 'center',
   justifyContent: 'center',
-  background: '#15181d',
-  color: '#e8eaef',
+  background: 'var(--bg)',
+  color: 'var(--fg)',
   fontFamily: 'system-ui, sans-serif',
 } as const;

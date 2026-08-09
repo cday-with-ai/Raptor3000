@@ -118,7 +118,7 @@ const baseButtonStyle = {
   padding: '4px 10px',
   background: 'var(--bg-input)',
   color: 'var(--fg)',
-  border: '1px solid #3a4150',
+  border: '1px solid var(--border-strong)',
   borderRadius: 4,
   fontSize: 12,
 } as const;

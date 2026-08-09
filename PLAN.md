@@ -8,13 +8,71 @@ doubling fixed, the `/` panes made scrollable, theme changes taught to
 reach open popups, the dead board-toolbar buttons made to look dead, and
 `WindowManager` given its first tests, restored window positions clamped
 to the screen that currently exists, the two window-position writers made
-to share one declaration of where they write, and the prefix parsers' leading-
-character tolerance narrowed to whitespace, 2026-08-09.
+to share one declaration of where they write, the prefix parsers' leading-
+character tolerance narrowed to whitespace, and the theme-var migration
+finished across the UI, 2026-08-09.
 
 ## Where this is
 
 The connector, the parser and the board renderer all exist and are wired
-together. 306 unit tests pass in `packages/shared`, 118 in `packages/web`.
+together. 306 unit tests pass in `packages/shared`, 144 in `packages/web`.
+
+**Day mode now actually reaches the UI.** The theme sync landed three runs ago
+and worked; what it could not do was repaint a property that was never written
+as a `var(--…)` in the first place. About thirty inline styles were hex
+literals copied straight out of the *dark* half of the palette — every window
+divider (`#2a2f38` = `--border-soft`), every control outline (`#3a4150`), the
+chat tab underline and the outbound-message colour (`#7bb8ff` = `--accent`),
+the `App`/`BoardLayout` full-window background and foreground (`#15181d`,
+`#e8eaef`), the promotion popover, and the Seek placeholder panel this file
+has been listing as a loose end since 2026-08-05. Flipping to Day gave a white
+page with dark borders and dark panels on it. They all read the palette now.
+
+`--border-strong` is new in `index.css`, in both blocks. It exists because
+`#3a4150` was already in use as the outline of a control that has to read as
+raised — button, input, popover — and the only var carrying that value was
+`--scroll-thumb-hover`, which is a different idea that happens to be the same
+colour. Three border weights now: `--border` between panes, `--border-soft`
+between rows inside one, `--border-strong` around a control.
+
+What was deliberately *not* converted, because it is a design decision rather
+than a mechanical one: colours that are not in the palette at all. The board
+squares and their highlight set (which already carry their own light/dark
+pair, keyed on square parity, not on theme), the clock's running-green and
+low-time-red, `colorFor`'s per-chat-type greens and ambers, the login error
+red. Several of those are chosen for a dark background and will read poorly in
+Day mode — the chat greens especially — but giving them theme-aware values
+means picking new colours, and a night that quietly restyles chat is a night
+whose diff nobody can check. One literal is exempted rather than unconverted:
+the "waiting for position" overlay text is `#15181d` because it sits on the
+board, whose squares are mid-to-light in either theme, so `var(--fg)` would
+make it vanish in dark mode. The reason is in a comment at the line and in the
+test's exemption list, which must agree.
+
+The 26 tests in `packages/web/src/__tests__/themeVars.test.ts` are a lint that
+happens to be a test, which is the only form of it available with no eslint
+config in the repo. It parses `index.css` as the source of truth for what the
+palette is, then reads every `.ts`/`.tsx` under `src` and fails on any hex
+literal equal to a dark-palette value, naming the var to use instead. Four
+things about it are load-bearing: it asserts every var is declared in *both*
+blocks (a var present only in the dark block still resolves in light mode —
+`:root` matches too — so it silently keeps its dark value, with no browser
+warning and one stubborn dark element as the only symptom); it asserts no var
+has the same value in both themes, since such a var does nothing; it asserts
+the file walk found something, or every per-file check passes vacuously; and
+it fails on a *stale* exemption, so the list cannot outlive the line it was
+written for. Verified by sabotage: restoring one `#2a2f38` reddens 1 with the
+file and line in the message, deleting `--border-strong` from the light block
+reddens 1, converting the exempted overlay literal reddens 1.
+
+That test reads files from disk, so `packages/web` needed `@types/node` — it
+was already in the lockfile via shared and in `node_modules`, so adding the
+same `^20.11.0` specifier to `package.json` and `"node"` to the tsconfig
+`types` array resolved with no install and no lockfile change. Side effect
+worth knowing: node globals are now visible to all of web's source, not just
+its tests, because there is no separate tsconfig for tests. Nothing stops
+browser code importing `node:fs` and failing at runtime instead of at compile
+time.
 
 **Six chat parsers no longer classify a line that opens with a spurious
 character.** `XFinger of Bob` was a FINGER event, `X(told alice)` a TOLD, and so
@@ -497,8 +555,10 @@ of which this run changed:
 
 Offline work that remains available, in rough order of what a night can
 finish, is now down to small named things: the stale `chessAlg.ts:122`
-comment, the Seek panel's hardcoded `#1b1f26`/`#2a313c` which stay dark in day
-mode, and the unreferenced `startsWithAt` export. A true
+comment, the unreferenced `startsWithAt` export, and — larger, and a design
+call rather than a mechanical one — the semantic colours the theme-var pass
+deliberately left alone, of which `colorFor`'s chat greens and ambers are the
+ones a user meets. A true
 `BoardWindow` render test *would* need jsdom + testing-library added to the
 lockfile — a daytime decision, not a nightly one, and it is now what stands
 between the toolbar tests and proof that a `disabled` button reaches the
@@ -510,12 +570,11 @@ kind of gap and not one a night without a browser closes.
 
 Note the web suite is outside `bin/raptor-run.sh`'s ratchet, which counts only
 `packages/shared`. Tests added there are real but unguarded: nothing reverts a
-run that deletes them — and seven consecutive nights landed their increment
-there (34 → 118 web tests since 2026-08-05) while the ratcheted count sat still
-at 289 for over a working week. This run moved shared (289 → 306), so the gate
-is watching something again, but that was one parser cleanup and not a change
-in where the remaining offline work lives, which is still mostly
-`packages/web`. Pointing the ratchet at both packages is a one-line change to
+run that deletes them — and eight of the last nine nights landed their
+increment there (34 → 144 web tests since 2026-08-05) while the ratcheted count
+moved once, from 289 to 306. That one move was a parser cleanup and not a
+change in where the remaining offline work lives, which is still almost
+entirely `packages/web`. Pointing the ratchet at both packages is a one-line change to
 `count_tests` in `bin/raptor-run.sh` and would be worth Carson making.
 `count_skips` does scan `packages/*/src`, so silencing a test is still caught
 either way.

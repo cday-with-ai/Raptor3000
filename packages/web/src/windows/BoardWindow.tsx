@@ -173,8 +173,8 @@ function InfoBar(props: {
         alignItems: 'center',
         padding: '6px 12px',
         background: 'var(--bg-raised)',
-        borderBottom: props.side === 'opponent' ? '1px solid #2a2f38' : 'none',
-        borderTop: props.side === 'me' ? '1px solid #2a2f38' : 'none',
+        borderBottom: props.side === 'opponent' ? '1px solid var(--border-soft)' : 'none',
+        borderTop: props.side === 'me' ? '1px solid var(--border-soft)' : 'none',
         gap: 12,
         fontSize: 13,
       }}
@@ -402,6 +402,10 @@ function Board({
             flexDirection: 'column',
             gap: 4,
             fontSize: 13,
+            // Deliberately not var(--fg): this sits on top of the *board*,
+            // whose squares are the same mid-to-light colours whatever the
+            // theme is. var(--fg) is near-white in dark mode and would
+            // vanish. Exempted by name in __tests__/themeVars.test.ts.
             color: '#15181d',
             textShadow: '0 0 6px rgba(255,255,255,0.6)',
             pointerEvents: 'none',
@@ -472,10 +476,10 @@ function PromotionPicker({
         style={{
           display: 'flex',
           gap: 4,
-          background: '#2a2f38',
+          background: 'var(--bg-raised)',
           padding: 8,
           borderRadius: 6,
-          border: '1px solid #4a5160',
+          border: '1px solid var(--border-strong)',
         }}
       >
         {(['Q', 'R', 'B', 'N'] as const).map(p => (
@@ -488,7 +492,7 @@ function PromotionPicker({
               fontSize: 32,
               background: 'var(--bg-input)',
               color: 'var(--fg)',
-              border: '1px solid #3a4150',
+              border: '1px solid var(--border-strong)',
               borderRadius: 4,
               cursor: 'pointer',
             }}
@@ -709,7 +713,7 @@ const focusBtn = {
   padding: '4px 10px',
   background: 'var(--bg-input)',
   color: 'var(--fg)',
-  border: '1px solid #3a4150',
+  border: '1px solid var(--border-strong)',
   borderRadius: 4,
   cursor: 'pointer',
   fontSize: 12,
@@ -719,7 +723,7 @@ const smallBtn = {
   padding: '2px 8px',
   background: 'transparent',
   color: 'var(--fg)',
-  border: '1px solid #3a4150',
+  border: '1px solid var(--border-strong)',
   borderRadius: 3,
   cursor: 'pointer',
   fontSize: 11,
@@ -733,7 +737,7 @@ function Section({
   children: React.ReactNode;
 }) {
   return (
-    <div style={{ borderBottom: '1px solid #2a2f38', paddingBottom: 6 }}>
+    <div style={{ borderBottom: '1px solid var(--border-soft)', paddingBottom: 6 }}>
       <div
         style={{
           fontSize: 11,
@@ -778,7 +782,7 @@ function ToolbarShell({ children }: { children: React.ReactNode }) {
         display: 'flex',
         gap: 6,
         padding: 6,
-        borderTop: '1px solid #2a2f38',
+        borderTop: '1px solid var(--border-soft)',
         background: 'var(--bg-raised)',
       }}
     >
