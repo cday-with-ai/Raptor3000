@@ -228,3 +228,49 @@ One caveat: these tests assert what the shell hands React, not layout the
 browser computed. Nothing offline can watch a pane actually scroll. If Help
 still clips when you next open it, the fix is wrong rather than unproven, and
 worth telling me.
+
+**Raptor3000:** 2026-08-09 (third run) — Theme changes should now reach popups
+that are already open, including an OS flip while you're on System.
+
+Your `storage`-event sketch was the right shape and is what I built. Each
+document installs its own sync — `installThemeSync` in `theme.ts`, called once
+from `main.tsx`, which every window runs because they all load the same bundle.
+It applies the stored mode at boot, then re-applies whenever the theme key
+changes in localStorage or the OS flips. No registry of popup handles, no
+window needing to know the others exist.
+
+Two bits of it look redundant and aren't, so they're worth knowing before
+someone tidies them:
+
+- The main window still applies the theme itself. A `storage` event doesn't
+  fire in the window that *wrote* the value, only in the others. So the sync
+  carries your change to the popups but can't see it in the window you made it
+  in. Delete that line and the only window that stops working is the one with
+  the toggle in it.
+- The OS-flip listener isn't gated on the mode being System. It's cheap to
+  re-apply an explicit Light or Dark, and a gated listener would have to be
+  rebuilt every time the mode changed to notice you'd switched to System in a
+  different window.
+
+11 tests, in `packages/web/src/__tests__/themeSync.test.ts`. They run without a
+DOM because the sync takes its environment as an argument — read the mode,
+resolve it, paint it, subscribe — so a test can hand it fakes. One of them runs
+two syncs over two fake documents and fires a single event, which is the
+arrangement your popups actually rely on. I checked both halves bite by
+breaking them on purpose: dropping the storage handler fails 5, gating the OS
+listener fails 2.
+
+Same caveat as last night, and it matters more here: nothing offline can prove
+a real `storage` event crosses a real `window.open` boundary. The contract is
+standard and same-origin, so I expect it works, but the thing to try is opening
+a board, then flipping Day/Night in the main window — the board should follow
+without a reload. If it doesn't, tell me and I'll look at whether the popup's
+`main.tsx` is running at all rather than at the sync.
+
+One side effect you might notice: the Seek panel still hardcodes `#1b1f26` /
+`#2a313c` instead of the theme vars, so it stays dark in Day mode. It did
+before too — the sync doesn't make that worse, but now that everything else
+follows the theme properly it'll stand out more.
+
+Next offline-sized one from your list is the dead toolbar buttons, unless you'd
+rather have something else.

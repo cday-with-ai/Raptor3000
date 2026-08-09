@@ -4,12 +4,13 @@ Written 2026-07-26 from a live session against freechess.org; connector→board
 seam test added 2026-08-01; setting-rejection surfacing added 2026-08-02;
 chat-parser trim + prompt filtering restored 2026-08-03; the `says:` tell form
 added 2026-08-04; blocked board popups made visible 2026-08-05; tab-prefix
-doubling fixed and the `/` panes made scrollable 2026-08-09.
+doubling fixed, the `/` panes made scrollable, and theme changes taught to
+reach open popups 2026-08-09.
 
 ## Where this is
 
 The connector, the parser and the board renderer all exist and are wired
-together. 289 unit tests pass in `packages/shared`, 34 in `packages/web`.
+together. 289 unit tests pass in `packages/shared`, 45 in `packages/web`.
 
 **`queue/suggestions.md` has a large 2026-08-05 note from Carson, answered
 2026-08-09 but only one item of it acted on.** That file now carries better
@@ -20,9 +21,43 @@ short: the Options page writes seven preferences that nothing reads
 (`loadPreferences` is called once, in `OptionsPage`), which is the root of both
 the piece-set and theme complaints; every board toolbar button is decorative
 because `TbButton` takes no `onClick`; theme changes never reach already-open
-popups. The pane-clipping item on that list is done (below); the theme
-`storage`-event plumbing and the dead toolbar buttons are what is left of the
-nightly-sized ones.
+popups. The pane-clipping and theme-propagation items on that list are done
+(below); **the dead toolbar buttons are the last nightly-sized one**, and the
+rest of the list needs either a browser or a consumer wired into the renderer.
+
+**A theme change now reaches windows that are already open.** `applyTheme`
+writes `document.documentElement.dataset.theme` on whichever document called
+it, and board/chat windows are real `window.open` popups with their own
+documents — so a popup took the palette at open time and then went stale, OS
+flips included, since `watchSystemTheme` was subscribed only in `MainWindow`.
+`installThemeSync` in `theme.ts` is what every document now runs, once, from
+`main.tsx`: apply the stored mode immediately, then re-apply on a `storage`
+event for the theme key or on an OS flip. Same-origin windows share the
+localStorage the mode already lived in, so no registry of popup handles is
+needed and no window has to know the others exist — Carson's own sketch of the
+fix, and it fit.
+
+Two things about it that are load-bearing and read as redundant:
+
+- **`MainWindow` still applies the theme itself.** A `storage` event does not
+  fire in the window that wrote the value, so the sync cannot see the main
+  window's own edit. It only *carries* it. Deleting that `applyTheme` call
+  breaks the window doing the changing and nothing else, which is a nasty
+  shape to debug.
+- **The OS listener is not gated on `mode === 'system'`.** Re-applying an
+  explicit `light`/`dark` is a no-op, whereas a gated listener would have to be
+  torn down and rebuilt whenever the mode changed to notice that another window
+  had selected `system`. A test pins exactly that sequence.
+
+`installThemeSync` takes a `ThemeEnvironment` — read mode, resolve, reflect,
+subscribe to storage, subscribe to OS — defaulting to the browser one. That
+seam is why the 11 tests in `packages/web/src/__tests__/themeSync.test.ts` run
+in the `node` environment vitest is configured for here, with no jsdom. One of
+them installs two syncs over two fake documents and fires one event, which is
+the arrangement the popups actually depend on. Both halves were verified to
+bite by sabotage: dropping the storage re-apply reddens 5, gating the OS
+listener reddens 2. What they cannot see is whether a real `storage` event
+crosses windows and whether CSS repaints — that needs a browser.
 
 **The `/` panes scroll.** Help, Options and Seek clipped everything past the
 viewport. `packages/web/src/windows/shellStyles.ts` now holds the shell's
@@ -269,8 +304,13 @@ what it still permits is a *spurious* leading character — `XFinger of Bob`
 would match. It is Raptor's own idiom so it was left alone, but it is now
 tolerance without a purpose, and tightening it is a real if minor cleanup.
 
-Offline work that remains available: `WindowManager` is the last React-free
-piece with no tests. `featuresFor`, `urlFor`, `storageKeyFor` and the cascade
+Offline work that remains available, in rough order of what a night can
+finish: the **dead board-toolbar buttons** — `TbButton`
+(`BoardWindow.tsx:844`) takes only `children`, so every button in every mode
+renders a handler-less `<button>` while carrying `cursor: 'pointer'`; the
+honest interim Carson suggested is dimming or disabling the ones with nothing
+behind them, which is bounded and needs no DOM. Then `WindowManager`, the last
+React-free piece with no tests. `featuresFor`, `urlFor`, `storageKeyFor` and the cascade
 maths are pure string/number work; they need `window.screen` and
 `localStorage`, which are a few lines of stub, not jsdom. A true `BoardWindow`
 render test *would* need jsdom + testing-library added to the lockfile — a
@@ -278,7 +318,10 @@ daytime decision, not a nightly one.
 
 Note the web suite is outside `bin/raptor-run.sh`'s ratchet, which counts only
 `packages/shared`. Tests added there are real but unguarded: nothing reverts a
-run that deletes them. `count_skips` does scan `packages/*/src`, so silencing
+run that deletes them — and three consecutive nights have now landed their
+increment there (34 → 45 web tests since 2026-08-05) while the ratcheted count
+sat still at 289. That is not a fault in the work, but it does mean the gate
+has been watching an untouched suite. `count_skips` does scan `packages/*/src`, so silencing
 one is still caught.
 
 `npx tsc --noEmit` in `packages/web` is red on two pre-existing unused-symbol

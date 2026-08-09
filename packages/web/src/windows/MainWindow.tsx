@@ -17,7 +17,6 @@ import {
   applyTheme,
   loadThemeMode,
   saveThemeMode,
-  watchSystemTheme,
   type ThemeMode,
 } from '../theme.js';
 import {
@@ -104,13 +103,13 @@ function PostLoginShell({
   const [tab, setTab] = useState<NavTab>('options');
   const [themeMode, setThemeMode] = useState<ThemeMode>(() => loadThemeMode());
 
+  // Apply here as well as persist: a `storage` event does not fire in the
+  // window that wrote the value, so the sync installed in `main.tsx` — which
+  // is what carries the change to the popups — cannot see our own edit. It
+  // owns the OS-flip watch for this document, so there is no watcher here.
   useEffect(() => {
     applyTheme(themeMode);
     saveThemeMode(themeMode);
-    if (themeMode === 'system') {
-      return watchSystemTheme(() => applyTheme('system'));
-    }
-    return undefined;
   }, [themeMode]);
 
   const who = session.creds.isAnonGuest
