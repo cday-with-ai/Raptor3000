@@ -354,7 +354,11 @@ export function splitSettingRejections(
 
 // ---------- Timeseal2 bits (port of SFI/Raptor implementation) ----------
 
-export function encodeTimeseal(message: string): Uint8Array {
+// Returns an ArrayBuffer-backed view specifically (not the ArrayBufferLike
+// default the bare `Uint8Array` now widens to under TS 7's lib): the buffer is
+// always a plain ArrayBuffer here, and WebSocket.send rejects the SharedArrayBuffer
+// possibility that ArrayBufferLike admits.
+export function encodeTimeseal(message: string): Uint8Array<ArrayBuffer> {
   let t = message.length;
   const n = new Uint8Array(t + 30);
   for (let i = 0; i < message.length; i++) n[i] = message.charCodeAt(i);
