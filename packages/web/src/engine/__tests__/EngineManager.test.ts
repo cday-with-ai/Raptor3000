@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { GameService, BoardMode, type Style12Message } from '@raptor3000/shared';
+import { GameService, type Style12Message } from '@raptor3000/shared';
 import { EngineManager } from '../EngineManager.js';
 
 /**
@@ -121,7 +121,9 @@ describe('EngineManager — anti-cheat & lifecycle gating', () => {
 
   it('refreshes analysis on every Style12 for the focused game', async () => {
     const game = new GameService();
-    const _mgr = new EngineManager(game);
+    // Constructed for its side effect: EngineManager subscribes to `game` in
+    // its constructor, which is what this test exercises.
+    new EngineManager(game);
 
     game.recordStyle12(makeStyle12('1', 0));
     game.fireGameCreated('1');
