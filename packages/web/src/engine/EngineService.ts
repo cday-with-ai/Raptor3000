@@ -55,7 +55,7 @@ export class EngineService {
     this.worker = worker;
     worker.onmessage = ev => this.handleLine(typeof ev.data === 'string' ? ev.data : '');
     worker.onerror = err => {
-      // eslint-disable-next-line no-console
+       
       console.error('[EngineService] worker error', err);
       this.setState('stopped');
     };

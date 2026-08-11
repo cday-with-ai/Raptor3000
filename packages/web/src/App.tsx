@@ -24,22 +24,12 @@ export function App() {
   const kind = params.get('window');
   const id = params.get('id');
 
-  // Main window: we own the context, mount it on window.raptor.
+  // Main window: we own the context, mount it on window.raptor. The hooks for
+  // that live in MainWindowRoot rather than here, so they are never called
+  // behind this `if` -- Rules of Hooks require every hook to run on every
+  // render of a given component, and App renders popups without them.
   if (!kind) {
-    const [ctx] = useState<RaptorContext>(() => {
-      const c = createContext();
-      window.raptor = c;
-      return c;
-    });
-    // Clean up on unload so reloading the page doesn't leak stale context.
-    useEffect(() => {
-      const onUnload = () => {
-        delete window.raptor;
-      };
-      window.addEventListener('beforeunload', onUnload);
-      return () => window.removeEventListener('beforeunload', onUnload);
-    }, []);
-    return <MainWindow context={ctx} />;
+    return <MainWindowRoot />;
   }
 
   // Popup: resolve context from opener. If orphaned, show the lost-main screen.
@@ -56,6 +46,29 @@ export function App() {
     default:
       return <UnknownWindow kind={kind} />;
   }
+}
+
+/**
+ * The main window's root: owns the RaptorContext and mounts it on
+ * window.raptor. A component of its own so its hooks run unconditionally --
+ * App only reaches here when this is the main window, and never renders it for
+ * a popup, so the hooks below can never be skipped on a later render.
+ */
+function MainWindowRoot() {
+  const [ctx] = useState<RaptorContext>(() => {
+    const c = createContext();
+    window.raptor = c;
+    return c;
+  });
+  // Clean up on unload so reloading the page doesn't leak stale context.
+  useEffect(() => {
+    const onUnload = () => {
+      delete window.raptor;
+    };
+    window.addEventListener('beforeunload', onUnload);
+    return () => window.removeEventListener('beforeunload', onUnload);
+  }, []);
+  return <MainWindow context={ctx} />;
 }
 
 function Orphaned({ kind, inPopup }: { kind: string; inPopup: boolean }) {

@@ -90,7 +90,7 @@ function parseGameLine(line: string): GameInfo | null {
   const len = line.length;
   if (len === 0) return null;
   if (line.endsWith(GameInfoParser.END)) {
-    // eslint-disable-next-line @typescript-eslint/only-throw-error
+     
     throw END_OF_LIST;
   }
 

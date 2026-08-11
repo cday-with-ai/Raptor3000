@@ -117,7 +117,7 @@ export class GameManager {
       // blocked popup identical to a broken board: `obs 25` succeeds, the game
       // registers as open, and nothing appears or complains.
       this.onBoardWindowBlocked?.(gameId);
-      // eslint-disable-next-line no-console
+       
       console.warn(
         `[GameManager] board window for game ${gameId} was blocked by the browser. ` +
           `Allow popups for this origin, or open it from a click.`,

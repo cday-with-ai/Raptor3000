@@ -129,7 +129,7 @@ function wordWrap(text: string, limit: number): string[] {
       break;
     }
     // Look for last space within limit window
-    let end = i + limit;
+    const end = i + limit;
     let brk = text.lastIndexOf(' ', end - 1);
     if (brk <= i) {
       // No space in window → hard-break

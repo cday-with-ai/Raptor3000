@@ -51,7 +51,9 @@ export class MovesParser implements ChunkParser<MovesMessage> {
       }
     }
 
-    let gameType = '';
+    // Assigned in the try below; the catch returns, so it is always set by the
+    // time it is read. No useless '' initialiser (no-useless-assignment).
+    let gameType: string;
     try {
       const headerTok = new RaptorTokenizer(input.substring(firstColon), '\n');
       headerTok.nextToken();                     // ":"
