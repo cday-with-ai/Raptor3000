@@ -65,6 +65,9 @@ export interface AppPreferences {
    * a pinned main console. Switchable inline from the chat window.
    */
   chatLayout: ChatLayout;
+  /** Split layout: the top (tab) pane's share of the height, 0.15–0.85.
+   *  Set by dragging the divider. */
+  chatSplitRatio: number;
   /** Console (chat window) look: base font, and per-event-type styling. */
   chatFontFamily: string;
   chatFontSize: number;
@@ -100,6 +103,7 @@ export const DEFAULT_PREFERENCES: AppPreferences = {
   clockIdleBg: 'auto',
   clockIdleText: 'auto',
   chatLayout: 'split',
+  chatSplitRatio: 0.6,
   chatFontFamily: '"SF Mono", Consolas, monospace',
   chatFontSize: 13,
   chatColorChannel: 'auto',
@@ -177,6 +181,12 @@ function readColor(k: string, fallback: string): string {
   return v != null && /^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/.test(v) ? v : fallback;
 }
 
+/** Split ratio: a float within the draggable range, else the default. */
+function readRatio(k: string, fallback: number): number {
+  const v = parseFloat(getRaw(k) ?? '');
+  return Number.isFinite(v) && v >= 0.15 && v <= 0.85 ? v : fallback;
+}
+
 /** Chat font size: an integer 8–24, else the default. */
 function readFontSize(k: string, fallback: number): number {
   const v = parseInt(getRaw(k) ?? '', 10);
@@ -249,6 +259,7 @@ export function loadPreferences(): AppPreferences {
     clockIdleBg: readClockColor('clockIdleBg'),
     clockIdleText: readClockColor('clockIdleText'),
     chatLayout: readString('chatLayout', DEFAULT_PREFERENCES.chatLayout, CHAT_LAYOUTS),
+    chatSplitRatio: readRatio('chatSplitRatio', DEFAULT_PREFERENCES.chatSplitRatio),
     chatFontFamily: getRaw('chatFontFamily') ?? DEFAULT_PREFERENCES.chatFontFamily,
     chatFontSize: readFontSize('chatFontSize', DEFAULT_PREFERENCES.chatFontSize),
     chatColorChannel: readClockColor('chatColorChannel'),
@@ -293,6 +304,7 @@ export function savePreferences(prefs: AppPreferences): void {
   setRaw('clockIdleBg', prefs.clockIdleBg);
   setRaw('clockIdleText', prefs.clockIdleText);
   setRaw('chatLayout', prefs.chatLayout);
+  setRaw('chatSplitRatio', String(prefs.chatSplitRatio));
   setRaw('chatFontFamily', prefs.chatFontFamily);
   setRaw('chatFontSize', String(prefs.chatFontSize));
   setRaw('chatColorChannel', prefs.chatColorChannel);

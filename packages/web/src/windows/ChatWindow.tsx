@@ -14,11 +14,10 @@ import {
 } from '../channelHistory.js';
 import {
   loadPreferences,
-  savePreferences,
   type AppPreferences,
   type ChatLayout,
 } from '../preferences.js';
-import { useLivePreferences } from '../useLivePreferences.js';
+import { saveLivePreference, useLivePreferences } from '../useLivePreferences.js';
 import {
   chatColorFor,
   lineBody,
@@ -111,9 +110,18 @@ export const ChatWindow = function ChatWindow({
   // Layout mode, switchable inline (the movelist-control concept applied
   // to the window itself): plain stream / one-line tabs / Decaf split.
   const layout = prefs.chatLayout;
-  const setLayout = (l: ChatLayout) => savePreferences({ ...loadPreferences(), chatLayout: l });
+  const setLayout = (l: ChatLayout) => saveLivePreference('chatLayout', l);
   // 'plain' has no tab bar — everything reads and types through main.
   const effectiveTab = layout === 'plain' ? MAIN_TAB : activeTab;
+
+  // Split mode wants a tab above the pinned main console; sitting on
+  // "main" there means an empty top pane. Adopt the first real tab as
+  // soon as one exists.
+  useEffect(() => {
+    if (layout !== 'split' || activeTab.kind !== 'main') return;
+    const first = tabs.find(t => t.kind !== 'main');
+    if (first) setActiveTabId(first.id);
+  }, [layout, activeTab, tabs]);
 
   const submit = (line: string) => {
     if (line.length === 0) return;
@@ -151,7 +159,9 @@ export const ChatWindow = function ChatWindow({
             </span>
           ) : (
             <TabBar
-              tabs={tabs}
+              // In split mode the main console is always visible below —
+              // a main tab up top would be redundant (Carson).
+              tabs={layout === 'split' ? tabs.filter(t => t.kind !== 'main') : tabs}
               activeId={activeTab.id}
               onSelect={setActiveTabId}
               onClose={closeTab}
@@ -171,9 +181,12 @@ export const ChatWindow = function ChatWindow({
       ) : (
         // Decaf-style split (Carson, 2026-08-12): the active tab on top,
         // the main console always visible underneath — you never lose
-        // the stream by reading a channel.
-        <div style={splitPane}>
-          <div style={splitTop}>
+        // the stream by reading a channel. The divider drags; the ratio
+        // is remembered like everything else.
+        <SplitView
+          ratio={prefs.chatSplitRatio}
+          onRatio={r => saveLivePreference('chatSplitRatio', r)}
+          top={
             <TabLog
               tab={activeTab}
               events={tabEvents}
@@ -181,9 +194,8 @@ export const ChatWindow = function ChatWindow({
               ownHandle={ownHandle}
               onCommand={cmd => context.connector.sendMessage(cmd)}
             />
-          </div>
-          <div style={splitDivider}>main</div>
-          <div style={splitBottom}>
+          }
+          bottom={
             <TabLog
               tab={MAIN_TAB}
               events={events}
@@ -191,8 +203,8 @@ export const ChatWindow = function ChatWindow({
               ownHandle={ownHandle}
               onCommand={cmd => context.connector.sendMessage(cmd)}
             />
-          </div>
-        </div>
+          }
+        />
       )}
       <form
         style={inputRow}
@@ -685,16 +697,57 @@ const logView = {
   height: '100%',
 } as const;
 
-// The Decaf split: tab pane above, persistent main console below.
+/**
+ * The Decaf split: tab pane above, persistent main console below, with
+ * a draggable divider. During a drag the ratio is local state for
+ * smoothness; on release it saves as a preference.
+ */
+function SplitView({
+  top,
+  bottom,
+  ratio,
+  onRatio,
+}: {
+  top: React.ReactNode;
+  bottom: React.ReactNode;
+  ratio: number;
+  onRatio: (r: number) => void;
+}) {
+  const ref = useRef<HTMLDivElement>(null);
+  const [live, setLive] = useState<number | null>(null);
+  const r = live ?? ratio;
+  const clamp = (v: number) => Math.min(0.85, Math.max(0.15, v));
+  return (
+    <div ref={ref} style={splitPane}>
+      <div style={{ flex: `${r} 1 0%`, minHeight: 0, overflow: 'hidden' }}>{top}</div>
+      <div
+        style={splitDivider}
+        onPointerDown={e => {
+          e.currentTarget.setPointerCapture(e.pointerId);
+          setLive(ratio);
+        }}
+        onPointerMove={e => {
+          if (live === null) return;
+          const rect = ref.current?.getBoundingClientRect();
+          if (!rect || rect.height === 0) return;
+          setLive(clamp((e.clientY - rect.top) / rect.height));
+        }}
+        onPointerUp={() => {
+          if (live !== null) onRatio(clamp(live));
+          setLive(null);
+        }}
+        onPointerCancel={() => setLive(null)}
+      >
+        main
+      </div>
+      <div style={{ flex: `${1 - r} 1 0%`, minHeight: 0, overflow: 'hidden' }}>{bottom}</div>
+    </div>
+  );
+}
+
 const splitPane = {
   display: 'flex',
   flexDirection: 'column',
-  minHeight: 0,
-  overflow: 'hidden',
-} as const;
-
-const splitTop = {
-  flex: '1 1 60%',
   minHeight: 0,
   overflow: 'hidden',
 } as const;
@@ -709,12 +762,9 @@ const splitDivider = {
   borderBottom: '1px solid var(--border-soft)',
   background: 'var(--bg-raised)',
   flexShrink: 0,
-} as const;
-
-const splitBottom = {
-  flex: '0 0 35%',
-  minHeight: 0,
-  overflow: 'hidden',
+  cursor: 'row-resize',
+  userSelect: 'none',
+  touchAction: 'none',
 } as const;
 
 const inputRow = {
