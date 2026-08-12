@@ -201,8 +201,17 @@ function PostLoginShell({
       {tab === 'seek' && <SeekGraphTab context={context} />}
       {tab === 'help' && <HelpPage />}
 
-      <footer style={footer}>
-        session #{sessionId.toString(16).slice(-6)}
+      <footer style={{ ...footer, display: 'flex', justifyContent: 'space-between' }}>
+        <span>session #{sessionId.toString(16).slice(-6)}</span>
+        <span>
+          <a href={`${REPO_URL}/issues/new?labels=enhancement&title=Suggestion%3A%20`} target="_blank" rel="noreferrer" style={footerLink}>
+            suggest a feature
+          </a>
+          {' · '}
+          <a href={`${REPO_URL}/issues/new?labels=bug&title=Bug%3A%20`} target="_blank" rel="noreferrer" style={footerLink}>
+            report an issue
+          </a>
+        </span>
       </footer>
     </div>
   );
@@ -710,8 +719,19 @@ function HelpPage() {
         </ul>
         <p style={helpP}>
           The complete inventory with exact licenses lives in{' '}
-          <code style={code}>THIRD_PARTY_NOTICES.md</code> in the source
-          repository.
+          <code style={code}>THIRD_PARTY_NOTICES.md</code> in{' '}
+          <a href={REPO_URL} target="_blank" rel="noreferrer" style={helpLink}>
+            the source repository
+          </a>
+          . Something broken or missing?{' '}
+          <a href={`${REPO_URL}/issues/new?labels=bug&title=Bug%3A%20`} target="_blank" rel="noreferrer" style={helpLink}>
+            Report an issue
+          </a>{' '}
+          or{' '}
+          <a href={`${REPO_URL}/issues/new?labels=enhancement&title=Suggestion%3A%20`} target="_blank" rel="noreferrer" style={helpLink}>
+            suggest a feature
+          </a>
+          .
         </p>
       </Section>
 
@@ -773,6 +793,14 @@ const bannerDismiss = {
   cursor: 'pointer',
   fontSize: 14,
   padding: '0 4px',
+} as const;
+
+const REPO_URL = 'https://github.com/cday-with-ai/Raptor3000';
+
+const footerLink = {
+  color: 'var(--fg-dim)',
+  textDecoration: 'underline',
+  textUnderlineOffset: 2,
 } as const;
 
 const helpLink = {

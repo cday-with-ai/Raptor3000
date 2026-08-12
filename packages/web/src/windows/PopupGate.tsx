@@ -170,6 +170,19 @@ export function PopupGate() {
       <button type="button" style={gateButton} onClick={test}>
         {state === 'blocked' ? 'Test again' : 'Test board windows'}
       </button>
+      {state === 'blocked' && (
+        <span style={{ marginLeft: 12, fontSize: 12, opacity: 0.8 }}>
+          Still stuck?{' '}
+          <a
+            href="https://github.com/cday-with-ai/Raptor3000/issues/new?labels=bug&title=Popup%20gate%3A%20"
+            target="_blank"
+            rel="noreferrer"
+            style={{ color: '#8fb8f0' }}
+          >
+            report it
+          </a>
+        </span>
+      )}
     </div>
   );
 }
