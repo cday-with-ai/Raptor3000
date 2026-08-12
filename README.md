@@ -24,9 +24,13 @@ and `connector/ics/game/message/*.java`.
 
 ## Status
 
-Scaffolding stage. The parser taxonomy, event dispatch, and a handful of reference
-parsers exist. Everything else — FICS WebSocket, Timeseal, board rendering,
-Stockfish — will be ported piece-by-piece from Simple-FICS-Interface.
+Playable. Live FICS over WebSocket + Timeseal2 (login, kick-war handling,
+guests), popup board windows with the Chess Ascent board port (piece sets,
+themes, drag/drop, animations, premove), a Decaf-style chat console with
+channel tabs and split view, Stockfish WASM analysis with MultiPV, opening
+detection from the lichess dataset, per-mode layout memory, sounds, and
+game-end theater (the winning king dances). PLAN.md tracks the living
+detail; the roadmap below records how it got here.
 
 ## Architecture
 
