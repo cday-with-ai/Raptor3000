@@ -676,9 +676,25 @@ function Board({
   } | null>(null);
   const [ghost, setGhost] = useState<{ piece: number; x: number; y: number } | null>(null);
   const [dragFrom, setDragFrom] = useState<string | null>(null);
-  // The last move completed by OUR drag — its server echo shouldn't
-  // animate; the ghost already made that motion.
+  // The last move WE sent — its server echo shouldn't animate (the
+  // ghost or the optimistic hold already showed the motion).
   const lastDragRef = useRef<{ from: string; to: string; t: number } | null>(null);
+  // Optimistic hold (Carson's drop-flicker report): after we send a
+  // move, render the piece at its destination until the server's next
+  // position lands. Cleared by any new s12 or a safety timeout.
+  const [pending, setPending] = useState<{
+    from: string;
+    to: string;
+    piece: number;
+  } | null>(null);
+  useEffect(() => {
+    setPending(null); // any new position supersedes the guess
+  }, [s12]);
+  useEffect(() => {
+    if (!pending) return undefined;
+    const t = setTimeout(() => setPending(null), 2500); // illegal move etc.
+    return () => clearTimeout(t);
+  }, [pending]);
 
   // Move animation (the Chess Ascent slide): when a new move arrives,
   // the piece glides from its source square; the destination shows the
@@ -753,6 +769,10 @@ function Board({
       return;
     }
     if (isMyTurn) {
+      // Our own echo neither animates nor waits: suppress the flight
+      // and hold the piece at its destination until the server speaks.
+      lastDragRef.current = { from, to, t: Date.now() };
+      setPending({ from, to, piece: movingPiece });
       sendMove(context, from, to);
     } else if (canPremove) {
       setPremove({ from, to });
@@ -865,7 +885,6 @@ function Board({
       const to = squareFromPoint(e.clientX, e.clientY);
       setSelected(null);
       if (to && to !== p.downSq) {
-        lastDragRef.current = { from: p.downSq, to, t: Date.now() };
         completeMoveTo(p.downSq, to);
       }
       return;
@@ -944,9 +963,14 @@ function Board({
         >
           {(() => {
             // While a move animates, its destination shows what was
-            // captured (or nothing) until the flight lands.
-            const shown =
-              !viewing && anim && sq === anim.toSq ? anim.captured : code;
+            // captured (or nothing) until the flight lands; while OUR
+            // move awaits its echo, the piece holds at its destination.
+            let shown = code;
+            if (!viewing && anim && sq === anim.toSq) shown = anim.captured;
+            if (!viewing && pending) {
+              if (sq === pending.to) shown = pending.piece;
+              else if (sq === pending.from) shown = 0;
+            }
             return (
               shown !== 0 && dragFrom !== sq && (
                 <PieceImg code={shown} set={prefs.pieceSet} />
