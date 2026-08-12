@@ -1,5 +1,5 @@
 import { observer } from 'mobx-react-lite';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import {
   BoardMode,
   engineAnalysisAllowed,
@@ -23,6 +23,11 @@ import {
 } from './boardToolbar.js';
 import { installPositionTracker, windowStorageKey } from './windowPosition.js';
 import type { EngineAnalysis } from '../engine/EngineService.js';
+import {
+  boardColors,
+  loadPreferences,
+  type AppPreferences,
+} from '../preferences.js';
 
 /**
  * Board window — per-game popup. Subscribes to GameService for its
@@ -159,6 +164,13 @@ function useClockTick(s12: Style12Message | undefined): number {
   return tick;
 }
 
+/**
+ * Info band above/below the board. Chess Ascent's boardHeaderRow /
+ * boardFooterRow shape: exactly as wide as the board (BoardLayout owns
+ * that), content justified to the edges, card-styled rather than a
+ * window-spanning bar. Chess Ascent puts rating/status here; ours is the
+ * FICS version — player, rating, clock.
+ */
 function InfoBar(props: {
   side: 'opponent' | 'me';
   name: string;
@@ -171,17 +183,21 @@ function InfoBar(props: {
       style={{
         display: 'flex',
         alignItems: 'center',
-        padding: '6px 12px',
+        justifyContent: 'space-between',
+        padding: '4px 10px',
         background: 'var(--bg-raised)',
-        borderBottom: props.side === 'opponent' ? '1px solid var(--border-soft)' : 'none',
-        borderTop: props.side === 'me' ? '1px solid var(--border-soft)' : 'none',
+        border: '1px solid var(--border-soft)',
+        borderRadius: 6,
         gap: 12,
         fontSize: 13,
       }}
     >
-      <strong>{props.name}</strong>
-      {props.rating && <span style={{ opacity: 0.7 }}>({props.rating})</span>}
-      <span style={{ flex: 1 }} />
+      <span style={{ display: 'flex', alignItems: 'baseline', gap: 8, minWidth: 0 }}>
+        <strong style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          {props.name}
+        </strong>
+        {props.rating && <span style={{ opacity: 0.7 }}>({props.rating})</span>}
+      </span>
       <Clock ms={props.clockMs} ticking={props.ticking} />
     </div>
   );
@@ -215,11 +231,59 @@ function Clock({ ms, ticking }: { ms: number; ticking: boolean }) {
   );
 }
 
-const PIECE_GLYPH: Record<number, string> = {
-  0: '',
-  1: '\u2659', 2: '\u2657', 3: '\u2658', 4: '\u2656', 5: '\u2655', 6: '\u2654',
-  7: '\u265F', 8: '\u265D', 9: '\u265E', 10: '\u265C', 11: '\u265B', 12: '\u265A',
+/**
+ * Style12 piece code \u2192 Chess Ascent piece id, which is also the SVG
+ * filename: `/pieces/<set>/<id>.svg`. The sets themselves are copied
+ * verbatim from chessascent.app (public/pieces).
+ */
+const PIECE_ID: Record<number, string> = {
+  1: 'wP', 2: 'wB', 3: 'wN', 4: 'wR', 5: 'wQ', 6: 'wK',
+  7: 'bP', 8: 'bB', 9: 'bN', 10: 'bR', 11: 'bQ', 12: 'bK',
 };
+
+/** One piece image, Chess Ascent style: plain <img>, never draggable \u2014
+ *  drag is implemented with pointer events on the board, not HTML5 DnD. */
+function PieceImg({
+  code,
+  set,
+  sizePx,
+}: {
+  code: number;
+  set: AppPreferences['pieceSet'];
+  sizePx?: number;
+}) {
+  const id = PIECE_ID[code];
+  if (!id) return null;
+  return (
+    <img
+      src={`/pieces/${set}/${id}.svg`}
+      alt={id}
+      draggable={false}
+      style={{
+        width: sizePx ?? '100%',
+        height: sizePx ?? '100%',
+        objectFit: 'contain',
+        pointerEvents: 'none',
+        userSelect: 'none',
+        display: 'block',
+      }}
+    />
+  );
+}
+
+/** Read preferences and keep them live: `storage` fires in this window
+ *  when the options page (a different window) saves a change. */
+function useLivePreferences(): AppPreferences {
+  const [prefs, setPrefs] = useState<AppPreferences>(() => loadPreferences());
+  useEffect(() => {
+    const onStorage = (e: StorageEvent) => {
+      if (e.key === null || e.key.startsWith('pref.')) setPrefs(loadPreferences());
+    };
+    window.addEventListener('storage', onStorage);
+    return () => window.removeEventListener('storage', onStorage);
+  }, []);
+  return prefs;
+}
 
 /**
  * Interactive board — click-to-move, highlights for last move + selection
@@ -248,6 +312,38 @@ function Board({
   const [premove, setPremove] = useState<{ from: string; to: string } | null>(null);
   const [promotion, setPromotion] = useState<{ from: string; to: string } | null>(null);
 
+  // Board look — Chess Ascent's themes/pieces, live-updated from the
+  // options page in the main window via storage events.
+  const prefs = useLivePreferences();
+  const { light: lightColor, dark: darkColor } = boardColors(prefs);
+
+  // Measured square size in px: drives coordinate-label font scaling and
+  // all drag math. The board root is a perfect square (BoardLayout).
+  const rootRef = useRef<HTMLDivElement | null>(null);
+  const [squareSize, setSquareSize] = useState(48);
+  useLayoutEffect(() => {
+    const el = rootRef.current;
+    if (!el) return undefined;
+    const measure = () => setSquareSize(el.getBoundingClientRect().width / 8);
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+
+  // Drag state. `pointer` tracks the gesture; `ghost` renders the piece
+  // under the cursor; `dragFrom` hides the origin square's piece.
+  // MIN_DRAG_DISTANCE is Chess Ascent's: below it a press stays a tap.
+  const pointer = useRef<{
+    downSq: string;
+    piece: number;
+    startX: number;
+    startY: number;
+    dragging: boolean;
+  } | null>(null);
+  const [ghost, setGhost] = useState<{ piece: number; x: number; y: number } | null>(null);
+  const [dragFrom, setDragFrom] = useState<string | null>(null);
+
   // When it becomes our turn (relation=1 after being -1), fire any premove.
   const isMyTurn =
     s12 !== undefined &&
@@ -269,35 +365,9 @@ function Board({
 
   const kingInCheckSq = s12 && s12.san.includes('+') ? findKingSquareInCheck(s12) : null;
 
-  function onSquareClick(sq: string) {
-    if (!interactive && !canPremove) return;
-    const piece = pieceAt(s12, sq);
-    // If nothing selected yet:
-    if (!selected) {
-      if (piece === 0) return;
-      // Only allow selecting MY pieces for move origin.
-      if (!pieceIsMineInStyle12(piece, s12, mode)) {
-        if (!canPremove) return;
-        if (!pieceIsMineInStyle12(piece, s12, mode)) return;
-      }
-      setSelected(sq);
-      return;
-    }
-    // Second click — if same square, deselect.
-    if (selected === sq) {
-      setSelected(null);
-      return;
-    }
-    // If second click on another of my pieces, re-select.
-    if (piece !== 0 && pieceIsMineInStyle12(piece, s12, mode)) {
-      setSelected(sq);
-      return;
-    }
-    // Otherwise treat as destination — send or queue as premove.
-    const from = selected;
-    const to = sq;
-    setSelected(null);
-    // Check for promotion: moving pawn to 1st/8th rank.
+  /** Destination chosen (by second tap or by drop): send, queue as
+   *  premove, or open the promotion picker. Shared by tap and drag. */
+  function completeMoveTo(from: string, to: string) {
     const movingPiece = pieceAt(s12, from);
     const toRank = parseSquare(to)!.rank;
     if (isPawn(movingPiece) && (toRank === 0 || toRank === 7)) {
@@ -311,23 +381,136 @@ function Board({
     }
   }
 
+  function onSquareClick(sq: string) {
+    if (!interactive && !canPremove) return;
+    const piece = pieceAt(s12, sq);
+    // If nothing selected yet:
+    if (!selected) {
+      if (piece === 0) return;
+      // Only allow selecting MY pieces for move origin.
+      if (!pieceIsMineInStyle12(piece, s12, mode)) return;
+      setSelected(sq);
+      return;
+    }
+    // Second click — if same square, deselect.
+    if (selected === sq) {
+      setSelected(null);
+      return;
+    }
+    // If second click on another of my pieces, re-select.
+    if (piece !== 0 && pieceIsMineInStyle12(piece, s12, mode)) {
+      setSelected(sq);
+      return;
+    }
+    // Otherwise treat as destination.
+    const from = selected;
+    setSelected(null);
+    completeMoveTo(from, sq);
+  }
+
+  /** Client point → square name, honoring the flip. Null outside board. */
+  function squareFromPoint(clientX: number, clientY: number): string | null {
+    const el = rootRef.current;
+    if (!el) return null;
+    const rect = el.getBoundingClientRect();
+    const x = clientX - rect.left;
+    const y = clientY - rect.top;
+    if (x < 0 || y < 0 || x >= rect.width || y >= rect.height) return null;
+    const fi = Math.min(7, Math.floor((x / rect.width) * 8));
+    const ri = Math.min(7, Math.floor((y / rect.height) * 8));
+    const file = flipped ? 7 - fi : fi;
+    const rank = flipped ? ri : 7 - ri;
+    return squareName(rank, file);
+  }
+
+  // Pointer-event drag-and-drop, semantics ported from Chess Ascent's
+  // gesture pipeline: a press only becomes a drag after 10px of travel,
+  // so taps stay taps (and click-to-move keeps working); drop on another
+  // square completes the move through the same path as a second tap.
+  // Works for mouse and touch alike — touchAction:none on the root stops
+  // the browser from claiming the gesture for scrolling on mobile.
+  const MIN_DRAG_DISTANCE = 10;
+
+  function onPointerDown(e: React.PointerEvent) {
+    if (e.button !== 0 && e.pointerType === 'mouse') return;
+    const sq = squareFromPoint(e.clientX, e.clientY);
+    if (!sq) return;
+    const piece = pieceAt(s12, sq);
+    pointer.current = {
+      downSq: sq,
+      piece,
+      startX: e.clientX,
+      startY: e.clientY,
+      dragging: false,
+    };
+    const draggable =
+      (interactive || canPremove) &&
+      piece !== 0 &&
+      pieceIsMineInStyle12(piece, s12, mode);
+    if (draggable) rootRef.current?.setPointerCapture(e.pointerId);
+  }
+
+  function onPointerMove(e: React.PointerEvent) {
+    const p = pointer.current;
+    if (!p) return;
+    if (!p.dragging) {
+      const draggable =
+        (interactive || canPremove) &&
+        p.piece !== 0 &&
+        pieceIsMineInStyle12(p.piece, s12, mode);
+      if (!draggable) return;
+      const dist = Math.hypot(e.clientX - p.startX, e.clientY - p.startY);
+      if (dist < MIN_DRAG_DISTANCE) return;
+      p.dragging = true;
+      setDragFrom(p.downSq);
+    }
+    const rect = rootRef.current?.getBoundingClientRect();
+    if (!rect) return;
+    setGhost({ piece: p.piece, x: e.clientX - rect.left, y: e.clientY - rect.top });
+  }
+
+  function onPointerUp(e: React.PointerEvent) {
+    const p = pointer.current;
+    pointer.current = null;
+    if (!p) return;
+    if (p.dragging) {
+      setGhost(null);
+      setDragFrom(null);
+      const to = squareFromPoint(e.clientX, e.clientY);
+      setSelected(null);
+      if (to && to !== p.downSq) {
+        completeMoveTo(p.downSq, to);
+      }
+      return;
+    }
+    // No drag — a tap. Same square-click semantics as before.
+    onSquareClick(p.downSq);
+  }
+
+  function onPointerCancel() {
+    pointer.current = null;
+    setGhost(null);
+    setDragFrom(null);
+  }
+
   function onPromotionPick(promo: 'Q' | 'R' | 'B' | 'N') {
     if (!promotion) return;
     sendMove(context, promotion.from, promotion.to, promo);
     setPromotion(null);
   }
 
-  // Build square grid.
+  // Build square grid. Colors, coordinate labels and highlight palette
+  // are Chess Ascent's, verbatim (components/chess/ChessBoard.tsx there).
+  const coordFontSize = Math.max(7, Math.min(14, squareSize * 0.18));
   const rows: React.ReactNode[] = [];
   for (let ri = 0; ri < 8; ri++) {
     const rank = flipped ? ri : 7 - ri;
     const cols: React.ReactNode[] = [];
     for (let fi = 0; fi < 8; fi++) {
       const file = flipped ? 7 - fi : fi;
-      const dark = (rank + file) % 2 === 0;
+      const isLight = (rank + file) % 2 === 1;
       const sq = squareName(rank, file);
       const code = s12?.position[rank]?.[file] ?? 0;
-      const glyph = PIECE_GLYPH[code] ?? '';
 
       const isLastFrom = lastMove?.from === sq;
       const isLastTo = lastMove?.to === sq;
@@ -336,21 +519,30 @@ function Board({
       const isPremoveTo = premove?.to === sq;
       const isCheck = kingInCheckSq === sq;
 
-      const baseBg = dark ? '#6b8e95' : '#e5ecee';
+      const baseBg = isLight ? lightColor : darkColor;
+      // Chess Ascent: selected #829769; last move #ffb347/#ff8c00 by
+      // square shade. Check and premove are this client's own states —
+      // Chess Ascent has neither — and keep their existing colors.
       const highlight = isCheck
         ? '#d86868'
         : isPremoveFrom || isPremoveTo
-          ? dark ? '#8b5ba5' : '#d5b3e5'
+          ? isLight ? '#d5b3e5' : '#8b5ba5'
           : isSelected
-            ? dark ? '#b98a4a' : '#ffd99a'
+            ? '#829769'
             : isLastFrom || isLastTo
-              ? dark ? '#8b956b' : '#dfe5a5'
+              ? isLight ? '#ffb347' : '#ff8c00'
               : null;
+
+      // In-square coordinates: rank in the top-right of the rendered
+      // rightmost column, file letter in the bottom-left of the rendered
+      // bottom row, colored with the OPPOSITE square shade for contrast.
+      const coordColor = isLight ? darkColor : lightColor;
+      const showRankLabel = prefs.boardCoordinates && fi === 7;
+      const showFileLabel = prefs.boardCoordinates && ri === 7;
 
       cols.push(
         <div
           key={`${rank}-${file}`}
-          onClick={() => onSquareClick(sq)}
           style={{
             background: highlight ?? baseBg,
             aspectRatio: '1',
@@ -358,18 +550,24 @@ function Board({
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            fontSize: 38,
-            lineHeight: 1,
-            color: isWhitePiece(code) ? '#fafafa' : '#111',
-            textShadow: isWhitePiece(code) ? '0 0 2px #000, 0 0 2px #000' : 'none',
             userSelect: 'none',
             cursor: interactive || canPremove ? 'pointer' : 'default',
-            outline: isSelected ? '2px solid #ffbd4a' : undefined,
-            outlineOffset: isSelected ? '-2px' : undefined,
             position: 'relative',
           }}
         >
-          {glyph}
+          {code !== 0 && dragFrom !== sq && (
+            <PieceImg code={code} set={prefs.pieceSet} />
+          )}
+          {showRankLabel && (
+            <span style={{ ...coordLabelStyle, top: 0, right: 1, fontSize: coordFontSize, color: coordColor }}>
+              {rank + 1}
+            </span>
+          )}
+          {showFileLabel && (
+            <span style={{ ...coordLabelStyle, bottom: 0, left: 1, fontSize: coordFontSize, color: coordColor }}>
+              {'abcdefgh'[file]}
+            </span>
+          )}
         </div>,
       );
     }
@@ -382,15 +580,42 @@ function Board({
 
   return (
     <div
+      ref={rootRef}
+      onPointerDown={onPointerDown}
+      onPointerMove={onPointerMove}
+      onPointerUp={onPointerUp}
+      onPointerCancel={onPointerCancel}
       style={{
         width: '100%',
         height: '100%',
         display: 'flex',
         flexDirection: 'column',
         position: 'relative',
+        // Chess Ascent board chrome: 4px rounding, theme-gated shadow
+        // (declared in index.css: light mode only, like the original).
+        borderRadius: 4,
+        overflow: 'hidden',
+        boxShadow: 'var(--board-shadow)',
+        // Without this, mobile browsers claim the drag for scrolling.
+        touchAction: 'none',
       }}
     >
       {rows}
+      {ghost && (
+        <div
+          style={{
+            position: 'absolute',
+            left: ghost.x - squareSize / 2,
+            top: ghost.y - squareSize / 2,
+            width: squareSize,
+            height: squareSize,
+            pointerEvents: 'none',
+            zIndex: 6,
+          }}
+        >
+          <PieceImg code={ghost.piece} set={prefs.pieceSet} />
+        </div>
+      )}
       {!s12 && (
         <div
           style={{
@@ -446,17 +671,36 @@ function Board({
           >×</button>
         </div>
       )}
-      {promotion && <PromotionPicker onPick={onPromotionPick} onCancel={() => setPromotion(null)} />}
+      {promotion && (
+        <PromotionPicker
+          onPick={onPromotionPick}
+          onCancel={() => setPromotion(null)}
+          set={prefs.pieceSet}
+          asWhite={mode === BoardMode.PLAYING ? !s12?.isWhiteOnTop : true}
+        />
+      )}
     </div>
   );
 }
 
+const coordLabelStyle = {
+  position: 'absolute',
+  fontWeight: 700,
+  lineHeight: 1.2,
+  userSelect: 'none',
+  pointerEvents: 'none',
+} as const;
+
 function PromotionPicker({
   onPick,
   onCancel,
+  set,
+  asWhite,
 }: {
   onPick: (p: 'Q' | 'R' | 'B' | 'N') => void;
   onCancel: () => void;
+  set: AppPreferences['pieceSet'];
+  asWhite: boolean;
 }) {
   return (
     <div
@@ -487,17 +731,16 @@ function PromotionPicker({
             key={p}
             onClick={() => onPick(p)}
             style={{
-              width: 48,
-              height: 48,
-              fontSize: 32,
+              width: 56,
+              height: 56,
+              padding: 4,
               background: 'var(--bg-input)',
-              color: 'var(--fg)',
               border: '1px solid var(--border-strong)',
               borderRadius: 4,
               cursor: 'pointer',
             }}
           >
-            {promoGlyph(p)}
+            <PieceImg code={promoCode(p, asWhite)} set={set} />
           </button>
         ))}
       </div>
@@ -505,8 +748,10 @@ function PromotionPicker({
   );
 }
 
-function promoGlyph(p: 'Q' | 'R' | 'B' | 'N'): string {
-  return { Q: '\u2655', R: '\u2656', B: '\u2657', N: '\u2658' }[p];
+/** Promotion choice \u2192 Style12 piece code for the mover's color. */
+function promoCode(p: 'Q' | 'R' | 'B' | 'N', asWhite: boolean): number {
+  const white = { Q: 5, R: 4, B: 2, N: 3 } as const;
+  return asWhite ? white[p] : white[p] + 6;
 }
 
 function pieceAt(s12: Style12Message | undefined, sq: string): number {

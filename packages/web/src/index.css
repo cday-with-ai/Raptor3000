@@ -34,6 +34,8 @@ html[data-theme="dark"] {
   --scroll-track:#0e1116;
   --scroll-thumb:#2a2f38;
   --scroll-thumb-hover:#3a4150;
+  /* Chess Ascent shows no board shadow in dark mode. */
+  --board-shadow: none;
   color-scheme: dark;
 }
 
@@ -53,6 +55,8 @@ html[data-theme="light"] {
   --scroll-track:#eceef2;
   --scroll-thumb:#c2c7cf;
   --scroll-thumb-hover:#a6adb8;
+  /* Chess Ascent's light-mode board shadow, verbatim. */
+  --board-shadow: 4px 4px 12px rgba(0, 0, 0, 0.4);
   color-scheme: light;
 }
 

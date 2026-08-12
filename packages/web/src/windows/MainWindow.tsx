@@ -20,6 +20,7 @@ import {
   type ThemeMode,
 } from '../theme.js';
 import {
+  boardColors,
   loadPreferences,
   savePreferences,
   type AppPreferences,
@@ -269,25 +270,52 @@ function OptionsPage({
         </Section>
 
         <Section title="Board">
-          <Row label="Theme">
+          <Row label="Colors">
             <Select<BoardTheme>
               value={prefs.boardTheme}
               onChange={v => update('boardTheme', v)}
               options={[
-                ['slate', 'Slate'],
-                ['wood', 'Wood'],
+                ['brown', 'Brown'],
                 ['blue', 'Blue'],
+                ['green', 'Green'],
+                ['purple', 'Purple'],
+                ['ic', 'IC'],
+                ['horsey', 'Horsey'],
+                ['custom', 'Custom'],
               ]}
             />
+            <BoardPreview prefs={prefs} />
           </Row>
+          {prefs.boardTheme === 'custom' && (
+            <>
+              <Row label="Light squares">
+                <input
+                  type="color"
+                  value={prefs.customLightSquareColor}
+                  onChange={e => update('customLightSquareColor', e.target.value)}
+                  style={colorInput}
+                />
+              </Row>
+              <Row label="Dark squares">
+                <input
+                  type="color"
+                  value={prefs.customDarkSquareColor}
+                  onChange={e => update('customDarkSquareColor', e.target.value)}
+                  style={colorInput}
+                />
+              </Row>
+            </>
+          )}
           <Row label="Piece set">
             <Select<PieceSet>
               value={prefs.pieceSet}
               onChange={v => update('pieceSet', v)}
               options={[
-                ['classic', 'Classic'],
                 ['alpha', 'Alpha'],
-                ['merida', 'Merida'],
+                ['cardinal', 'Cardinal'],
+                ['cburnett', 'Cburnett'],
+                ['leipzig', 'Leipzig'],
+                ['mpchess', 'MPChess'],
               ]}
             />
           </Row>
@@ -574,6 +602,45 @@ function Select<T extends string>({
     </select>
   );
 }
+
+/** Four-square strip showing the current colors and piece set together. */
+function BoardPreview({ prefs }: { prefs: AppPreferences }) {
+  const { light, dark } = boardColors(prefs);
+  const cell = 22;
+  return (
+    <div
+      style={{
+        display: 'inline-flex',
+        borderRadius: 3,
+        overflow: 'hidden',
+        border: '1px solid var(--border-soft)',
+        marginLeft: 10,
+        verticalAlign: 'middle',
+      }}
+    >
+      {[0, 1, 2, 3].map(i => (
+        <div key={i} style={{ width: cell, height: cell, background: i % 2 === 0 ? light : dark }}>
+          {i === 1 && (
+            <img src={`/pieces/${prefs.pieceSet}/wN.svg`} alt="" width={cell} height={cell} draggable={false} />
+          )}
+          {i === 2 && (
+            <img src={`/pieces/${prefs.pieceSet}/bQ.svg`} alt="" width={cell} height={cell} draggable={false} />
+          )}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+const colorInput = {
+  width: 44,
+  height: 26,
+  padding: 0,
+  border: '1px solid var(--border-strong)',
+  borderRadius: 4,
+  background: 'var(--bg-input)',
+  cursor: 'pointer',
+} as const;
 
 function hydrateAutoLogin(): LoginSubmission | null {
   const sel = loadSelection();
