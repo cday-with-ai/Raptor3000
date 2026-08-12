@@ -610,35 +610,42 @@ than code:
 
 ## Next thing that would make sense
 
-Carson's 2026-08-05 note (summarised above, in full in `queue/suggestions.md`)
-now describes more of the real state of the UI than this section does. What
-follows is still true and still blocked.
+**The popup hypothesis is dead, killed with a browser (2026-08-12).** Board
+popups open and paint in both Chrome and Brave: an examine board accepted a
+drag, an observed live game rendered fully. The whole diagnostic ladder above
+it (blocked windows, off-screen positions, BoardWindow's render) is settled —
+the client plays. What remains, in rough order of value:
 
-**Confirm or kill the popup hypothesis**, because it's cheap and it decides
-where everything else looks. It still needs a human with a browser — nothing
-offline can settle it — but as of 2026-08-05 it no longer needs devtools open
-in advance. Run `obs` on any game and read the main chat console: `Board
-window for game N was blocked by the browser` appears there if it was blocked.
-Silence in the console with no board means it was not blocked.
+1. **Cross-tab session lock.** The one-session-per-account handling is
+   surfaced and recoverable now, but two long-lived windows still fight
+   politely. A BroadcastChannel lock — background documents don't
+   auto-connect while another window holds the account, offer "take over"
+   instead — finishes the job the 2026-08-12 login rewrite started.
+2. **Analysis-not-updating** (Carson's 08-05 report). The static inspection
+   chain in `queue/suggestions.md` cleared every link; this needs a live
+   browser with a temporary log in `EngineManager.refresh()` — id, FEN,
+   resulting depth — while an observed game plays.
+3. **Wire the three unconsumed preferences**: `moveListVisible` (the side
+   panel ignores it), `showEngineAnalysis` (EnginePanel gates on mode only),
+   `soundMode` (no sound system exists at all — this one is a feature, not
+   a wire).
+4. **Day-mode chat palette.** The per-type chat colours (tell green, channel
+   amber) were picked for a dark background and wash out on white. Choosing
+   a light-mode set is a taste call — propose, don't just ship.
+5. **Ratings in the board info bands.** The bands show name + clock;
+   FICS sends ratings in `<g1>` (`rt=1586E,2100`) and G1Message already
+   parses. Chess Ascent shows a rating badge there; parity says we should.
+6. **Toolbar wiring**, one button at a time — `boardToolbar.ts` is data,
+   flip `implemented` per button as each handler lands. Nav arrows need
+   `forward`/`back` (examine mode); Resign/Draw/Abort are one-line sends.
+7. **Parked, deliberately**: SAN in the engine PV and legal-move dots — both
+   blocked on a client-side move generator (the ChessAPI port). Approximating
+   either is wrong exactly where it matters.
 
-- If blocked: allow popups for `localhost:5173` and the board should paint.
-- If not blocked and still no board: the fault is downstream of GameService.
-  The transport, login sequence, Style 12 parsing, mode derivation, the
-  GameService→GameManager listener contract, GameManager's own
-  open/close/blocked behavior, and the URL, window name, feature string and
-  position maths of `WindowManager.open` are all covered by tests. Opening off
-  the edge of the screen was the leading suspect as of last run and is now
-  closed: a remembered position is clamped at open time, so a gone monitor or
-  a shrunk resolution can no longer hide a board. Note the stored record is
-  *not* rewritten by the clamp, so
-  `localStorage['raptor3000.windowPositions.v1']` may still read as off-screen
-  while the window opens fine; clearing that key restores the cascaded
-  defaults, but it is no longer a fix for anything. What that leaves is
-  `BoardWindow`'s render, which has no test and needs a DOM.
-
-After that, in rough order: check `set height 240` was accepted (a rejection
-now announces itself as an INTERNAL error — just read the console); then drag
-and drop.
+Also standing: FICS-side channel join. `autoJoinChannels` drives the chat
+backfill (2026-08-12) but nothing sends `+channel N` at login — the account's
+own FICS-side channel list is doing the joining today, which works for cday
+and silently does nothing for a fresh account or a guest.
 
 **Raptor's source is no longer at `/tmp/raptor`.** Comment headers all over
 this codebase cite paths like

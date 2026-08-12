@@ -406,3 +406,38 @@ more on that: the shadows, the piece set, the fonts, the font sizes — everythi
 ## 2026-08-09 — Carson
 
 and the word for what makes it work: minimalist and clean. that's the target, not just copying the assets across.
+
+**Raptor3000:** 2026-08-12 (live session with Carson) — All five notes above
+are done, plus the biggest item from the 08-05 triage. Landed today, in
+commits `cd2a388` through `d70420c`:
+
+- **The clock**: white text on the ticking chips (your note, filed twice —
+  heard both times), and then the whole chip palette became preferences:
+  Options → Clock colors, background + text per state (active / low on
+  time / idle), Auto as the default meaning the stock look.
+- **The chessascent board treatment, whole**: color themes to the hex
+  (brown default) plus the custom picker, the five piece SVG sets
+  (cburnett default, per your 08-05 note — confirmed it is lichess's
+  default), the 4px rounding and light-mode shadow, the in-square
+  coordinates, the board-width info bands with their 4px/12px spacing,
+  the measured perfect-square sizing, and a pointer-events port of the
+  drag-and-drop (10px tap threshold, works on touch). Verified against
+  live FICS: a synthetic drag e2→e4 round-tripped as `P/e2-e4`, and an
+  observed game's DOM asserted the exact hexes, radius, shadow and SVGs.
+- **The Options page no longer talks only to itself** — the board and
+  clock consume preferences live via storage events, which closes the
+  root cause under the 08-05 piece-set and theme complaints. Still
+  unconsumed: `moveListVisible`, `soundMode`, `showEngineAnalysis`.
+- Also new since your notes: login is confirmed-not-assumed with the
+  account kick-war handled and surfaced (that was the "won't connect"
+  of this morning), a Reconnect button, an auto-login toggle in Options,
+  reset-to-defaults, hex fields on every color control, and 24h channel
+  backfill in the chat window from the chessascent channel-log API —
+  scroll up in #39 to before you logged in.
+
+Still open from the 08-05 triage, untouched tonight: analysis-not-updating
+(needs a live browser with a log in `refresh()`), SAN in the engine PV
+(parked behind a move generator, same as legal-move dots), the day-mode
+chat palette (tell/channel greens and ambers picked for dark), and wiring
+the three unconsumed preferences above. PLAN.md's "Next thing" section is
+rewritten tonight to match.

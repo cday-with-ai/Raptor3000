@@ -100,7 +100,7 @@ packages/
 
 - [x] **FICS WebSocket + Timeseal2 connector** — `wss://www.freechess.org:5001`, full Timeseal2 handshake, guest-login state machine, line-buffered feed into `FicsParser.parseStream`
 - [ ] Chess engine + variants (ChessAPI — standard, crazyhouse, atomic, 960, suicide, losers, wild)
-- [ ] Full board UI (drag/drop, piece sets, animations)
+- [x] Board UI: drag/drop + piece sets (Chess Ascent port, 2026-08-12) — animations pending
 - [ ] Stockfish WASM wrapper (for non-playing modes only)
 
 ### End-to-end flow (done — green via Playwright against real FICS)
@@ -120,7 +120,7 @@ packages/
 - [x] Help page with Linux/Windows/macOS instructions for chromeless `--app` mode
 - [ ] Per-gameId GameStore + GameRegistry (replace single-game assumption)
 - [ ] Tab stores: MainConsole, Channel, Person, RegEx, GameChat, BughousePartner
-- [ ] Real chess piece sets + drag/drop board interaction
+- [x] Real chess piece sets + drag/drop board interaction (2026-08-12, ported from chessascent.app)
 - [ ] Seek graph scatter-plot rendering
 - [ ] PGN import/export
 - [ ] User scripts / aliases
