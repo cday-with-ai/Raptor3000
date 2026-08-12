@@ -29,6 +29,9 @@ export class EngineManager {
   private readonly listener: GameServiceListener;
   private focusedGameId: string | null = null;
   private pinnedFen: string | null = null;
+  /** The user clicked (off): nothing auto-engages until they click a
+   *  mode link again (Carson: "just update if it's on"). */
+  private userOff = false;
   private disposed = false;
 
   constructor(gameService: GameService) {
@@ -105,6 +108,7 @@ export class EngineManager {
   focus(gameId: string): void {
     const mode = this.gameService.getMode(gameId);
     if (!mode || mode === BoardMode.PLAYING) return;
+    this.userOff = false;
     this.pinnedFen = null;
     this.focusedGameId = gameId;
     this.engine.start();
@@ -123,6 +127,7 @@ export class EngineManager {
   focusFen(gameId: string, fen: string): void {
     const mode = this.gameService.getMode(gameId);
     if (mode === BoardMode.PLAYING) return;
+    this.userOff = false;
     this.focusedGameId = gameId;
     this.pinnedFen = fen;
     this.engine.start();
@@ -142,9 +147,16 @@ export class EngineManager {
     this.engine.pause();
   }
 
+  /** The (off) click: stop AND stay off until an explicit re-engage. */
+  userDisable(): void {
+    this.userOff = true;
+    this.unfocus();
+  }
+
   // ---- internals ----
 
   private focusIfAnalyzable(gameId: string, mode: typeof BoardMode[keyof typeof BoardMode]): void {
+    if (this.userOff) return;
     if (mode === BoardMode.PLAYING) return;
     this.focusedGameId = gameId;
     this.engine.start();

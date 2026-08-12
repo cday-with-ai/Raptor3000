@@ -268,3 +268,28 @@ describe('focusFen — ended games and history browsing (2026-08-12)', () => {
     em.dispose();
   });
 });
+
+describe('userDisable — (off) is sticky (2026-08-12)', () => {
+  it('lifecycle hooks do not re-engage after the user turns it off', async () => {
+    const gs = new GameService();
+    const em = new EngineManager(gs);
+    gs.recordStyle12(makeStyle12('3', 0));
+    gs.fireGameCreated('3');
+    gs.fireGameStateChanged('3', false);
+    await new Promise(r => setTimeout(r, 0));
+    expect(em.getFocusedGameId()).toBe('3');
+    em.userDisable();
+    expect(em.getFocusedGameId()).toBeNull();
+    // new moves / new observed game starts must not re-engage
+    gs.recordStyle12(makeStyle12('3', 0));
+    gs.fireGameStateChanged('3', true);
+    gs.recordStyle12(makeStyle12('4', 0));
+    gs.fireGameCreated('4');
+    gs.fireGameStateChanged('4', false);
+    expect(em.getFocusedGameId()).toBeNull();
+    // an explicit click re-engages and clears the latch
+    em.focus('3');
+    expect(em.getFocusedGameId()).toBe('3');
+    em.dispose();
+  });
+});
