@@ -327,12 +327,21 @@ export const BoardWindow = observer(function BoardWindow({
     : null;
   const bottomBar = (
     <>
-      {premove && (
+      {/* Reserved whenever premove is possible, so the board and bands
+          never shift when one is queued (Carson) — the text just pops
+          into the waiting line. */}
+      {mode === BoardMode.PLAYING && (
         <div style={premoveStrip}>
-          premove: <strong>{premoveLabel}</strong>
-          <button onClick={() => setPremove(null)} style={premoveClear} title="clear (or right-click the board)">
-            ×
-          </button>
+          {premove ? (
+            <>
+              premove: <strong>{premoveLabel}</strong>
+              <button onClick={() => setPremove(null)} style={premoveClear} title="clear (or right-click the board)">
+                ×
+              </button>
+            </>
+          ) : (
+            <span>&nbsp;</span>
+          )}
         </div>
       )}
       <InfoBar side="me" name={bottomName} rating={bottomRating} clockMs={bottomClock} ticking={bottomTicking} prefs={prefs} />
@@ -1118,6 +1127,8 @@ function Board({
 
 const premoveStrip = {
   fontSize: 11,
+  height: 18,
+  boxSizing: 'border-box',
   padding: '2px 10px',
   color: 'var(--fg-muted)',
   display: 'flex',
