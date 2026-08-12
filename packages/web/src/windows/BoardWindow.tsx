@@ -1232,17 +1232,14 @@ function SidePanel({
   analysisFen: string | null;
   startMovesExpanded: boolean;
 }) {
-  // Order per Carson (2026-08-12): status first, engine next, moves at
-  // the bottom. Captured is gone — it never earned its pixels.
+  // Order per Carson (2026-08-12, revised same day): Status pinned top,
+  // Moves in the middle, Engine pinned bottom.
   return (
     <>
       <div style={{ borderBottom: '1px solid var(--border-soft)', paddingBottom: 6, fontSize: 12 }}>
         <span style={{ fontWeight: 700, opacity: 0.75 }}>Status:</span>{' '}
         <span style={{ opacity: 0.85 }}>{modeLabel(mode)}</span>
       </div>
-      {showEngine && engineAnalysisAllowed(mode) && (
-        <EnginePanel context={context} gameId={gameId} fen={analysisFen} viewing={viewPly !== null} />
-      )}
       <MovesSection
         s12={s12}
         opening={opening}
@@ -1252,6 +1249,9 @@ function SidePanel({
         viewPly={viewPly}
         onViewPly={onViewPly}
       />
+      {showEngine && engineAnalysisAllowed(mode) && (
+        <EnginePanel context={context} gameId={gameId} fen={analysisFen} viewing={viewPly !== null} />
+      )}
     </>
   );
 }
