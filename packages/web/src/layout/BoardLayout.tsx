@@ -115,19 +115,21 @@ export function BoardLayout(props: BoardLayoutProps) {
         <div style={cornerControls}>
           <button
             style={triangleBtn}
-            title={panelOpen ? 'hide the side panel' : 'show the side panel'}
-            onClick={() => saveLivePreference('boardPanelOpen', !panelOpen)}
-          >
-            {panelOpen ? '▸' : '◂'}
-          </button>
-          <button
-            style={triangleBtn}
             title={toolbarOpen ? 'hide the toolbar' : 'show the toolbar'}
             onClick={() => saveLivePreference('boardToolbarOpen', !toolbarOpen)}
           >
             {toolbarOpen ? '▾' : '▴'}
           </button>
         </div>
+        {!panelOpen && (
+          <button
+            style={edgeReopen}
+            title="show the side panel"
+            onClick={() => saveLivePreference('boardPanelOpen', true)}
+          >
+            ◂
+          </button>
+        )}
       </div>
 
       {panelOpen && (
@@ -148,7 +150,17 @@ export function BoardLayout(props: BoardLayoutProps) {
           setLiveRatio(null);
         }}
         onPointerCancel={() => setLiveRatio(null)}
-      />
+      >
+        <button
+          style={dividerCollapse}
+          title="hide the side panel"
+          onClick={() => saveLivePreference('boardPanelOpen', false)}
+          onPointerDown={e => e.stopPropagation()}
+          onPointerUp={e => e.stopPropagation()}
+        >
+          ▸
+        </button>
+      </div>
       )}
 
       {panelOpen && <div style={sidePanelStyle}>{side}</div>}
@@ -184,6 +196,39 @@ const dividerStyle = {
   cursor: 'col-resize',
   background: 'var(--border-soft)',
   touchAction: 'none',
+  position: 'relative',
+} as const;
+
+// Vertically centered on the resize divider (Carson) — click collapses,
+// the strip around it still drags.
+const dividerCollapse = {
+  position: 'absolute',
+  top: '50%',
+  left: '50%',
+  transform: 'translate(-50%, -50%)',
+  background: 'var(--bg-raised)',
+  color: 'var(--fg-dim)',
+  border: '1px solid var(--border-soft)',
+  borderRadius: 3,
+  cursor: 'pointer',
+  fontSize: 12,
+  padding: '6px 1px',
+  lineHeight: 1,
+} as const;
+
+const edgeReopen = {
+  position: 'absolute',
+  right: 0,
+  top: '50%',
+  transform: 'translateY(-50%)',
+  background: 'var(--bg-raised)',
+  color: 'var(--fg-dim)',
+  border: '1px solid var(--border-soft)',
+  borderRadius: '3px 0 0 3px',
+  cursor: 'pointer',
+  fontSize: 12,
+  padding: '6px 2px',
+  lineHeight: 1,
 } as const;
 
 const boardCellStyle = {
