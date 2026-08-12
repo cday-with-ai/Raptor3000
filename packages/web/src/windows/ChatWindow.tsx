@@ -137,13 +137,40 @@ export const ChatWindow = function ChatWindow({
         onSelect={setActiveTabId}
         onClose={closeTab}
       />
-      <TabLog
-        tab={activeTab}
-        events={tabEvents}
-        prefs={prefs}
-        ownHandle={ownHandle}
-        onCommand={cmd => context.connector.sendMessage(cmd)}
-      />
+      {activeTab.kind === 'main' ? (
+        <TabLog
+          tab={activeTab}
+          events={tabEvents}
+          prefs={prefs}
+          ownHandle={ownHandle}
+          onCommand={cmd => context.connector.sendMessage(cmd)}
+        />
+      ) : (
+        // Decaf-style split (Carson, 2026-08-12): the active tab on top,
+        // the main console always visible underneath — you never lose
+        // the stream by reading a channel.
+        <div style={splitPane}>
+          <div style={splitTop}>
+            <TabLog
+              tab={activeTab}
+              events={tabEvents}
+              prefs={prefs}
+              ownHandle={ownHandle}
+              onCommand={cmd => context.connector.sendMessage(cmd)}
+            />
+          </div>
+          <div style={splitDivider}>main</div>
+          <div style={splitBottom}>
+            <TabLog
+              tab={MAIN_TAB}
+              events={events}
+              prefs={prefs}
+              ownHandle={ownHandle}
+              onCommand={cmd => context.connector.sendMessage(cmd)}
+            />
+          </div>
+        </div>
+      )}
       <form
         style={inputRow}
         onSubmit={e => {
@@ -578,6 +605,39 @@ const logView = {
   fontFamily: '"SF Mono", Consolas, monospace',
   fontSize: 13,
   lineHeight: 1.5,
+  height: '100%',
+} as const;
+
+// The Decaf split: tab pane above, persistent main console below.
+const splitPane = {
+  display: 'flex',
+  flexDirection: 'column',
+  minHeight: 0,
+  overflow: 'hidden',
+} as const;
+
+const splitTop = {
+  flex: '1 1 60%',
+  minHeight: 0,
+  overflow: 'hidden',
+} as const;
+
+const splitDivider = {
+  fontSize: 10,
+  textTransform: 'uppercase',
+  letterSpacing: 0.8,
+  opacity: 0.55,
+  padding: '2px 12px',
+  borderTop: '1px solid var(--border-soft)',
+  borderBottom: '1px solid var(--border-soft)',
+  background: 'var(--bg-raised)',
+  flexShrink: 0,
+} as const;
+
+const splitBottom = {
+  flex: '0 0 35%',
+  minHeight: 0,
+  overflow: 'hidden',
 } as const;
 
 const inputRow = {
