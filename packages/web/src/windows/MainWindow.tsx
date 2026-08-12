@@ -335,6 +335,12 @@ function OptionsPage({
               ]}
             />
           </Row>
+          <Row label="Move animations">
+            <Toggle
+              checked={prefs.boardAnimations}
+              onChange={v => update('boardAnimations', v)}
+            />
+          </Row>
           <Row label="Show coordinates">
             <Toggle
               checked={prefs.boardCoordinates}

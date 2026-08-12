@@ -459,6 +459,60 @@ function PieceImg({
 
 
 /**
+ * The piece in flight for a move animation: mounts on the source square
+ * and glides to the destination (180ms, like Chess Ascent's slide).
+ * Keyed by the animation id so every move gets a fresh flight.
+ */
+function FlightPiece({
+  anim,
+  flipped,
+  set,
+}: {
+  anim: { code: number; fromSq: string; toSq: string };
+  flipped: boolean;
+  set: AppPreferences['pieceSet'];
+}) {
+  const [fly, setFly] = useState(false);
+  useLayoutEffect(() => {
+    // Two frames: the first commits the at-source style, the second
+    // starts the transition. One frame races the style flush.
+    const raf = requestAnimationFrame(() =>
+      requestAnimationFrame(() => setFly(true)),
+    );
+    return () => cancelAnimationFrame(raf);
+  }, []);
+  const cell = (sq: string) => {
+    const p = parseSquare(sq)!;
+    return {
+      fi: flipped ? 7 - p.file : p.file,
+      ri: flipped ? p.rank : 7 - p.rank,
+    };
+  };
+  const from = cell(anim.fromSq);
+  const to = cell(anim.toSq);
+  return (
+    <div
+      style={{
+        position: 'absolute',
+        width: '12.5%',
+        height: '12.5%',
+        left: `${from.fi * 12.5}%`,
+        top: `${from.ri * 12.5}%`,
+        // translate % is of the piece's own box, so one square = 100%.
+        transform: fly
+          ? `translate(${(to.fi - from.fi) * 100}%, ${(to.ri - from.ri) * 100}%)`
+          : 'translate(0, 0)',
+        transition: 'transform 180ms ease',
+        pointerEvents: 'none',
+        zIndex: 5,
+      }}
+    >
+      <PieceImg code={anim.code} set={set} />
+    </div>
+  );
+}
+
+/**
  * Interactive board — click-to-move, highlights for last move + selection
  * + premove + check. Move sending is gated by mode:
  *   PLAYING    — sends immediately.
@@ -524,6 +578,42 @@ function Board({
   } | null>(null);
   const [ghost, setGhost] = useState<{ piece: number; x: number; y: number } | null>(null);
   const [dragFrom, setDragFrom] = useState<string | null>(null);
+  // The last move completed by OUR drag — its server echo shouldn't
+  // animate; the ghost already made that motion.
+  const lastDragRef = useRef<{ from: string; to: string; t: number } | null>(null);
+
+  // Move animation (the Chess Ascent slide): when a new move arrives,
+  // the piece glides from its source square; the destination shows the
+  // captured piece (if any) until the flight lands.
+  const prevS12Ref = useRef<Style12Message | undefined>(undefined);
+  const [anim, setAnim] = useState<{
+    code: number;
+    captured: number;
+    fromSq: string;
+    toSq: string;
+    id: number;
+  } | null>(null);
+  useEffect(() => {
+    const prev = prevS12Ref.current;
+    prevS12Ref.current = s12;
+    if (!prefs.boardAnimations || !s12 || !prev) return undefined;
+    const lm = lastMoveSquares(s12);
+    if (!lm) return undefined;
+    if (plyOf(s12) <= plyOf(prev)) return undefined; // takeback/refresh: snap
+    const d = lastDragRef.current;
+    if (d && d.from === lm.from && d.to === lm.to && Date.now() - d.t < 3000) {
+      return undefined;
+    }
+    const to = parseSquare(lm.to);
+    if (!to) return undefined;
+    const code = s12.position[to.rank]?.[to.file] ?? 0;
+    if (!code) return undefined;
+    const captured = prev.position[to.rank]?.[to.file] ?? 0;
+    const id = Date.now();
+    setAnim({ code, captured, fromSq: lm.from, toSq: lm.to, id });
+    const timer = setTimeout(() => setAnim(a => (a?.id === id ? null : a)), 240);
+    return () => clearTimeout(timer);
+  }, [s12, prefs.boardAnimations]);
 
   // When it becomes our turn (relation=1 after being -1), fire any premove.
   const isMyTurn =
@@ -672,6 +762,7 @@ function Board({
       const to = squareFromPoint(e.clientX, e.clientY);
       setSelected(null);
       if (to && to !== p.downSq) {
+        lastDragRef.current = { from: p.downSq, to, t: Date.now() };
         completeMoveTo(p.downSq, to);
       }
       return;
@@ -748,9 +839,17 @@ function Board({
             position: 'relative',
           }}
         >
-          {code !== 0 && dragFrom !== sq && (
-            <PieceImg code={code} set={prefs.pieceSet} />
-          )}
+          {(() => {
+            // While a move animates, its destination shows what was
+            // captured (or nothing) until the flight lands.
+            const shown =
+              !viewing && anim && sq === anim.toSq ? anim.captured : code;
+            return (
+              shown !== 0 && dragFrom !== sq && (
+                <PieceImg code={shown} set={prefs.pieceSet} />
+              )
+            );
+          })()}
           {showRankLabel && (
             <span style={{ ...coordLabelStyle, top: 0, right: 1, fontSize: coordFontSize, color: coordColor }}>
               {rank + 1}
@@ -794,6 +893,9 @@ function Board({
       }}
     >
       {rows}
+      {!viewing && anim && (
+        <FlightPiece key={anim.id} anim={anim} flipped={flipped} set={prefs.pieceSet} />
+      )}
       {ghost && (
         <div
           style={{
@@ -1110,7 +1212,7 @@ function MovesSection({
 
   const viewing = viewPly !== null;
   return (
-    <Section title="Moves">
+    <div style={{ paddingBottom: 6 }}>
       <div
         style={{
           // One compact line, always — the 220px panel must not wrap this.
@@ -1122,6 +1224,7 @@ function MovesSection({
           overflow: 'hidden',
         }}
       >
+        <strong style={{ opacity: 0.75, fontSize: 12, flexShrink: 0 }}>Moves:</strong>
         {viewing ? (
           <>
             <span style={{ opacity: 0.7 }}>viewing</span>
@@ -1175,7 +1278,7 @@ function MovesSection({
           )}
         </div>
       )}
-    </Section>
+    </div>
   );
 }
 
@@ -1293,7 +1396,7 @@ function EnginePanel({
     <Section title="Engine">
       {!isFocused ? (
         <button
-          style={focusBtn}
+          style={inlineLink}
           onClick={() => {
             if (!gameId) return;
             // A live game follows updates via focus(); an ended game's
@@ -1307,7 +1410,7 @@ function EnginePanel({
             setFocusedGameId(engine.getFocusedGameId());
           }}
         >
-          Focus engine here
+          (focus engine here)
         </button>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
@@ -1364,15 +1467,16 @@ function EnginePanel({
   );
 }
 
-const focusBtn = {
-  padding: '4px 10px',
-  background: 'var(--bg-input)',
-  color: 'var(--fg)',
-  border: '1px solid var(--border-strong)',
-  borderRadius: 4,
+// The (focus engine here) one-liner — same voice as (movelist).
+const inlineLink = {
+  background: 'none',
+  border: 'none',
+  color: 'var(--accent)',
   cursor: 'pointer',
   fontSize: 12,
+  padding: 0,
 } as const;
+
 
 const smallBtn = {
   padding: '2px 8px',

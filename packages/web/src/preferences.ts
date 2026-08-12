@@ -53,6 +53,8 @@ export interface AppPreferences {
   customLightSquareColor: string;
   customDarkSquareColor: string;
   pieceSet: PieceSet;
+  /** Animate incoming moves (the Chess Ascent slide). */
+  boardAnimations: boolean;
   clockActiveBg: ClockColor;
   clockActiveText: ClockColor;
   clockLowBg: ClockColor;
@@ -96,6 +98,7 @@ export const DEFAULT_PREFERENCES: AppPreferences = {
   customLightSquareColor: '#f0d9b5',
   customDarkSquareColor: '#b58863',
   pieceSet: 'cburnett',
+  boardAnimations: true,
   clockActiveBg: 'auto',
   clockActiveText: 'auto',
   clockLowBg: 'auto',
@@ -252,6 +255,7 @@ export function loadPreferences(): AppPreferences {
       DEFAULT_PREFERENCES.customDarkSquareColor,
     ),
     pieceSet: readString('pieceSet', DEFAULT_PREFERENCES.pieceSet, PIECE_SETS),
+    boardAnimations: readBool('boardAnimations', DEFAULT_PREFERENCES.boardAnimations),
     clockActiveBg: readClockColor('clockActiveBg'),
     clockActiveText: readClockColor('clockActiveText'),
     clockLowBg: readClockColor('clockLowBg'),
@@ -297,6 +301,7 @@ export function savePreferences(prefs: AppPreferences): void {
   setRaw('customLightSquareColor', prefs.customLightSquareColor);
   setRaw('customDarkSquareColor', prefs.customDarkSquareColor);
   setRaw('pieceSet', prefs.pieceSet);
+  setRaw('boardAnimations', String(prefs.boardAnimations));
   setRaw('clockActiveBg', prefs.clockActiveBg);
   setRaw('clockActiveText', prefs.clockActiveText);
   setRaw('clockLowBg', prefs.clockLowBg);
