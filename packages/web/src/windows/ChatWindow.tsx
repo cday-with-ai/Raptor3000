@@ -44,6 +44,12 @@ export const ChatWindow = function ChatWindow({
   const [events, setEvents] = useState<ChatEvent[]>([]);
   const [activeTabId, setActiveTabId] = useState<string>('main');
   const [input, setInput] = useState('');
+  // Readline-style input history: up/down walk previously sent lines,
+  // cursor lands at the end, enter sends (Carson).
+  const historyRef = useRef<string[]>([]);
+  const historyPosRef = useRef<number>(-1); // -1 = live input
+  const draftRef = useRef<string>('');
+  const inputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => installPositionTracker(windowStorageKey('chat')), []);
 
@@ -117,6 +123,11 @@ export const ChatWindow = function ChatWindow({
 
   const submit = (line: string) => {
     if (line.length === 0) return;
+    // History: newest last, no consecutive duplicates, capped.
+    const h = historyRef.current;
+    if (h[h.length - 1] !== line) h.push(line);
+    if (h.length > 200) h.shift();
+    historyPosRef.current = -1;
     const sent = context.connector.sendMessage(line);
     if (!sent) {
       // Not connected — synthesize an INTERNAL event so the user sees it.
@@ -208,10 +219,43 @@ export const ChatWindow = function ChatWindow({
       >
         <span style={prefixLabel}>{'>'}</span>
         <input
+          ref={inputRef}
           style={inputBox}
           value={input}
-          onChange={e => setInput(e.target.value)}
-          
+          onChange={e => {
+            setInput(e.target.value);
+            historyPosRef.current = -1;
+          }}
+          onKeyDown={e => {
+            const h = historyRef.current;
+            if (e.key === 'ArrowUp') {
+              if (h.length === 0) return;
+              e.preventDefault();
+              if (historyPosRef.current === -1) {
+                draftRef.current = input;
+                historyPosRef.current = h.length - 1;
+              } else if (historyPosRef.current > 0) {
+                historyPosRef.current--;
+              }
+              const line = h[historyPosRef.current];
+              setInput(line);
+              requestAnimationFrame(() =>
+                inputRef.current?.setSelectionRange(line.length, line.length),
+              );
+            } else if (e.key === 'ArrowDown') {
+              if (historyPosRef.current === -1) return;
+              e.preventDefault();
+              historyPosRef.current++;
+              const line =
+                historyPosRef.current >= h.length
+                  ? ((historyPosRef.current = -1), draftRef.current)
+                  : h[historyPosRef.current];
+              setInput(line);
+              requestAnimationFrame(() =>
+                inputRef.current?.setSelectionRange(line.length, line.length),
+              );
+            }
+          }}
           autoFocus
         />
         <button style={btn} type="submit">
