@@ -20,6 +20,7 @@ import {
   formatSanLine,
   pvToSan,
   replaySans,
+  whiteToMoveFromFen,
 } from '../game/chessBridge.js';
 import { detectOpening, loadOpenings, type Opening } from '../game/openings.js';
 import type { RaptorContext } from './appContext.js';
@@ -145,6 +146,16 @@ export const BoardWindow = observer(function BoardWindow({
     viewPly !== null && viewPly < replay.grids.length
       ? replay.grids[viewPly]
       : null;
+
+  // The position the engine should be looking at: the viewed ply while
+  // browsing, the live position otherwise (Carson, 2026-08-12 — "the
+  // engine should focus on where we are on the board").
+  const analysisFen =
+    viewPly !== null
+      ? replay.fens[viewPly] ?? null
+      : s12
+        ? style12ToFen(s12)
+        : null;
 
   // Opening detection: longest catalogued prefix of the move history
   // (lichess chess-openings, fetched fresh at runtime). Seeding: ask for
@@ -314,6 +325,7 @@ export const BoardWindow = observer(function BoardWindow({
           onViewPly={setViewPly}
           showEngine={prefs.showEngineAnalysis}
           opening={opening}
+          analysisFen={analysisFen}
         />
       }
       toolbar={<Toolbar mode={mode} handlers={toolbarHandlers} />}
@@ -1139,6 +1151,7 @@ function SidePanel({
   onViewPly,
   showEngine,
   opening,
+  analysisFen,
 }: {
   context: RaptorContext;
   s12: Style12Message | undefined;
@@ -1151,30 +1164,22 @@ function SidePanel({
   /** Options → Engine → "Stockfish analysis available" — finally wired. */
   showEngine: boolean;
   opening: Opening | null;
+  analysisFen: string | null;
 }) {
   // Order per Carson (2026-08-12): status first, engine next, moves at
   // the bottom. Captured is gone — it never earned its pixels.
   return (
     <>
       <div style={{ borderBottom: '1px solid var(--border-soft)', paddingBottom: 6, fontSize: 12 }}>
-        <div>
-          <span style={{ fontWeight: 700, opacity: 0.75 }}>Status:</span>{' '}
-          <span style={{ opacity: 0.85 }}>{modeLabel(mode)}</span>
-        </div>
-        {opening && (
-          <div style={{ marginTop: 2 }}>
-            <span style={{ fontWeight: 700, opacity: 0.75 }}>Opening:</span>{' '}
-            <span style={{ opacity: 0.85 }} title={`ECO ${opening.eco}, book through ply ${opening.plies}`}>
-              {opening.eco} {opening.name}
-            </span>
-          </div>
-        )}
+        <span style={{ fontWeight: 700, opacity: 0.75 }}>Status:</span>{' '}
+        <span style={{ opacity: 0.85 }}>{modeLabel(mode)}</span>
       </div>
       {showEngine && engineAnalysisAllowed(mode) && (
-        <EnginePanel context={context} gameId={gameId} s12={s12} />
+        <EnginePanel context={context} gameId={gameId} fen={analysisFen} viewing={viewPly !== null} />
       )}
       <MovesSection
         s12={s12}
+        opening={opening}
         sans={sans}
         viewablePlies={viewablePlies}
         viewPly={viewPly}
@@ -1209,12 +1214,14 @@ function plyLabel(ply: number, san: string | null): string {
  */
 function MovesSection({
   s12,
+  opening,
   sans,
   viewablePlies,
   viewPly,
   onViewPly,
 }: {
   s12: Style12Message | undefined;
+  opening: Opening | null;
   sans: ReadonlyMap<number, string>;
   viewablePlies: number;
   viewPly: number | null;
@@ -1301,6 +1308,14 @@ function MovesSection({
             gap: 1,
           }}
         >
+          {opening && (
+            <div
+              style={{ opacity: 0.75, fontStyle: 'italic', marginBottom: 2 }}
+              title={`ECO ${opening.eco}, book through ply ${opening.plies}`}
+            >
+              {opening.eco} {opening.name}
+            </div>
+          )}
           {rows.length === 0 ? (
             <span style={{ opacity: 0.5 }}>(waiting for movelist…)</span>
           ) : (
@@ -1367,11 +1382,14 @@ const movelistLink = {
 function EnginePanel({
   context,
   gameId,
-  s12,
+  fen,
+  viewing,
 }: {
   context: RaptorContext;
   gameId: string | null;
-  s12: Style12Message | undefined;
+  /** The position being looked at — the viewed ply while browsing. */
+  fen: string | null;
+  viewing: boolean;
 }) {
   // (best line) shows one PV; (multi line) searches and shows three.
   const [lineMode, setLineMode] = useState<'best' | 'multi'>('best');
@@ -1412,8 +1430,7 @@ function EnginePanel({
   // Eval and lines are always shown from White's perspective — the
   // convention every engine GUI uses. UCI reports side-to-move, so the
   // flip needs the analyzed position's turn.
-  const whiteToMove = s12?.isWhitesMoveAfterMoveIsMade ?? true;
-  const fen = s12 ? style12ToFen(s12) : null;
+  const whiteToMove = fen ? whiteToMoveFromFen(fen) : true;
   const lines = analysis?.lines ?? [];
   const shown = lineMode === 'best' ? lines.slice(0, 1) : lines.slice(0, 3);
 
@@ -1426,10 +1443,14 @@ function EnginePanel({
     setLineMode(m);
     engine.setMultiPv(m === 'multi' ? 3 : 1);
     if (!isFocused) {
-      if (context.gameService.getLatestStyle12(gameId)) {
+      if (viewing && fen) {
+        // Engage on the position being looked at, pinned there.
+        engine.focusFen(gameId, fen);
+      } else if (context.gameService.getLatestStyle12(gameId)) {
         engine.focus(gameId);
-      } else if (s12) {
-        engine.focusFen(gameId, style12ToFen(s12));
+      } else if (fen) {
+        // Ended game: the final position, held only by this window.
+        engine.focusFen(gameId, fen);
       }
       setFocusedGameId(engine.getFocusedGameId());
     }

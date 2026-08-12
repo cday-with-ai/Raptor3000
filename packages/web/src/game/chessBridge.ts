@@ -148,3 +148,9 @@ export function formatEvalWhitePov(
   const v = cp / 100;
   return (v >= 0 ? '+' : '') + v.toFixed(2);
 }
+
+/** Side to move from a FEN — the eval flip must follow the ANALYZED
+ *  position, which is the viewed one while browsing history. */
+export function whiteToMoveFromFen(fen: string): boolean {
+  return fen.split(' ')[1] !== 'b';
+}

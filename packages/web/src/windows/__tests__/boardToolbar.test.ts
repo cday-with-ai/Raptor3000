@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { BoardMode, engineAnalysisAllowed, type BoardModeCode } from '@raptor3000/shared';
+import { BoardMode, type BoardModeCode } from '@raptor3000/shared';
 import {
   NOT_IMPLEMENTED_HINT,
   toolbarButtonProps,
@@ -70,11 +70,12 @@ describe('toolbarLayoutFor', () => {
     ]);
   });
 
-  it('offers the engine toggle exactly where analysis is allowed', () => {
+  it('offers no Engine toggle anywhere — the side panel owns that now', () => {
+    // 2026-08-12: the Engine control moved into the side panel
+    // ("Engine: (best line) (multi line)"); a second switch in the
+    // toolbar was redundant.
     for (const mode of ALL_MODES) {
-      expect(labels(mode).includes('Engine'), mode).toBe(
-        engineAnalysisAllowed(mode),
-      );
+      expect(labels(mode)).not.toContain('Engine');
     }
   });
 
@@ -103,22 +104,17 @@ describe('toolbarLayoutFor', () => {
   it('gives OBSERVING, EXAMINING, INACTIVE and BUGHOUSE_SUGGEST their own right-hand sets', () => {
     const right = (m: BoardModeCode) =>
       toolbarLayoutFor(m).right.map((i) => i.label);
-    expect(right(BoardMode.OBSERVING)).toEqual([
-      'Flip',
-      'Engine',
-      'Update',
-      'Winners',
-    ]);
+    // OBSERVING slimmed to just Flip (Carson, 2026-08-12): Update and
+    // Winners never earned their pixels.
+    expect(right(BoardMode.OBSERVING)).toEqual(['Flip']);
     expect(right(BoardMode.EXAMINING)).toEqual([
       'Flip',
-      'Engine',
       'Setup',
       'Commit',
       'Revert',
     ]);
     expect(right(BoardMode.INACTIVE)).toEqual([
       'Flip',
-      'Engine',
       'Rematch',
       'Save PGN',
     ]);
@@ -129,7 +125,7 @@ describe('toolbarLayoutFor', () => {
     const first = toolbarLayoutFor(BoardMode.OBSERVING);
     first.right.pop();
     expect(toolbarLayoutFor(BoardMode.OBSERVING).right.map((i) => i.label))
-      .toEqual(['Flip', 'Engine', 'Update', 'Winners']);
+      .toEqual(['Flip']);
   });
 });
 

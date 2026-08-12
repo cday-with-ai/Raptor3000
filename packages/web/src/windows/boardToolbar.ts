@@ -21,11 +21,7 @@
  * mode → buttons mapping can be asserted without a DOM. What a test here
  * cannot see is the rendering itself; that still needs jsdom.
  */
-import {
-  BoardMode,
-  engineAnalysisAllowed,
-  type BoardModeCode,
-} from '@raptor3000/shared';
+import { BoardMode, type BoardModeCode } from '@raptor3000/shared';
 
 export type ToolbarItem = {
   /** Stable id, for tests and for handler lookup once handlers exist. */
@@ -78,7 +74,9 @@ function modeItems(mode: BoardModeCode): ToolbarItem[] {
         dead('resign', 'Resign'),
       ];
     case BoardMode.OBSERVING:
-      return [dead('update', 'Update'), dead('winners', 'Winners')];
+      // Just Flip (Carson): the engine has its own control in the side
+      // panel now, and Update/Winners never earned their pixels.
+      return [];
     case BoardMode.EXAMINING:
       return [
         dead('setup', 'Setup'),
@@ -111,13 +109,9 @@ export function toolbarLayoutFor(mode: BoardModeCode): ToolbarLayout {
     };
   }
 
-  const engineToggle = engineAnalysisAllowed(mode)
-    ? [dead('engine', 'Engine')]
-    : [];
-
   return {
     left: navItems,
-    right: [live('flip', 'Flip'), ...engineToggle, ...modeItems(mode)],
+    right: [live('flip', 'Flip'), ...modeItems(mode)],
   };
 }
 
