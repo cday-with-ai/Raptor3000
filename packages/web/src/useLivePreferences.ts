@@ -41,3 +41,59 @@ export function saveLivePreference<K extends keyof AppPreferences>(
   savePreferences({ ...loadPreferences(), [key]: value });
   window.dispatchEvent(new Event(LOCAL_EVENT));
 }
+
+/** Board-window layout, remembered PER MODE (Carson: playing wants a
+ *  different shape than observing). Falls back to the global prefs so
+ *  nothing changes until a bucket is customized. */
+export type LayoutBucket = 'playing' | 'observing' | 'examining';
+
+export interface BoardLayoutPrefs {
+  panelRatio: number;
+  panelOpen: boolean;
+  toolbarOpen: boolean;
+  engineRatio: number;
+  movesExpanded: boolean;
+}
+
+const RATIO_BOUNDS: Record<string, [number, number]> = {
+  panelRatio: [0.1, 0.5],
+  engineRatio: [0.15, 0.7],
+};
+
+function rawKey(bucket: LayoutBucket, field: keyof BoardLayoutPrefs): string {
+  return `pref.layout.${bucket}.${field}`;
+}
+
+export function loadBoardLayout(bucket: LayoutBucket): BoardLayoutPrefs {
+  const g = loadPreferences();
+  const num = (field: 'panelRatio' | 'engineRatio', fallback: number) => {
+    const v = parseFloat(localStorage.getItem(rawKey(bucket, field)) ?? '');
+    const [lo, hi] = RATIO_BOUNDS[field];
+    return Number.isFinite(v) && v >= lo && v <= hi ? v : fallback;
+  };
+  const bool = (field: 'panelOpen' | 'toolbarOpen' | 'movesExpanded', fallback: boolean) => {
+    const v = localStorage.getItem(rawKey(bucket, field));
+    return v === 'true' ? true : v === 'false' ? false : fallback;
+  };
+  return {
+    panelRatio: num('panelRatio', g.boardPanelRatio),
+    panelOpen: bool('panelOpen', g.boardPanelOpen),
+    toolbarOpen: bool('toolbarOpen', g.boardToolbarOpen),
+    engineRatio: num('engineRatio', g.engineSplitRatio),
+    // Playing starts its move list collapsed by default (Carson).
+    movesExpanded: bool('movesExpanded', bucket === 'playing' ? false : g.moveListVisible),
+  };
+}
+
+export function saveBoardLayoutField<K extends keyof BoardLayoutPrefs>(
+  bucket: LayoutBucket,
+  field: K,
+  value: BoardLayoutPrefs[K],
+): void {
+  try {
+    localStorage.setItem(rawKey(bucket, field), String(value));
+  } catch {
+    // best-effort
+  }
+  window.dispatchEvent(new Event(LOCAL_EVENT));
+}

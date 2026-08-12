@@ -1,5 +1,10 @@
 import { useLayoutEffect, useRef, useState, type ReactNode } from 'react';
-import { saveLivePreference, useLivePreferences } from '../useLivePreferences.js';
+import {
+  loadBoardLayout,
+  saveBoardLayoutField,
+  useLivePreferences,
+  type LayoutBucket,
+} from '../useLivePreferences.js';
 
 /**
  * Single default board-window layout. Ported from Raptor's ChessArea /
@@ -34,6 +39,9 @@ export interface BoardLayoutProps {
   board: ReactNode;       // the board component (fills a size×size box)
   side: ReactNode;        // move list / captures / status column
   toolbar?: ReactNode;    // optional tool row at the very bottom
+  /** Which per-mode layout memory this window reads and writes —
+   *  playing wants a different shape than observing (Carson). */
+  bucket: LayoutBucket;
 }
 
 const BAND_GAP_ABOVE = 4;   // Chess Ascent boardHeaderRow marginBottom
@@ -41,7 +49,7 @@ const BAND_GAP_BELOW = 12;  // Chess Ascent boardFooterRow marginTop
 const CELL_PADDING = 8;
 
 export function BoardLayout(props: BoardLayoutProps) {
-  const { topBar, bottomBar, board, side, toolbar } = props;
+  const { topBar, bottomBar, board, side, toolbar, bucket } = props;
   const cellRef = useRef<HTMLDivElement | null>(null);
   const topRef = useRef<HTMLDivElement | null>(null);
   const bottomRef = useRef<HTMLDivElement | null>(null);
@@ -49,18 +57,19 @@ export function BoardLayout(props: BoardLayoutProps) {
   const [size, setSize] = useState(0);
 
   // The board/panel divider drags (Carson, 2026-08-12): the side
-  // panel's share of the width is a preference, live during the drag,
-  // saved on release. The board cell's ResizeObserver re-squares the
-  // board as the column moves.
-  const prefs = useLivePreferences();
+  // panel's share of the width is remembered PER MODE, live during the
+  // drag, saved on release. The board cell's ResizeObserver re-squares
+  // the board as the column moves.
+  useLivePreferences(); // re-renders this window when any pref changes
+  const layout = loadBoardLayout(bucket);
   const [liveRatio, setLiveRatio] = useState<number | null>(null);
-  const panelRatio = liveRatio ?? prefs.boardPanelRatio;
+  const panelRatio = liveRatio ?? layout.panelRatio;
   const clampRatio = (v: number) => Math.min(0.5, Math.max(0.1, v));
   // The triangles (Carson): collapse the side panel and/or the toolbar
   // entirely — the board takes the space, the ResizeObserver re-squares.
-  // Both controls live in the BOARD area, remembered as preferences.
-  const panelOpen = prefs.boardPanelOpen;
-  const toolbarOpen = prefs.boardToolbarOpen;
+  // Both controls live in the BOARD area, remembered per mode.
+  const panelOpen = layout.panelOpen;
+  const toolbarOpen = layout.toolbarOpen;
 
   useLayoutEffect(() => {
     const cell = cellRef.current;
@@ -118,7 +127,7 @@ export function BoardLayout(props: BoardLayoutProps) {
           <button
             style={bottomReopen}
             title="show the toolbar"
-            onClick={() => saveLivePreference('boardToolbarOpen', true)}
+            onClick={() => saveBoardLayoutField(bucket, 'toolbarOpen', true)}
           >
             ▴
           </button>
@@ -127,7 +136,7 @@ export function BoardLayout(props: BoardLayoutProps) {
           <button
             style={edgeReopen}
             title="show the side panel"
-            onClick={() => saveLivePreference('boardPanelOpen', true)}
+            onClick={() => saveBoardLayoutField(bucket, 'panelOpen', true)}
           >
             ◂
           </button>
@@ -148,7 +157,7 @@ export function BoardLayout(props: BoardLayoutProps) {
           setLiveRatio(clampRatio((rect.right - e.clientX) / rect.width));
         }}
         onPointerUp={() => {
-          if (liveRatio !== null) saveLivePreference('boardPanelRatio', clampRatio(liveRatio));
+          if (liveRatio !== null) saveBoardLayoutField(bucket, 'panelRatio', clampRatio(liveRatio));
           setLiveRatio(null);
         }}
         onPointerCancel={() => setLiveRatio(null)}
@@ -156,7 +165,7 @@ export function BoardLayout(props: BoardLayoutProps) {
         <button
           style={dividerCollapse}
           title="hide the side panel"
-          onClick={() => saveLivePreference('boardPanelOpen', false)}
+          onClick={() => saveBoardLayoutField(bucket, 'panelOpen', false)}
           onPointerDown={e => e.stopPropagation()}
           onPointerUp={e => e.stopPropagation()}
         >
@@ -173,7 +182,7 @@ export function BoardLayout(props: BoardLayoutProps) {
             <button
               style={toolbarCollapse}
               title="hide the toolbar"
-              onClick={() => saveLivePreference('boardToolbarOpen', false)}
+              onClick={() => saveBoardLayoutField(bucket, 'toolbarOpen', false)}
             >
               ▾
             </button>

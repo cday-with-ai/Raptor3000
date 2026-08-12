@@ -41,7 +41,12 @@ import {
   clockChipColors,
   type AppPreferences,
 } from '../preferences.js';
-import { saveLivePreference, useLivePreferences } from '../useLivePreferences.js';
+import {
+  loadBoardLayout,
+  saveBoardLayoutField,
+  useLivePreferences,
+  type LayoutBucket,
+} from '../useLivePreferences.js';
 
 /**
  * Board window — per-game popup. Subscribes to GameService for its
@@ -243,6 +248,11 @@ export const BoardWindow = observer(function BoardWindow({
       : fallbackMode;
   if (!ended) liveModeRef.current = mode;
 
+  // Which per-mode layout memory this window lives in. An ended game
+  // keeps the shape of the mode it ended FROM — a finished played game
+  // still looks like a playing window (Carson).
+  const bucket = layoutBucketFor(ended ? (endedFrom ?? mode) : mode);
+
   // Locally-ticked clock offsets, applied to the server clocks between
   // Style12 updates. Reset on every new Style12; frozen once the game ends.
   const tick = useClockTick(ended ? undefined : s12);
@@ -367,6 +377,7 @@ export const BoardWindow = observer(function BoardWindow({
 
   return (
     <BoardLayout
+      bucket={bucket}
       topBar={topBar}
       bottomBar={bottomBar}
       board={
@@ -397,10 +408,11 @@ export const BoardWindow = observer(function BoardWindow({
           opening={opening}
           openingFen={opening ? replay.fens[opening.plies] ?? null : null}
           analysisFen={analysisFen}
+          bucket={bucket}
           startMovesExpanded={
-            // PLAYING starts collapsed regardless of the pref (Carson):
-            // just "1) … e5" until you ask for the list.
-            mode !== BoardMode.PLAYING && prefs.moveListVisible
+            // Per-mode memory: playing defaults collapsed — just
+            // "1) … e5" — but however you left it last time wins.
+            loadBoardLayout(bucket).movesExpanded
           }
           onNav={nav}
           gameEnd={gameEnd}
@@ -445,6 +457,14 @@ function savePgn(
   a.download = `${s12?.whiteName ?? 'white'}-vs-${s12?.blackName ?? 'black'}.pgn`;
   a.click();
   URL.revokeObjectURL(url);
+}
+
+/** PLAYING and EXAMINING get their own layout memory; everything else
+ *  (observing, isolated positions, unknowns) shares the observing one. */
+function layoutBucketFor(mode: BoardModeCode): LayoutBucket {
+  if (mode === BoardMode.PLAYING) return 'playing';
+  if (mode === BoardMode.EXAMINING) return 'examining';
+  return 'observing';
 }
 
 /**
@@ -1412,6 +1432,7 @@ function SidePanel({
   opening,
   openingFen,
   analysisFen,
+  bucket,
   startMovesExpanded,
   onNav,
   gameEnd,
@@ -1431,6 +1452,7 @@ function SidePanel({
   opening: Opening | null;
   openingFen: string | null;
   analysisFen: string | null;
+  bucket: LayoutBucket;
   startMovesExpanded: boolean;
 }) {
   // Panel structure (Carson, 2026-08-12 evening): Status pinned top,
@@ -1439,8 +1461,8 @@ function SidePanel({
   // reflow anything above it.
   const panelRef = useRef<HTMLDivElement | null>(null);
   const [liveEngineRatio, setLiveEngineRatio] = useState<number | null>(null);
-  const prefs2 = useLivePreferences();
-  const engineRatio = liveEngineRatio ?? prefs2.engineSplitRatio;
+  useLivePreferences(); // re-render on layout-memory changes
+  const engineRatio = liveEngineRatio ?? loadBoardLayout(bucket).engineRatio;
   const clampEngine = (v: number) => Math.min(0.7, Math.max(0.15, v));
   const engineShown = showEngine && engineAnalysisAllowed(mode);
   return (
@@ -1457,6 +1479,7 @@ function SidePanel({
       <div style={{ flex: 1, minHeight: 0, overflowY: 'auto' }}>
         <MovesSection
           s12={s12}
+          bucket={bucket}
           opening={opening}
           openingFen={openingFen}
           startExpanded={startMovesExpanded}
@@ -1485,7 +1508,7 @@ function SidePanel({
             }}
             onPointerUp={() => {
               if (liveEngineRatio !== null) {
-                saveLivePreference('engineSplitRatio', clampEngine(liveEngineRatio));
+                saveBoardLayoutField(bucket, 'engineRatio', clampEngine(liveEngineRatio));
               }
               setLiveEngineRatio(null);
             }}
@@ -1533,6 +1556,7 @@ function plyLabel(ply: number, san: string | null): string {
  */
 function MovesSection({
   s12,
+  bucket,
   opening,
   openingFen,
   startExpanded,
@@ -1544,6 +1568,7 @@ function MovesSection({
   onNav,
 }: {
   s12: Style12Message | undefined;
+  bucket: LayoutBucket;
   opening: Opening | null;
   /** "0-1 (GuestX forfeits on time)" once the game is over. */
   resultLine: string | null;
@@ -1560,8 +1585,13 @@ function MovesSection({
   const [expanded, setExpanded] = useState(startExpanded);
 
   // History is seeded when the window opens (the opening-detection
-  // seed), so expanding is pure UI.
-  const toggle = () => setExpanded(e => !e);
+  // seed), so expanding is pure UI — remembered per mode so the next
+  // window of this kind opens the way you left this one.
+  const toggle = () => {
+    const next = !expanded;
+    setExpanded(next);
+    saveBoardLayoutField(bucket, 'movesExpanded', next);
+  };
 
   const maxPly = sans.size === 0 ? 0 : Math.max(...sans.keys());
   const rows: React.ReactNode[] = [];
