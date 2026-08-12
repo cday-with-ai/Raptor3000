@@ -195,13 +195,69 @@ export const BoardWindow = observer(function BoardWindow({
   const whiteClock = Math.max(0, baseWhiteMs - (whiteTicking ? tick : 0));
   const blackClock = Math.max(0, baseBlackMs - (blackTicking ? tick : 0));
 
-  const flipped = !!s12?.isWhiteOnTop;
+  // Manual flip on top of the server's orientation (the Flip button).
+  const [flipOverride, setFlipOverride] = useState(false);
+  const flipped = !!s12?.isWhiteOnTop !== flipOverride;
+
   const topName = flipped ? whiteName : blackName;
   const bottomName = flipped ? blackName : whiteName;
   const topClock = flipped ? whiteClock : blackClock;
   const bottomClock = flipped ? blackClock : whiteClock;
   const topTicking = flipped ? whiteTicking : blackTicking;
   const bottomTicking = flipped ? blackTicking : whiteTicking;
+
+  // Closing an observed/examined board leaves the game on FICS too —
+  // Raptor behavior. beforeunload also fires on a popup reload, which
+  // costs one unobserve and a re-observe; closing is the common case.
+  useEffect(() => {
+    const onUnload = () => {
+      if (!gameId || ended || !context.connector.isConnected()) return;
+      if (mode === BoardMode.OBSERVING) {
+        context.connector.sendMessageHidden(`unobserve ${gameId}`);
+      } else if (mode === BoardMode.EXAMINING) {
+        context.connector.sendMessageHidden('unexamine');
+      }
+    };
+    window.addEventListener('beforeunload', onUnload);
+    return () => window.removeEventListener('beforeunload', onUnload);
+  }, [mode, ended, gameId, context]);
+
+  // Toolbar nav: EXAMINING walks the game server-side; everything else
+  // browses the window-local history (same machinery as the move list).
+  const navMovesRequested = useRef(false);
+  const viewablePlies = replay.grids.length - 1;
+  const nav = (which: 'first' | 'back' | 'forward' | 'last') => {
+    if (mode === BoardMode.EXAMINING) {
+      const cmd = {
+        first: 'backward 999',
+        back: 'backward',
+        forward: 'forward',
+        last: 'forward 999',
+      }[which];
+      context.connector.sendMessageHidden(cmd);
+      return;
+    }
+    if (!navMovesRequested.current && gameId) {
+      navMovesRequested.current = true;
+      context.connector.sendMessageHidden(`moves ${gameId}`);
+    }
+    const current = viewPly ?? viewablePlies;
+    switch (which) {
+      case 'first': setViewPly(0); break;
+      case 'back': setViewPly(Math.max(0, current - 1)); break;
+      case 'forward': setViewPly(current + 1 >= viewablePlies ? null : current + 1); break;
+      case 'last': setViewPly(null); break;
+    }
+  };
+
+  const toolbarHandlers: Record<string, () => void> = {
+    'nav-first': () => nav('first'),
+    'nav-back': () => nav('back'),
+    'nav-forward': () => nav('forward'),
+    'nav-last': () => nav('last'),
+    flip: () => setFlipOverride(o => !o),
+  };
+
 
   const prefs = useLivePreferences();
 
@@ -223,6 +279,7 @@ export const BoardWindow = observer(function BoardWindow({
           gameId={gameId}
           mode={mode}
           viewGrid={viewGrid}
+          flipped={flipped}
         />
       }
       side={
@@ -237,7 +294,7 @@ export const BoardWindow = observer(function BoardWindow({
           onViewPly={setViewPly}
         />
       }
-      toolbar={<Toolbar mode={mode} />}
+      toolbar={<Toolbar mode={mode} handlers={toolbarHandlers} />}
     />
   );
 });
@@ -414,6 +471,7 @@ function Board({
   gameId,
   mode,
   viewGrid,
+  flipped,
 }: {
   context: RaptorContext;
   s12: Style12Message | undefined;
@@ -422,8 +480,9 @@ function Board({
   /** When set, render this historical position instead of the live one
    *  (read-only; the Moves control owns the viewing/live affordance). */
   viewGrid: number[][] | null;
+  /** Orientation, including the Flip button's manual override. */
+  flipped: boolean;
 }) {
-  const flipped = !!s12?.isWhiteOnTop;
   // Viewing history is read-only — moves belong to the live position.
   const viewing = viewGrid !== null;
   const interactive =
@@ -1356,16 +1415,22 @@ function Section({
  * item there is currently `implemented: false`, which is what makes these
  * render disabled — see that file before wiring a handler.
  */
-function Toolbar({ mode }: { mode: BoardModeCode }) {
+function Toolbar({
+  mode,
+  handlers,
+}: {
+  mode: BoardModeCode;
+  handlers: Record<string, () => void>;
+}) {
   const { left, right } = toolbarLayoutFor(mode);
   return (
     <ToolbarShell>
       {left.map((item) => (
-        <TbButton key={item.id} item={item} />
+        <TbButton key={item.id} item={item} onClick={handlers[item.id]} />
       ))}
       <span style={{ flex: 1 }} />
       {right.map((item) => (
-        <TbButton key={item.id} item={item} />
+        <TbButton key={item.id} item={item} onClick={handlers[item.id]} />
       ))}
     </ToolbarShell>
   );
@@ -1387,10 +1452,19 @@ function ToolbarShell({ children }: { children: React.ReactNode }) {
   );
 }
 
-function TbButton({ item }: { item: ToolbarItem }) {
-  const { disabled, title, style } = toolbarButtonProps(item);
+function TbButton({
+  item,
+  onClick,
+}: {
+  item: ToolbarItem;
+  onClick?: () => void;
+}) {
+  // `implemented` claims a handler exists; a missing one here means the
+  // flag was flipped without wiring — render it dead rather than lie.
+  const effective = onClick ? item : { ...item, implemented: false };
+  const { disabled, title, style } = toolbarButtonProps(effective);
   return (
-    <button disabled={disabled} title={title} style={style}>
+    <button disabled={disabled} title={title} style={style} onClick={onClick}>
       {item.label}
     </button>
   );

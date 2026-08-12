@@ -51,11 +51,18 @@ function dead(id: string, label: string): ToolbarItem {
   return { id, label, implemented: false };
 }
 
+function live(id: string, label: string): ToolbarItem {
+  return { id, label, implemented: true };
+}
+
+// Wired 2026-08-12: EXAMINING navigates server-side (backward/forward),
+// every other mode browses the window-local move history. Handlers live
+// in BoardWindow's `toolbarHandlers`.
 const navItems: ToolbarItem[] = [
-  dead('nav-first', '⏮'),
-  dead('nav-back', '◀'),
-  dead('nav-forward', '▶'),
-  dead('nav-last', '⏭'),
+  live('nav-first', '⏮'),
+  live('nav-back', '◀'),
+  live('nav-forward', '▶'),
+  live('nav-last', '⏭'),
 ];
 
 /** Buttons to the right of the gap, excluding Flip and the engine toggle. */
@@ -110,7 +117,7 @@ export function toolbarLayoutFor(mode: BoardModeCode): ToolbarLayout {
 
   return {
     left: navItems,
-    right: [dead('flip', 'Flip'), ...engineToggle, ...modeItems(mode)],
+    right: [live('flip', 'Flip'), ...engineToggle, ...modeItems(mode)],
   };
 }
 
