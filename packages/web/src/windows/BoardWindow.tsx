@@ -218,7 +218,10 @@ function Clock({ ms, ticking }: { ms: number; ticking: boolean }) {
         padding: '2px 10px',
         background: ticking ? (lowTime ? '#5a2a2a' : '#2a4a2a') : 'var(--bg-sunken)',
         border: `1px solid ${ticking ? (lowTime ? '#a04040' : '#3a6a3a') : 'var(--border-soft)'}`,
-        color: lowTime && ticking ? '#ffd9d9' : 'inherit',
+        // The ticking backgrounds are dark regardless of theme, so the text
+        // must be light regardless of theme — `inherit` is near-black in
+        // light mode and vanished against the green.
+        color: ticking ? (lowTime ? '#ffd9d9' : '#ffffff') : 'inherit',
         borderRadius: 4,
         minWidth: 72,
         textAlign: 'center',
