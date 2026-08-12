@@ -1394,14 +1394,13 @@ function Section({
     <div style={{ borderBottom: '1px solid var(--border-soft)', paddingBottom: 6 }}>
       <div
         style={{
-          fontSize: 11,
-          textTransform: 'uppercase',
-          letterSpacing: 0.8,
-          opacity: 0.6,
+          fontSize: 12,
+          fontWeight: 700,
+          opacity: 0.75,
           marginBottom: 4,
         }}
       >
-        {title}
+        {title}:
       </div>
       {children}
     </div>
@@ -1471,12 +1470,12 @@ function TbButton({
 
 function modeLabel(m: BoardModeCode): string {
   switch (m) {
-    case BoardMode.PLAYING: return 'playing';
-    case BoardMode.OBSERVING: return 'observing';
-    case BoardMode.EXAMINING: return 'examining';
-    case BoardMode.SETUP: return 'setup';
-    case BoardMode.INACTIVE: return 'inactive';
-    case BoardMode.BUGHOUSE_SUGGEST: return 'bughouse (partner)';
+    case BoardMode.PLAYING: return 'Playing';
+    case BoardMode.OBSERVING: return 'Observing';
+    case BoardMode.EXAMINING: return 'Examining';
+    case BoardMode.SETUP: return 'Setup';
+    case BoardMode.INACTIVE: return 'Game over';
+    case BoardMode.BUGHOUSE_SUGGEST: return 'Bughouse (partner)';
     default: return m;
   }
 }
