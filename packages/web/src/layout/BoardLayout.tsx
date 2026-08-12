@@ -112,15 +112,15 @@ export function BoardLayout(props: BoardLayoutProps) {
         <div ref={bottomRef} style={{ width: size || undefined, marginTop: BAND_GAP_BELOW }}>
           {bottomBar}
         </div>
-        <div style={cornerControls}>
+        {!toolbarOpen && (
           <button
-            style={triangleBtn}
-            title={toolbarOpen ? 'hide the toolbar' : 'show the toolbar'}
-            onClick={() => saveLivePreference('boardToolbarOpen', !toolbarOpen)}
+            style={bottomReopen}
+            title="show the toolbar"
+            onClick={() => saveLivePreference('boardToolbarOpen', true)}
           >
-            {toolbarOpen ? '▾' : '▴'}
+            ▴
           </button>
-        </div>
+        )}
         {!panelOpen && (
           <button
             style={edgeReopen}
@@ -166,28 +166,52 @@ export function BoardLayout(props: BoardLayoutProps) {
       {panelOpen && <div style={sidePanelStyle}>{side}</div>}
 
       {toolbar && toolbarOpen && (
-        <div style={{ gridRow: '2', gridColumn: '1 / span 3' }}>{toolbar}</div>
+        <div style={{ gridRow: '2', gridColumn: '1 / span 3', position: 'relative' }}>
+          <button
+            style={toolbarCollapse}
+            title="hide the toolbar"
+            onClick={() => saveLivePreference('boardToolbarOpen', false)}
+          >
+            ▾
+          </button>
+          {toolbar}
+        </div>
       )}
     </div>
   );
 }
 
-const cornerControls = {
+// Horizontally centered on the toolbar's top edge — the same treatment
+// as the divider triangle (Carson).
+const toolbarCollapse = {
   position: 'absolute',
-  right: 4,
-  bottom: 4,
-  display: 'flex',
-  gap: 2,
+  top: 0,
+  left: '50%',
+  transform: 'translate(-50%, -50%)',
+  background: 'var(--bg-raised)',
+  color: 'var(--fg-dim)',
+  border: '1px solid var(--border-soft)',
+  borderRadius: 3,
+  cursor: 'pointer',
+  fontSize: 12,
+  padding: '1px 6px',
+  lineHeight: 1,
+  zIndex: 2,
 } as const;
 
-const triangleBtn = {
-  background: 'transparent',
+const bottomReopen = {
+  position: 'absolute',
+  bottom: 0,
+  left: '50%',
+  transform: 'translateX(-50%)',
+  background: 'var(--bg-raised)',
   color: 'var(--fg-dim)',
-  border: 'none',
+  border: '1px solid var(--border-soft)',
+  borderRadius: '3px 3px 0 0',
   cursor: 'pointer',
-  fontSize: 13,
-  padding: '0 3px',
-  lineHeight: 1.2,
+  fontSize: 12,
+  padding: '2px 6px',
+  lineHeight: 1,
 } as const;
 
 const dividerStyle = {
