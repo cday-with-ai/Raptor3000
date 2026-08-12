@@ -1,4 +1,5 @@
 import { useLayoutEffect, useRef, useState, type ReactNode } from 'react';
+import { saveLivePreference, useLivePreferences } from '../useLivePreferences.js';
 
 /**
  * Single default board-window layout. Ported from Raptor's ChessArea /
@@ -44,7 +45,17 @@ export function BoardLayout(props: BoardLayoutProps) {
   const cellRef = useRef<HTMLDivElement | null>(null);
   const topRef = useRef<HTMLDivElement | null>(null);
   const bottomRef = useRef<HTMLDivElement | null>(null);
+  const rootRef = useRef<HTMLDivElement | null>(null);
   const [size, setSize] = useState(0);
+
+  // The board/panel divider drags (Carson, 2026-08-12): the side
+  // panel's share of the width is a preference, live during the drag,
+  // saved on release. The board cell's ResizeObserver re-squares the
+  // board as the column moves.
+  const prefs = useLivePreferences();
+  const [liveRatio, setLiveRatio] = useState<number | null>(null);
+  const panelRatio = liveRatio ?? prefs.boardPanelRatio;
+  const clampRatio = (v: number) => Math.min(0.5, Math.max(0.1, v));
 
   useLayoutEffect(() => {
     const cell = cellRef.current;
@@ -73,10 +84,11 @@ export function BoardLayout(props: BoardLayoutProps) {
 
   return (
     <div
+      ref={rootRef}
       style={{
         display: 'grid',
         gridTemplateRows: 'minmax(0, 1fr) auto',
-        gridTemplateColumns: 'minmax(0, 1fr) 220px',
+        gridTemplateColumns: `minmax(0, 1fr) 6px ${(panelRatio * 100).toFixed(2)}%`,
         height: '100vh',
         width: '100vw',
         background: 'var(--bg)',
@@ -95,14 +107,41 @@ export function BoardLayout(props: BoardLayoutProps) {
         </div>
       </div>
 
+      <div
+        style={dividerStyle}
+        onPointerDown={e => {
+          e.currentTarget.setPointerCapture(e.pointerId);
+          setLiveRatio(panelRatio);
+        }}
+        onPointerMove={e => {
+          if (liveRatio === null) return;
+          const rect = rootRef.current?.getBoundingClientRect();
+          if (!rect || rect.width === 0) return;
+          setLiveRatio(clampRatio((rect.right - e.clientX) / rect.width));
+        }}
+        onPointerUp={() => {
+          if (liveRatio !== null) saveLivePreference('boardPanelRatio', clampRatio(liveRatio));
+          setLiveRatio(null);
+        }}
+        onPointerCancel={() => setLiveRatio(null)}
+      />
+
       <div style={sidePanelStyle}>{side}</div>
 
       {toolbar && (
-        <div style={{ gridRow: '2', gridColumn: '1 / span 2' }}>{toolbar}</div>
+        <div style={{ gridRow: '2', gridColumn: '1 / span 3' }}>{toolbar}</div>
       )}
     </div>
   );
 }
+
+const dividerStyle = {
+  gridRow: '1',
+  gridColumn: '2',
+  cursor: 'col-resize',
+  background: 'var(--border-soft)',
+  touchAction: 'none',
+} as const;
 
 const boardCellStyle = {
   gridRow: '1',
@@ -118,9 +157,8 @@ const boardCellStyle = {
 
 const sidePanelStyle = {
   gridRow: '1',
-  gridColumn: '2',
+  gridColumn: '3',
   padding: 8,
-  borderLeft: '1px solid var(--border-soft)',
   overflow: 'auto',
   display: 'flex',
   flexDirection: 'column',
