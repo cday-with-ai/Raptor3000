@@ -12,7 +12,12 @@ import {
   mergeHistory,
   parseChannels,
 } from '../channelHistory.js';
-import { loadPreferences, type AppPreferences } from '../preferences.js';
+import {
+  loadPreferences,
+  savePreferences,
+  type AppPreferences,
+  type ChatLayout,
+} from '../preferences.js';
 import { useLivePreferences } from '../useLivePreferences.js';
 import {
   chatColorFor,
@@ -103,9 +108,16 @@ export const ChatWindow = function ChatWindow({
   const prefs = useLivePreferences();
   const ownHandle = context.connector.getLoggedInAs?.() ?? null;
 
+  // Layout mode, switchable inline (the movelist-control concept applied
+  // to the window itself): plain stream / one-line tabs / Decaf split.
+  const layout = prefs.chatLayout;
+  const setLayout = (l: ChatLayout) => savePreferences({ ...loadPreferences(), chatLayout: l });
+  // 'plain' has no tab bar — everything reads and types through main.
+  const effectiveTab = layout === 'plain' ? MAIN_TAB : activeTab;
+
   const submit = (line: string) => {
     if (line.length === 0) return;
-    const sent = context.connector.sendMessage(applyTabPrefix(activeTab.prefix, line));
+    const sent = context.connector.sendMessage(applyTabPrefix(effectiveTab.prefix, line));
     if (!sent) {
       // Not connected — synthesize an INTERNAL event so the user sees it.
       setEvents(prev =>
@@ -131,16 +143,27 @@ export const ChatWindow = function ChatWindow({
 
   return (
     <div style={shell}>
-      <TabBar
-        tabs={tabs}
-        activeId={activeTab.id}
-        onSelect={setActiveTabId}
-        onClose={closeTab}
-      />
-      {activeTab.kind === 'main' ? (
+      <div style={headerRow}>
+        <div style={{ flex: 1, minWidth: 0, overflow: 'hidden' }}>
+          {layout === 'plain' ? (
+            <span style={{ fontSize: 12, opacity: 0.6, padding: '6px 14px', display: 'inline-block' }}>
+              console
+            </span>
+          ) : (
+            <TabBar
+              tabs={tabs}
+              activeId={activeTab.id}
+              onSelect={setActiveTabId}
+              onClose={closeTab}
+            />
+          )}
+        </div>
+        <LayoutSwitcher layout={layout} onChange={setLayout} />
+      </div>
+      {layout !== 'split' || activeTab.kind === 'main' ? (
         <TabLog
-          tab={activeTab}
-          events={tabEvents}
+          tab={effectiveTab}
+          events={layout === 'plain' ? events : tabEvents}
           prefs={prefs}
           ownHandle={ownHandle}
           onCommand={cmd => context.connector.sendMessage(cmd)}
@@ -180,13 +203,13 @@ export const ChatWindow = function ChatWindow({
         }}
       >
         <span style={prefixLabel}>
-          {activeTab.prefix || '>'}
+          {effectiveTab.prefix || '>'}
         </span>
         <input
           style={inputBox}
           value={input}
           onChange={e => setInput(e.target.value)}
-          placeholder={placeholderFor(activeTab)}
+          placeholder={placeholderFor(effectiveTab)}
           autoFocus
         />
         <button style={btn} type="submit">
@@ -198,6 +221,52 @@ export const ChatWindow = function ChatWindow({
 };
 
 const MAX_EVENTS = 5000;
+
+/**
+ * Inline layout switcher — the movelist-control concept applied to the
+ * window: three small links, active one bold, remembered as a preference.
+ */
+function LayoutSwitcher({
+  layout,
+  onChange,
+}: {
+  layout: ChatLayout;
+  onChange: (l: ChatLayout) => void;
+}) {
+  const modes: [ChatLayout, string][] = [
+    ['plain', 'plain'],
+    ['tabs', 'tabs'],
+    ['split', 'split'],
+  ];
+  return (
+    <span style={{ display: 'inline-flex', gap: 2, padding: '0 8px', flexShrink: 0 }}>
+      {modes.map(([mode, label]) => (
+        <button
+          key={mode}
+          onClick={() => onChange(mode)}
+          title={
+            mode === 'plain'
+              ? 'one stream, no tabs'
+              : mode === 'tabs'
+                ? 'classic tabs, one pane'
+                : 'tabs above, main console always visible'
+          }
+          style={{
+            background: 'none',
+            border: 'none',
+            color: layout === mode ? 'var(--accent)' : 'var(--fg-dim)',
+            fontWeight: layout === mode ? 700 : 400,
+            cursor: 'pointer',
+            fontSize: 11,
+            padding: '2px 4px',
+          }}
+        >
+          ({label})
+        </button>
+      ))}
+    </span>
+  );
+}
 
 interface Tab {
   id: string;
@@ -583,9 +652,17 @@ const shell = {
 const tabBar = {
   display: 'flex',
   alignItems: 'stretch',
+  overflowX: 'auto',
+} as const;
+
+// Header row: tab bar (or the plain-mode label) + the layout switcher.
+// Carries the border/background the tab bar used to own, so the switcher
+// sits inside the same strip.
+const headerRow = {
+  display: 'flex',
+  alignItems: 'center',
   borderBottom: '1px solid var(--border-soft)',
   background: 'var(--bg-raised)',
-  overflowX: 'auto',
 } as const;
 
 const closeBtn = {

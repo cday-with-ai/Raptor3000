@@ -44,6 +44,9 @@ export const PIECE_SETS: readonly PieceSet[] = [
  */
 export type ClockColor = 'auto' | string;
 
+export type ChatLayout = 'plain' | 'tabs' | 'split';
+export const CHAT_LAYOUTS: readonly ChatLayout[] = ['plain', 'tabs', 'split'];
+
 export interface AppPreferences {
   boardTheme: BoardTheme;
   /** Only consulted when boardTheme === 'custom'. */
@@ -56,6 +59,12 @@ export interface AppPreferences {
   clockLowText: ClockColor;
   clockIdleBg: ClockColor;
   clockIdleText: ClockColor;
+  /**
+   * Console layout: 'plain' = one stream, no tabs; 'tabs' = classic
+   * single pane with a tab bar; 'split' = Decaf style, active tab above
+   * a pinned main console. Switchable inline from the chat window.
+   */
+  chatLayout: ChatLayout;
   /** Console (chat window) look: base font, and per-event-type styling. */
   chatFontFamily: string;
   chatFontSize: number;
@@ -90,6 +99,7 @@ export const DEFAULT_PREFERENCES: AppPreferences = {
   clockLowText: 'auto',
   clockIdleBg: 'auto',
   clockIdleText: 'auto',
+  chatLayout: 'split',
   chatFontFamily: '"SF Mono", Consolas, monospace',
   chatFontSize: 13,
   chatColorChannel: 'auto',
@@ -238,6 +248,7 @@ export function loadPreferences(): AppPreferences {
     clockLowText: readClockColor('clockLowText'),
     clockIdleBg: readClockColor('clockIdleBg'),
     clockIdleText: readClockColor('clockIdleText'),
+    chatLayout: readString('chatLayout', DEFAULT_PREFERENCES.chatLayout, CHAT_LAYOUTS),
     chatFontFamily: getRaw('chatFontFamily') ?? DEFAULT_PREFERENCES.chatFontFamily,
     chatFontSize: readFontSize('chatFontSize', DEFAULT_PREFERENCES.chatFontSize),
     chatColorChannel: readClockColor('chatColorChannel'),
@@ -281,6 +292,7 @@ export function savePreferences(prefs: AppPreferences): void {
   setRaw('clockLowText', prefs.clockLowText);
   setRaw('clockIdleBg', prefs.clockIdleBg);
   setRaw('clockIdleText', prefs.clockIdleText);
+  setRaw('chatLayout', prefs.chatLayout);
   setRaw('chatFontFamily', prefs.chatFontFamily);
   setRaw('chatFontSize', String(prefs.chatFontSize));
   setRaw('chatColorChannel', prefs.chatColorChannel);
