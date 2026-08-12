@@ -579,6 +579,67 @@ function HelpPage() {
         </p>
       </Section>
 
+      <Section title="About &amp; licenses">
+        <p style={helpP}>
+          Raptor3000 is <strong>MIT-licensed</strong>, by Carson Day —
+          the third of a line after <strong>Raptor</strong> (SWT) and{' '}
+          <strong>Decaf</strong> (Java). It stands on generously licensed
+          shoulders:
+        </p>
+        <ul style={helpUl}>
+          <li>
+            <strong>
+              <a href="https://stockfishchess.org/" target="_blank" rel="noreferrer" style={helpLink}>
+                Stockfish
+              </a>
+            </strong>{' '}
+            — the analysis engine, running in your browser as WebAssembly
+            (GPL-3.0).
+          </li>
+          <li>
+            <strong>
+              <a href="https://github.com/niklasf/chessops" target="_blank" rel="noreferrer" style={helpLink}>
+                chessops
+              </a>
+            </strong>{' '}
+            — lichess's chess library: SAN, legality, replay
+            (GPL-3.0-or-later).
+          </li>
+          <li>
+            <strong>
+              <a href="https://github.com/lichess-org/chess-openings" target="_blank" rel="noreferrer" style={helpLink}>
+                lichess chess-openings
+              </a>
+            </strong>{' '}
+            — the opening names and ECO codes (CC0 public domain).
+          </li>
+          <li>
+            <strong>
+              <a href="https://github.com/lichess-org/lila" target="_blank" rel="noreferrer" style={helpLink}>
+                lichess
+              </a>
+            </strong>{' '}
+            — the piano sound set by Enigmahack (AGPL-3.0+) and the piece
+            sets (cburnett by Colin M.L. Burnett and friends, each under
+            its own license).
+          </li>
+          <li>
+            <strong>
+              <a href="https://www.freechess.org/" target="_blank" rel="noreferrer" style={helpLink}>
+                FICS
+              </a>
+            </strong>{' '}
+            — the Free Internet Chess Server this whole app exists to
+            talk to. Be nice in channel 39.
+          </li>
+        </ul>
+        <p style={helpP}>
+          The complete inventory with exact licenses lives in{' '}
+          <code style={code}>THIRD_PARTY_NOTICES.md</code> in the source
+          repository.
+        </p>
+      </Section>
+
       <Section title="Troubleshooting">
         <ul style={helpUl}>
           <li>
@@ -604,6 +665,11 @@ function HelpPage() {
     </main>
   );
 }
+
+const helpLink = {
+  color: 'var(--accent)',
+  textDecoration: 'none',
+} as const;
 
 const DESKTOP_FILE_CONTENTS =
   `[Desktop Entry]

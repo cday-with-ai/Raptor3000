@@ -3,7 +3,7 @@
 Copied verbatim from chessascent.app (Carson's own app,
 `chessascent-app-front-end/assets/pieces/`), which in turn carries them
 from the lichess piece-set collection (github.com/lichess-org/lila,
-`public/piece/`). They are NOT covered by this repository's BSD license —
+`public/piece/`). They are NOT covered by this repository's MIT license —
 each set keeps its own:
 
 - **cburnett** — Colin M.L. Burnett, GPLv2+ (the lichess/Wikipedia set).

@@ -135,4 +135,8 @@ yarn dev                                      # web dev server on :5173
 
 ## License
 
-MIT — see `LICENSE`.
+MIT — see `LICENSE`. The app bundles third-party work under its own
+licenses — Stockfish (GPL-3.0), chessops (GPL-3.0+), lichess's piano
+sounds (AGPL-3.0+) and piece sets, the CC0 openings dataset — inventoried
+with links in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) and
+summarized in-app under Help → About &amp; licenses.
