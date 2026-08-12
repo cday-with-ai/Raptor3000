@@ -286,8 +286,5 @@ const sidePanelStyle = {
   overflow: 'auto',
   display: 'flex',
   flexDirection: 'column',
-  gap: 8,
-  // Status rides the top, Moves the bottom, Engine floats between
-  // (Carson, 2026-08-12).
-  justifyContent: 'space-between',
+  gap: 6,
 } as const;

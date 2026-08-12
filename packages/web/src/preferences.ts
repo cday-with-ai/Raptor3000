@@ -73,6 +73,9 @@ export interface AppPreferences {
   /** Board window: the side panel's share of the width, 0.1–0.5.
    *  Set by dragging the divider between board and panel. */
   boardPanelRatio: number;
+  /** Engine block's share of the side panel height, 0.15–0.7 — set by
+   *  dragging its seam. Fixed height keeps line churn from reflowing. */
+  engineSplitRatio: number;
   /** Board window: side panel and toolbar visibility (the triangles). */
   boardPanelOpen: boolean;
   boardToolbarOpen: boolean;
@@ -114,6 +117,7 @@ export const DEFAULT_PREFERENCES: AppPreferences = {
   chatLayout: 'split',
   chatSplitRatio: 0.6,
   boardPanelRatio: 0.22,
+  engineSplitRatio: 0.35,
   boardPanelOpen: true,
   boardToolbarOpen: true,
   chatFontFamily: '"SF Mono", Consolas, monospace',
@@ -199,6 +203,12 @@ function readRatio(k: string, fallback: number): number {
   return Number.isFinite(v) && v >= 0.15 && v <= 0.85 ? v : fallback;
 }
 
+/** Engine block ratio: a float within its draggable range, else default. */
+function readEngineRatio(k: string, fallback: number): number {
+  const v = parseFloat(getRaw(k) ?? '');
+  return Number.isFinite(v) && v >= 0.15 && v <= 0.7 ? v : fallback;
+}
+
 /** Board panel ratio: a float within its draggable range, else default. */
 function readBoardPanelRatio(k: string, fallback: number): number {
   const v = parseFloat(getRaw(k) ?? '');
@@ -280,6 +290,7 @@ export function loadPreferences(): AppPreferences {
     chatLayout: readString('chatLayout', DEFAULT_PREFERENCES.chatLayout, CHAT_LAYOUTS),
     chatSplitRatio: readRatio('chatSplitRatio', DEFAULT_PREFERENCES.chatSplitRatio),
     boardPanelRatio: readBoardPanelRatio('boardPanelRatio', DEFAULT_PREFERENCES.boardPanelRatio),
+    engineSplitRatio: readEngineRatio('engineSplitRatio', DEFAULT_PREFERENCES.engineSplitRatio),
     boardPanelOpen: readBool('boardPanelOpen', DEFAULT_PREFERENCES.boardPanelOpen),
     boardToolbarOpen: readBool('boardToolbarOpen', DEFAULT_PREFERENCES.boardToolbarOpen),
     chatFontFamily: getRaw('chatFontFamily') ?? DEFAULT_PREFERENCES.chatFontFamily,
@@ -329,6 +340,7 @@ export function savePreferences(prefs: AppPreferences): void {
   setRaw('chatLayout', prefs.chatLayout);
   setRaw('chatSplitRatio', String(prefs.chatSplitRatio));
   setRaw('boardPanelRatio', String(prefs.boardPanelRatio));
+  setRaw('engineSplitRatio', String(prefs.engineSplitRatio));
   setRaw('boardPanelOpen', String(prefs.boardPanelOpen));
   setRaw('boardToolbarOpen', String(prefs.boardToolbarOpen));
   setRaw('chatFontFamily', prefs.chatFontFamily);

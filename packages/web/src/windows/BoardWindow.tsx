@@ -41,7 +41,7 @@ import {
   clockChipColors,
   type AppPreferences,
 } from '../preferences.js';
-import { useLivePreferences } from '../useLivePreferences.js';
+import { saveLivePreference, useLivePreferences } from '../useLivePreferences.js';
 
 /**
  * Board window — per-game popup. Subscribes to GameService for its
@@ -1433,11 +1433,19 @@ function SidePanel({
   analysisFen: string | null;
   startMovesExpanded: boolean;
 }) {
-  // Order per Carson (2026-08-12, revised same day): Status pinned top,
-  // Moves in the middle, Engine pinned bottom.
+  // Panel structure (Carson, 2026-08-12 evening): Status pinned top,
+  // Moves takes ALL the middle (scrolling inside), Engine at the bottom
+  // in a FIXED, seam-adjustable slice — its line churn can no longer
+  // reflow anything above it.
+  const panelRef = useRef<HTMLDivElement | null>(null);
+  const [liveEngineRatio, setLiveEngineRatio] = useState<number | null>(null);
+  const prefs2 = useLivePreferences();
+  const engineRatio = liveEngineRatio ?? prefs2.engineSplitRatio;
+  const clampEngine = (v: number) => Math.min(0.7, Math.max(0.15, v));
+  const engineShown = showEngine && engineAnalysisAllowed(mode);
   return (
-    <>
-      <div style={{ borderBottom: '1px solid var(--border-soft)', paddingBottom: 6, fontSize: 12 }}>
+    <div ref={panelRef} style={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0, gap: 6 }}>
+      <div style={{ flexShrink: 0, borderBottom: '1px solid var(--border-soft)', paddingBottom: 6, fontSize: 12 }}>
         <span style={{ fontWeight: 700, opacity: 0.75 }}>Status:</span>{' '}
         <span style={{ opacity: 0.85 }}>
           {modeLabel(mode)}
@@ -1446,28 +1454,59 @@ function SidePanel({
           )}
         </span>
       </div>
-      <MovesSection
-        s12={s12}
-        opening={opening}
-        openingFen={openingFen}
-        startExpanded={startMovesExpanded}
-        resultLine={gameEnd ? formatResultLine(gameEnd) : null}
-        sans={sans}
-        viewablePlies={viewablePlies}
-        viewPly={viewPly}
-        onViewPly={onViewPly}
-        onNav={onNav}
-      />
-      {showEngine && engineAnalysisAllowed(mode) ? (
-        <EnginePanel context={context} gameId={gameId} fen={analysisFen} viewing={viewPly !== null} />
-      ) : (
-        // No engine (playing, or toggled off): a spacer keeps Moves in
-        // the middle instead of pinned to the bottom (Carson).
-        <div />
+      <div style={{ flex: 1, minHeight: 0, overflowY: 'auto' }}>
+        <MovesSection
+          s12={s12}
+          opening={opening}
+          openingFen={openingFen}
+          startExpanded={startMovesExpanded}
+          resultLine={gameEnd ? formatResultLine(gameEnd) : null}
+          sans={sans}
+          viewablePlies={viewablePlies}
+          viewPly={viewPly}
+          onViewPly={onViewPly}
+          onNav={onNav}
+        />
+      </div>
+      {engineShown && (
+        <>
+          <div
+            style={engineSeam}
+            title="drag to resize the engine block"
+            onPointerDown={e => {
+              e.currentTarget.setPointerCapture(e.pointerId);
+              setLiveEngineRatio(engineRatio);
+            }}
+            onPointerMove={e => {
+              if (liveEngineRatio === null) return;
+              const rect = panelRef.current?.getBoundingClientRect();
+              if (!rect || rect.height === 0) return;
+              setLiveEngineRatio(clampEngine((rect.bottom - e.clientY) / rect.height));
+            }}
+            onPointerUp={() => {
+              if (liveEngineRatio !== null) {
+                saveLivePreference('engineSplitRatio', clampEngine(liveEngineRatio));
+              }
+              setLiveEngineRatio(null);
+            }}
+            onPointerCancel={() => setLiveEngineRatio(null)}
+          />
+          <div style={{ flexBasis: `${(engineRatio * 100).toFixed(2)}%`, flexShrink: 0, minHeight: 0, overflowY: 'auto' }}>
+            <EnginePanel context={context} gameId={gameId} fen={analysisFen} viewing={viewPly !== null} />
+          </div>
+        </>
       )}
-    </>
+    </div>
   );
 }
+
+const engineSeam = {
+  height: 6,
+  flexShrink: 0,
+  background: 'var(--border-soft)',
+  cursor: 'row-resize',
+  touchAction: 'none',
+} as const;
 
 /** `26) … Rg8` — the collapsed one-line summary of where the game is. */
 function lastMoveLabel(s12: Style12Message | undefined): string {
@@ -1608,8 +1647,6 @@ function MovesSection({
           }}
           style={{
             marginTop: 6,
-            maxHeight: 220,
-            overflowY: 'auto',
             outline: 'none',
             fontSize: 13,
             fontFamily: '"SF Mono", Consolas, monospace',
