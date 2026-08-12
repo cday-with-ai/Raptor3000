@@ -389,6 +389,7 @@ export class FicsParser {
       // GameEnd — KEEP + trim at end
       const ge = this.gameLineParsers.gameEnd?.parse(line);
       if (ge) {
+        this.gameService?.recordGameEnd(ge);
         this.gameService?.fireGameInactive(ge.gameId);
         this.gameService?.forgetGame(ge.gameId);
         appendLine();

@@ -12,7 +12,9 @@ import {
   isBlackPiece,
   isPawn,
   isKing,
+  GameEndType,
   type BoardModeCode,
+  type GameEndMessage,
   type Style12Message,
 } from '@raptor3000/shared';
 import {
@@ -92,6 +94,17 @@ export const BoardWindow = observer(function BoardWindow({
   const [endedFrom, setEndedFrom] = useState<BoardModeCode | null>(null);
   const ended = endedFrom !== null;
   const liveModeRef = useRef<BoardModeCode>(BoardMode.OBSERVING);
+  // The server's end-of-game verdict (result + description) and the
+  // few seconds of theater that follow it: the result fades over the
+  // board, the winning king celebrates, the losing king topples.
+  const [gameEnd, setGameEnd] = useState<GameEndMessage | null>(null);
+  const [theater, setTheater] = useState(false);
+  useEffect(() => {
+    if (!gameEnd) return undefined;
+    setTheater(true);
+    const t = setTimeout(() => setTheater(false), 4000);
+    return () => clearTimeout(t);
+  }, [gameEnd]);
 
   // Subscribe to GameService for THIS game's updates.
   useEffect(() => {
@@ -133,6 +146,7 @@ export const BoardWindow = observer(function BoardWindow({
         // freezes the clocks, flips the mode to inactive, and lets the
         // engine panel analyze the final position.
         setEndedFrom(liveModeRef.current);
+        setGameEnd(context.gameService.getLatestGameEnd(gameId) ?? null);
       },
     };
     context.gameService.addListener(listener);
@@ -362,6 +376,8 @@ export const BoardWindow = observer(function BoardWindow({
           flipped={flipped}
           premove={premove}
           setPremove={setPremove}
+          gameEnd={gameEnd}
+          theater={theater}
         />
       }
       side={
@@ -384,6 +400,7 @@ export const BoardWindow = observer(function BoardWindow({
             mode !== BoardMode.PLAYING && prefs.moveListVisible
           }
           onNav={nav}
+          gameEnd={gameEnd}
         />
       }
       toolbar={<Toolbar mode={mode} endedFrom={endedFrom} handlers={toolbarHandlers} />}
@@ -426,6 +443,66 @@ function savePgn(
   a.click();
   URL.revokeObjectURL(url);
 }
+
+/** `1-0`, `0-1`, `½-½`, `Adjourned`, `Aborted` — the big overlay text. */
+function formatResultBig(ge: GameEndMessage): string {
+  switch (ge.type) {
+    case GameEndType.WHITE_WON: return '1-0';
+    case GameEndType.BLACK_WON: return '0-1';
+    case GameEndType.DRAW: return '½-½';
+    case GameEndType.ADJOURNED: return 'Adjourned';
+    case GameEndType.ABORTED: return 'Aborted';
+    default: return '*';
+  }
+}
+
+/** The move-list line: `0-1 (GuestX forfeits on time)`. */
+function formatResultLine(ge: GameEndMessage): string {
+  const r = formatResultBig(ge);
+  return ge.description ? `${r} (${ge.description})` : r;
+}
+
+/**
+ * Which animation this king gets. Winner: dance or bow, picked
+ * deterministically per game (no Math.random — same game, same show).
+ * Loser: topples and stays down. Draw: everyone bows.
+ */
+function kingTheaterAnimation(ge: GameEndMessage, whiteKing: boolean): string | null {
+  const celebrate = () => {
+    const pick = parseInt(ge.gameId, 10) % 2 === 0 ? 'raptor-king-dance' : 'raptor-king-bow';
+    return `${pick} 1.4s ease-in-out 2`;
+  };
+  switch (ge.type) {
+    case GameEndType.WHITE_WON:
+      return whiteKing ? celebrate() : 'raptor-king-topple 1.2s ease-in forwards';
+    case GameEndType.BLACK_WON:
+      return whiteKing ? 'raptor-king-topple 1.2s ease-in forwards' : celebrate();
+    case GameEndType.DRAW:
+      return 'raptor-king-bow 1.4s ease-in-out 2';
+    default:
+      return null;
+  }
+}
+
+const resultOverlay = {
+  position: 'absolute',
+  inset: 0,
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  background: 'rgba(10, 12, 16, 0.45)',
+  animation: 'raptor-result-fade 3.5s ease forwards',
+  pointerEvents: 'none',
+  zIndex: 8,
+} as const;
+
+const resultText = {
+  fontSize: 64,
+  fontWeight: 800,
+  color: '#fff',
+  textShadow: '0 2px 18px rgba(0,0,0,0.8)',
+  letterSpacing: 2,
+} as const;
 
 /** Plies played so far, per the Style12 turn/move-number convention:
  *  fullMoveNumber is the NEXT move's number. */
@@ -656,6 +733,8 @@ function Board({
   flipped,
   premove,
   setPremove,
+  gameEnd,
+  theater,
 }: {
   context: RaptorContext;
   s12: Style12Message | undefined;
@@ -668,6 +747,8 @@ function Board({
   flipped: boolean;
   premove: { from: string; to: string } | null;
   setPremove: (p: { from: string; to: string } | null) => void;
+  gameEnd: GameEndMessage | null;
+  theater: boolean;
 }) {
   // Viewing history is read-only — moves belong to the live position.
   const viewing = viewGrid !== null;
@@ -1027,10 +1108,19 @@ function Board({
               if (sq === pending.to) shown = pending.piece;
               else if (sq === pending.from) shown = 0;
             }
-            return (
-              shown !== 0 && dragFrom !== sq && (
+            if (shown === 0 || dragFrom === sq) return null;
+            // Game-end theater: the winning king celebrates, the losing
+            // king topples (Carson). Draws take a bow together.
+            const kingAnim =
+              theater && !viewing && gameEnd && isKing(shown)
+                ? kingTheaterAnimation(gameEnd, isWhitePiece(shown))
+                : null;
+            return kingAnim ? (
+              <div style={{ width: '100%', height: '100%', animation: kingAnim }}>
                 <PieceImg code={shown} set={prefs.pieceSet} />
-              )
+              </div>
+            ) : (
+              <PieceImg code={shown} set={prefs.pieceSet} />
             );
           })()}
           {showRankLabel && (
@@ -1086,6 +1176,11 @@ function Board({
       {rows}
       {!viewing && anim && (
         <FlightPiece key={anim.id} anim={anim} flipped={flipped} set={prefs.pieceSet} />
+      )}
+      {gameEnd && theater && !viewing && (
+        <div style={resultOverlay}>
+          <span style={resultText}>{formatResultBig(gameEnd)}</span>
+        </div>
       )}
       {ghost && (
         <div
@@ -1299,6 +1394,7 @@ function SidePanel({
   analysisFen,
   startMovesExpanded,
   onNav,
+  gameEnd,
 }: {
   context: RaptorContext;
   s12: Style12Message | undefined;
@@ -1309,6 +1405,7 @@ function SidePanel({
   viewPly: number | null;
   onViewPly: (ply: number | null) => void;
   onNav: (which: 'first' | 'back' | 'forward' | 'last') => void;
+  gameEnd: GameEndMessage | null;
   /** Options → Engine → "Stockfish analysis available" — finally wired. */
   showEngine: boolean;
   opening: Opening | null;
@@ -1329,6 +1426,7 @@ function SidePanel({
         opening={opening}
         openingFen={openingFen}
         startExpanded={startMovesExpanded}
+        resultLine={gameEnd ? formatResultLine(gameEnd) : null}
         sans={sans}
         viewablePlies={viewablePlies}
         viewPly={viewPly}
@@ -1374,6 +1472,7 @@ function MovesSection({
   opening,
   openingFen,
   startExpanded,
+  resultLine,
   sans,
   viewablePlies,
   viewPly,
@@ -1382,6 +1481,8 @@ function MovesSection({
 }: {
   s12: Style12Message | undefined;
   opening: Opening | null;
+  /** "0-1 (GuestX forfeits on time)" once the game is over. */
+  resultLine: string | null;
   /** Position at the end of the named book line — the study link. */
   openingFen: string | null;
   /** The moveListVisible preference — open the list without a click. */
@@ -1495,6 +1596,9 @@ function MovesSection({
             <span style={{ opacity: 0.5 }}>(waiting for movelist…)</span>
           ) : (
             rows
+          )}
+          {resultLine && (
+            <div style={{ marginTop: 3, fontWeight: 700 }}>{resultLine}</div>
           )}
         </div>
       )}

@@ -4,6 +4,7 @@ import type { Style12Message } from '../models/messages/Style12Message.js';
 import type { G1Message } from '../models/messages/G1Message.js';
 import type { B1Message } from '../models/messages/B1Message.js';
 import type { MovesMessage } from '../models/messages/MovesMessage.js';
+import type { GameEndMessage } from '../models/messages/GameEndMessage.js';
 import { BoardMode, modeFromRelation, type BoardModeCode } from '../models/BoardMode.js';
 
 /**
@@ -95,6 +96,7 @@ export class GameService {
   private readonly latestG1 = new Map<string, G1Message>();
   private readonly latestB1 = new Map<string, B1Message>();
   private readonly latestMoves = new Map<string, MovesMessage>();
+  private readonly latestGameEnd = new Map<string, GameEndMessage>();
   /** Current derived mode per game — tracked so lifecycle hooks know
    *  which end-event to fire, and so mode transitions (obs→examine)
    *  can be detected without consumers re-deriving from the relation. */
@@ -135,6 +137,16 @@ export class GameService {
    */
   recordMoves(msg: MovesMessage): void {
     this.latestMoves.set(msg.gameId, msg);
+  }
+
+  /** The end-of-game message, kept PAST forgetGame — the result overlay
+   *  and the move-list result line read it after the game is gone. */
+  recordGameEnd(msg: GameEndMessage): void {
+    this.latestGameEnd.set(msg.gameId, msg);
+  }
+
+  getLatestGameEnd(gameId: string): GameEndMessage | undefined {
+    return this.latestGameEnd.get(gameId);
   }
 
   getLatestMoves(gameId: string): MovesMessage | undefined {
