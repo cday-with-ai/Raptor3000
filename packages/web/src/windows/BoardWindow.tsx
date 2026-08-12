@@ -593,7 +593,12 @@ function Board({
     toSq: string;
     id: number;
   } | null>(null);
-  useEffect(() => {
+  // useLayoutEffect, deliberately: with useEffect the new position paints
+  // one frame BEFORE the animation starts — the piece appears at its
+  // destination, snaps back to the source, then glides. That was the
+  // "shaky start" Carson saw. Layout effects run before paint, so the
+  // flight and the suppressed destination commit in the same frame.
+  useLayoutEffect(() => {
     const prev = prevS12Ref.current;
     prevS12Ref.current = s12;
     if (!prefs.boardAnimations || !s12 || !prev) return undefined;
