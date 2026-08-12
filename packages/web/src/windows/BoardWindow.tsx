@@ -719,6 +719,11 @@ function Board({
   useLayoutEffect(() => {
     const prev = prevS12Ref.current;
     prevS12Ref.current = s12;
+    if (s12 === prev) return undefined;
+    // A stale flight rendered against a newer grid stacks two pieces on
+    // one square (Carson's premove-after-capture report) — whatever
+    // happens below, the previous animation dies with its position.
+    setAnim(null);
     if (!prefs.boardAnimations || !s12 || !prev) return undefined;
     const lm = lastMoveSquares(s12);
     if (!lm) return undefined;
@@ -745,7 +750,9 @@ function Board({
   useEffect(() => {
     if (!premove) return;
     if (!isMyTurn) return;
-    // Fire it.
+    // Fire it — and mark it OURS, so the echo doesn't animate over the
+    // opponent's still-flying capture (the stacked-pieces artifact).
+    lastDragRef.current = { from: premove.from, to: premove.to, t: Date.now() };
     sendMove(context, premove.from, premove.to);
     setPremove(null);
   }, [isMyTurn, premove, context]);
