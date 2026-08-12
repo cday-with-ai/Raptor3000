@@ -144,11 +144,14 @@ function PostLoginShell({
     <div style={pageShell}>
       <header style={pageHeader}>
         <div style={headerRow}>
-          <div>
-            <div style={brand}>Raptor3000</div>
-            <div style={tagline}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <img src="/raptor3000.svg" alt="" style={{ width: 40, height: 40 }} />
+            <div>
+              <div style={brand}>Raptor3000</div>
+              <div style={tagline}>
               Signed in as <strong>{who}</strong> · {session.creds.serverUrl}:
-              {session.creds.port} · profile {session.profile}
+                {session.creds.port} · profile {session.profile}
+              </div>
             </div>
           </div>
           <nav style={navRow}>

@@ -1,0 +1,69 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <!-- Raptor3000: a raptor in a space suit. Designed to read at 16px:
+       the helmet dome + long snout silhouette carry the shape; everything
+       else is garnish. Deep-space rounded square, glassy dome, teal
+       raptor, orange suit collar — no other icon on a taskbar looks
+       like this. -->
+  <defs>
+    <radialGradient id="dome" cx="0.35" cy="0.3" r="1.1">
+      <stop offset="0" stop-color="#bfe8ff" stop-opacity="0.55"/>
+      <stop offset="0.45" stop-color="#7fc4f0" stop-opacity="0.18"/>
+      <stop offset="1" stop-color="#274a66" stop-opacity="0.12"/>
+    </radialGradient>
+    <linearGradient id="space" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#101a33"/>
+      <stop offset="1" stop-color="#060a18"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="64" height="64" rx="14" fill="url(#space)"/>
+
+  <!-- stars -->
+  <circle cx="12" cy="13" r="1.1" fill="#e8f4ff"/>
+  <circle cx="53" cy="10" r="0.8" fill="#e8f4ff" opacity="0.8"/>
+  <circle cx="57" cy="27" r="1.0" fill="#e8f4ff" opacity="0.6"/>
+  <circle cx="8"  cy="34" r="0.7" fill="#e8f4ff" opacity="0.7"/>
+  <circle cx="47" cy="55" r="0.8" fill="#e8f4ff" opacity="0.5"/>
+
+  <!-- suit body / shoulders -->
+  <path d="M14 58 c1-10 8-15 18-15 c10 0 17 5 18 15 z" fill="#e9e3d5"/>
+  <path d="M14 58 c0.5-5 2.5-9 6-11.5 l4 3.5 c-3 2-5 4.5-5.5 8 z" fill="#d8863b"/>
+  <path d="M50 58 c-0.5-5 -2.5-9 -6-11.5 l-4 3.5 c3 2 5 4.5 5.5 8 z" fill="#d8863b"/>
+  <!-- chest panel -->
+  <rect x="27" y="49" width="10" height="6" rx="1.5" fill="#25314f"/>
+  <circle cx="30" cy="52" r="1.2" fill="#69d2a2"/>
+  <circle cx="34" cy="52" r="1.2" fill="#d85f4f"/>
+
+  <!-- helmet ring -->
+  <rect x="17" y="42" width="30" height="5" rx="2.5" fill="#c0cad9"/>
+
+  <!-- helmet dome -->
+  <circle cx="32" cy="27" r="17.5" fill="#0c1526"/>
+  <circle cx="32" cy="27" r="17.5" fill="url(#dome)" stroke="#c0cad9" stroke-width="2"/>
+
+  <!-- the raptor: teal head in profile, long snout to the right -->
+  <path d="M21 31
+           c0-7 4-12 9-13
+           c1.5-2.5 5-3.5 7-2.5
+           l5 2.5
+           c3.5 0.5 6.5 2.5 7 5
+           l-9 1.5
+           c1.5 1 2.5 2.5 2.5 4
+           l-6.5-0.5
+           c0.5 3-1.5 6-5 6.5
+           l-10 1.5 z"
+        fill="#3fa08a"/>
+  <!-- mouth: a slightly open jaw, the raptor grin -->
+  <path d="M31 28.5 c3.5 1.5 8 1.5 11.5 0.5" stroke="#0c1526" stroke-width="1.4" stroke-linecap="round" fill="none"/>
+  <path d="M31.5 29.5 c3 1.8 7 2 10 1 l-1.5 2.5 c-2.5 0.8-5.5 0.3-7.5-1 z" fill="#2c7a68"/>
+  <!-- nostril -->
+  <circle cx="45" cy="24.5" r="0.8" fill="#0c1526"/>
+  <!-- eye -->
+  <circle cx="33.5" cy="20.5" r="1.8" fill="#0c1526"/>
+  <circle cx="34.1" cy="19.9" r="0.6" fill="#e8f4ff"/>
+  <!-- brow ridge, the raptor attitude -->
+  <path d="M30.5 17.5 l6-1.5" stroke="#2c7a68" stroke-width="1.6" stroke-linecap="round" fill="none"/>
+
+  <!-- dome glare -->
+  <path d="M20.5 19 c2-4.5 6-7.5 10-8" stroke="#e8f4ff" stroke-width="1.8" stroke-linecap="round" fill="none" opacity="0.65"/>
+</svg>

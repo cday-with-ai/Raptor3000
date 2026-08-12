@@ -119,6 +119,7 @@ export function LoginScreen({
           submit();
         }}
       >
+        <img src="/raptor3000.svg" alt="" style={loginIcon} />
         <div style={brand}>Raptor3000</div>
         <div style={tagline}>Sign in to FICS</div>
 
@@ -243,6 +244,13 @@ const shell = {
   background: 'var(--bg)',
   color: 'var(--fg)',
   fontFamily: 'system-ui, -apple-system, sans-serif',
+} as const;
+
+const loginIcon = {
+  width: 72,
+  height: 72,
+  display: 'block',
+  margin: '0 auto 6px',
 } as const;
 
 const mobileNote = {
