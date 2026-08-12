@@ -21,6 +21,7 @@ import {
   pvToSan,
   replaySans,
 } from '../game/chessBridge.js';
+import { detectOpening, loadOpenings, type Opening } from '../game/openings.js';
 import type { RaptorContext } from './appContext.js';
 import { BoardLayout } from '../layout/BoardLayout.js';
 import {
@@ -144,6 +145,30 @@ export const BoardWindow = observer(function BoardWindow({
     viewPly !== null && viewPly < replay.grids.length
       ? replay.grids[viewPly]
       : null;
+
+  // Opening detection: longest catalogued prefix of the move history
+  // (lichess chess-openings, fetched fresh at runtime). Seeding: ask for
+  // the movelist once as soon as the game exists, so a mid-game join
+  // still knows its opening (and the Moves control opens pre-filled).
+  const [opening, setOpening] = useState<Opening | null>(null);
+  const seedRequested = useRef(false);
+  useEffect(() => {
+    if (seedRequested.current || !gameId || !s12) return;
+    seedRequested.current = true;
+    context.connector.sendMessageHidden(`moves ${gameId}`);
+  }, [gameId, s12, context]);
+  useEffect(() => {
+    let cancelled = false;
+    const list: string[] = [];
+    for (let p = 1; sans.has(p); p++) list.push(sans.get(p)!);
+    if (list.length === 0) return undefined;
+    void loadOpenings().then(table => {
+      if (!cancelled) setOpening(detectOpening(table, list));
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [sans]);
 
   // Clicking the move list focuses the engine there (Carson, 2026-08-12):
   // viewing a ply pins analysis to that position; back to live unpins.
@@ -293,6 +318,7 @@ export const BoardWindow = observer(function BoardWindow({
           viewPly={viewPly}
           onViewPly={setViewPly}
           showEngine={prefs.showEngineAnalysis}
+          opening={opening}
         />
       }
       toolbar={<Toolbar mode={mode} handlers={toolbarHandlers} />}
@@ -1117,6 +1143,7 @@ function SidePanel({
   viewPly,
   onViewPly,
   showEngine,
+  opening,
 }: {
   context: RaptorContext;
   s12: Style12Message | undefined;
@@ -1128,14 +1155,25 @@ function SidePanel({
   onViewPly: (ply: number | null) => void;
   /** Options → Engine → "Stockfish analysis available" — finally wired. */
   showEngine: boolean;
+  opening: Opening | null;
 }) {
   // Order per Carson (2026-08-12): status first, engine next, moves at
   // the bottom. Captured is gone — it never earned its pixels.
   return (
     <>
       <div style={{ borderBottom: '1px solid var(--border-soft)', paddingBottom: 6, fontSize: 12 }}>
-        <span style={{ fontWeight: 700, opacity: 0.75 }}>Status:</span>{' '}
-        <span style={{ opacity: 0.85 }}>{modeLabel(mode)}</span>
+        <div>
+          <span style={{ fontWeight: 700, opacity: 0.75 }}>Status:</span>{' '}
+          <span style={{ opacity: 0.85 }}>{modeLabel(mode)}</span>
+        </div>
+        {opening && (
+          <div style={{ marginTop: 2 }}>
+            <span style={{ fontWeight: 700, opacity: 0.75 }}>Opening:</span>{' '}
+            <span style={{ opacity: 0.85 }} title={`ECO ${opening.eco}, book through ply ${opening.plies}`}>
+              {opening.eco} {opening.name}
+            </span>
+          </div>
+        )}
       </div>
       {showEngine && engineAnalysisAllowed(mode) && (
         <EnginePanel context={context} gameId={gameId} s12={s12} />
