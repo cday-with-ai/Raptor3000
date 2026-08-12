@@ -59,6 +59,32 @@ describe('chatColorFor', () => {
   });
 });
 
+describe('sought table rows (2026-08-12)', () => {
+  it('links every ad shape from the live capture to play N', () => {
+    const rows = [
+      ['  9 ++++ guestHELL           7   0 unrated blitz                  0-9999 f', '9'],
+      [' 12 ++++ GuestDVKP           5   0 unrated suicide                0-9999 ', '12'],
+      [' 14 ++++ GuestFDXH          15   0 unrated standard   [black]     0-9999 ', '14'],
+      [' 37 1927 GriffyJr(C)         2  12 unrated blitz                  0-9999 ', '37'],
+      [' 40 1712P Newbie             3   0 rated crazywild/x              1200-1800 m', '40'],
+    ] as const;
+    for (const [line, n] of rows) {
+      expect(rowAction(line, null)?.command, line).toBe(`play ${n}`);
+    }
+  });
+
+  it('ignores the footer and ordinary numbered chat', () => {
+    expect(rowAction('7 ads displayed.', null)).toBeNull();
+    expect(rowAction('  5 people are rated higher than you', null)).toBeNull();
+  });
+
+  it('games rows still observe, not play', () => {
+    const games =
+      ' 22 1739 CDay        1683 GriffyJr   [ br  5  12]   4:11 -  3:47 (34-34) W: 18';
+    expect(rowAction(games, null)?.command).toBe('observe 22');
+  });
+});
+
 describe('rowAction', () => {
   it('recognizes a games-list row → observe', () => {
     const a = rowAction(' 22 2036 pikozrout   1638 walpurti  [ sr 15  10]   2:24 -  1:51 (39-39) W: 15', null);

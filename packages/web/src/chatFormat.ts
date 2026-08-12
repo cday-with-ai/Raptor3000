@@ -132,6 +132,14 @@ export interface RowAction {
 const GAMES_ROW_RE = /^\s{0,3}(\d{1,4})\s+(?:\d{1,4}|\+{4})\s+\S+\s+(?:\d{1,4}|\+{4})\s+\S+\s+\[/;
 // `GuestLTND (++++) seeking 15 0 unrated standard ("play 38" to respond)`
 const SEEK_ROW_RE = /\("play (\d+)" to respond\)/;
+// `sought` table rows (Carson, 2026-08-12 — the announcement form above
+// linked, the table didn't):
+// `  9 ++++ guestHELL     7   0 unrated blitz      0-9999 f`
+// ` 14 ++++ GuestFDXH    15   0 unrated standard   [black] 0-9999`
+// Shape-matched end to end (index, rating, name, time, inc, ratedness,
+// type, optional color, range) so bare numbered chat lines can't link.
+const SOUGHT_ROW_RE =
+  /^\s{0,3}(\d{1,4})\s+(?:\+{4}|-{4}|\d{1,4}[PE]?)\s+\S+\s+\d{1,3}\s+\d{1,3}\s+(?:un)?rated\s+\S+(?:\s+\[(?:white|black)\])?\s+\d{1,4}-\d{1,4}/;
 // `  1: - 22 W  1291 CDay        [ br  5  12] B23 Res Aug 12, 2026`
 const HISTORY_ROW_RE = /^\s{0,3}(\d{1,3}):\s+[+=-]\s+\d+\s+[WB]\s+\d+\s+(\S+)/;
 // `  %01: + 33 W 1291 CDay ...` — journal slots are %NN
@@ -147,6 +155,10 @@ export function rowAction(line: string, listOwner: string | null): RowAction | n
   const seek = SEEK_ROW_RE.exec(line);
   if (seek) {
     return { command: `play ${seek[1]}`, label: `accept seek ${seek[1]}` };
+  }
+  const sought = SOUGHT_ROW_RE.exec(line);
+  if (sought) {
+    return { command: `play ${sought[1]}`, label: `accept ad ${sought[1]}` };
   }
   const games = GAMES_ROW_RE.exec(line);
   if (games) {
