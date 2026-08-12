@@ -27,9 +27,6 @@ export * from './services/IcsUtils.js';
 export * from './services/Connector.js';
 export * from './services/FicsConnector.js';
 
-// Stores
-export * from './stores/TabPrefix.js';
-
 // Display
 export * from './display/richText.js';
 export * from './display/chessAlg.js';

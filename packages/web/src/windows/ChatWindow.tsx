@@ -1,10 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import {
-  applyTabPrefix,
-  ChatEventType,
-  tokenize,
-  type ChatEvent,
-} from '@raptor3000/shared';
+import { ChatEventType, tokenize, type ChatEvent } from '@raptor3000/shared';
 import type { RaptorContext } from './appContext.js';
 import { installPositionTracker, windowStorageKey } from './windowPosition.js';
 import {
@@ -37,10 +32,9 @@ import {
  * CHANNEL_TELL for gets a tab, every person who tells us gets a tab,
  * and `ptell` opens the partner tab. The main console is always present.
  *
- * When the user types a message, we prepend the active tab's prefix
- * (`tell 50 `, `tell alice `, `ptell `, or nothing for main) so the input
- * flows to the right place — via `applyTabPrefix`, so typing the command out
- * of habit doesn't send `tell 50 tell 50 ...`.
+ * The input line is raw FICS input in every mode and every tab — no
+ * per-tab prefixing (Carson, 2026-08-12): you type `tell 39 hi` yourself,
+ * exactly what gets sent.
  */
 export const ChatWindow = function ChatWindow({
   context,
@@ -111,8 +105,6 @@ export const ChatWindow = function ChatWindow({
   // to the window itself): plain stream / one-line tabs / Decaf split.
   const layout = prefs.chatLayout;
   const setLayout = (l: ChatLayout) => saveLivePreference('chatLayout', l);
-  // 'plain' has no tab bar — everything reads and types through main.
-  const effectiveTab = layout === 'plain' ? MAIN_TAB : activeTab;
 
   // Split mode wants a tab above the pinned main console; sitting on
   // "main" there means an empty top pane. Adopt the first real tab as
@@ -125,7 +117,7 @@ export const ChatWindow = function ChatWindow({
 
   const submit = (line: string) => {
     if (line.length === 0) return;
-    const sent = context.connector.sendMessage(applyTabPrefix(effectiveTab.prefix, line));
+    const sent = context.connector.sendMessage(line);
     if (!sent) {
       // Not connected — synthesize an INTERNAL event so the user sees it.
       setEvents(prev =>
@@ -172,8 +164,8 @@ export const ChatWindow = function ChatWindow({
       </div>
       {layout !== 'split' || activeTab.kind === 'main' ? (
         <TabLog
-          tab={effectiveTab}
-          events={layout === 'plain' ? events : tabEvents}
+          tab={layout === 'plain' ? MAIN_TAB : activeTab}
+          events={layout === 'plain' ? events.filter(e => tabAccepts(MAIN_TAB, e)) : tabEvents}
           prefs={prefs}
           ownHandle={ownHandle}
           onCommand={cmd => context.connector.sendMessage(cmd)}
@@ -198,7 +190,7 @@ export const ChatWindow = function ChatWindow({
           bottom={
             <TabLog
               tab={MAIN_TAB}
-              events={events}
+              events={events.filter(e => tabAccepts(MAIN_TAB, e))}
               prefs={prefs}
               ownHandle={ownHandle}
               onCommand={cmd => context.connector.sendMessage(cmd)}
@@ -214,14 +206,12 @@ export const ChatWindow = function ChatWindow({
           setInput('');
         }}
       >
-        <span style={prefixLabel}>
-          {effectiveTab.prefix || '>'}
-        </span>
+        <span style={prefixLabel}>{'>'}</span>
         <input
           style={inputBox}
           value={input}
           onChange={e => setInput(e.target.value)}
-          placeholder={placeholderFor(effectiveTab)}
+          placeholder="FICS command — tell 39 hi, observe 22, finger …"
           autoFocus
         />
         <button style={btn} type="submit">
@@ -284,7 +274,6 @@ interface Tab {
   id: string;
   kind: 'main' | 'channel' | 'person' | 'partner';
   label: string;
-  prefix: string;
   /** For channel tabs. */
   channel?: string;
   /** For person tabs. */
@@ -295,7 +284,6 @@ const MAIN_TAB: Tab = {
   id: 'main',
   kind: 'main',
   label: 'main',
-  prefix: '',
 };
 
 function deriveTabs(events: readonly ChatEvent[]): Tab[] {
@@ -310,7 +298,6 @@ function deriveTabs(events: readonly ChatEvent[]): Tab[] {
             id: 'channel:' + e.channel,
             kind: 'channel',
             label: '#' + e.channel,
-            prefix: `tell ${e.channel} `,
             channel: e.channel,
           });
         }
@@ -324,7 +311,6 @@ function deriveTabs(events: readonly ChatEvent[]): Tab[] {
               id: 'person:' + key,
               kind: 'person',
               label: e.source,
-              prefix: `tell ${e.source} `,
               person: e.source,
             });
           }
@@ -343,7 +329,6 @@ function deriveTabs(events: readonly ChatEvent[]): Tab[] {
                 id: 'channel:' + target,
                 kind: 'channel',
                 label: '#' + target,
-                prefix: `tell ${target} `,
                 channel: target,
               });
             }
@@ -354,7 +339,6 @@ function deriveTabs(events: readonly ChatEvent[]): Tab[] {
                 id: 'person:' + key,
                 kind: 'person',
                 label: target,
-                prefix: `tell ${target} `,
                 person: target,
               });
             }
@@ -372,7 +356,6 @@ function deriveTabs(events: readonly ChatEvent[]): Tab[] {
       id: 'partner',
       kind: 'partner',
       label: 'partner',
-      prefix: 'ptell ',
     });
   }
   return list;
@@ -388,20 +371,20 @@ function tabAcceptsById(tabId: string, e: ChatEvent): boolean {
   if (tabId.startsWith('channel:')) {
     const channel = tabId.slice(8);
     return tabAcceptsBy(
-      { id: tabId, kind: 'channel', label: '', prefix: '', channel },
+      { id: tabId, kind: 'channel', label: '', channel },
       e,
     );
   }
   if (tabId.startsWith('person:')) {
     const person = tabId.slice(7);
     return tabAcceptsBy(
-      { id: tabId, kind: 'person', label: '', prefix: '', person },
+      { id: tabId, kind: 'person', label: '', person },
       e,
     );
   }
   if (tabId === 'partner') {
     return tabAcceptsBy(
-      { id: 'partner', kind: 'partner', label: '', prefix: '' },
+      { id: 'partner', kind: 'partner', label: '' },
       e,
     );
   }
@@ -411,6 +394,16 @@ function tabAcceptsById(tabId: string, e: ChatEvent): boolean {
 function tabAcceptsBy(tab: Tab, e: ChatEvent): boolean {
   switch (tab.kind) {
     case 'main':
+      // Backfilled channel history (older than this window) reads in its
+      // channel tab only — main (and therefore plain mode) stays live
+      // traffic. Identified by time, same rule as the [HH:MM] stamps.
+      if (
+        e.time < WINDOW_OPENED - 5_000 &&
+        (e.type === ChatEventType.CHANNEL_TELL ||
+          (e.type === ChatEventType.INTERNAL && e.channel !== null))
+      ) {
+        return false;
+      }
       return true;
     case 'channel': {
       if (e.type === ChatEventType.CHANNEL_TELL && e.channel === tab.channel) return true;
@@ -438,14 +431,6 @@ function tabAcceptsBy(tab: Tab, e: ChatEvent): boolean {
   }
 }
 
-function placeholderFor(tab: Tab): string {
-  switch (tab.kind) {
-    case 'channel': return `message channel ${tab.channel}…`;
-    case 'person': return `tell ${tab.person}…`;
-    case 'partner': return `ptell your partner…`;
-    default: return 'FICS command — e.g. observe /l, tell 4 hi';
-  }
-}
 
 function TabLog({
   tab,
