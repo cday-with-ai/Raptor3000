@@ -115,6 +115,15 @@ function PostLoginShell({
 }) {
   const [tab, setTab] = useState<NavTab>('options');
   const [themeMode, setThemeMode] = useState<ThemeMode>(() => loadThemeMode());
+  // A board popup the browser refused (see announceBlockedBoardWindows).
+  // On a fresh production origin every first observe lands here, so the
+  // fix has to be one click away, not buried in a console line.
+  const [popupBlocked, setPopupBlocked] = useState(false);
+  useEffect(() => {
+    const onBlocked = () => setPopupBlocked(true);
+    window.addEventListener('raptor:popup-blocked', onBlocked);
+    return () => window.removeEventListener('raptor:popup-blocked', onBlocked);
+  }, []);
 
   // Apply here as well as persist: a `storage` event does not fire in the
   // window that wrote the value, so the sync installed in `main.tsx` — which
@@ -156,6 +165,34 @@ function PostLoginShell({
           </nav>
         </div>
       </header>
+
+      {popupBlocked && (
+        <div style={blockedBanner}>
+          <span>
+            <strong>Your browser blocked a board window.</strong> A game
+            opened on FICS but its board couldn't appear — allow popups
+            for this site and re-observe.
+          </span>
+          <span style={{ flexShrink: 0, display: 'inline-flex', gap: 8 }}>
+            <button
+              style={bannerAction}
+              onClick={() => {
+                setTab('help');
+                setPopupBlocked(false);
+              }}
+            >
+              Show me how
+            </button>
+            <button
+              style={bannerDismiss}
+              title="dismiss"
+              onClick={() => setPopupBlocked(false)}
+            >
+              ×
+            </button>
+          </span>
+        </div>
+      )}
 
       {tab === 'options' && <OptionsPage reopenChat={reopenChat} reconnect={reconnect} />}
       {tab === 'seek' && <SeekGraphTab context={context} />}
@@ -491,6 +528,40 @@ function HelpPage() {
         </p>
       </Section>
 
+      <Section title="Allow popups (required)">
+        <p style={helpP}>
+          Boards open when FICS says a game started — from a network
+          event, not from your click — which is exactly what popup
+          blockers block. Until this origin is allowed, observing a game
+          logs a console line instead of opening a board. One-time fix:
+        </p>
+        <ul style={helpUl}>
+          <li>
+            <strong>Chrome / Brave / Edge</strong> — click the popup icon
+            at the right end of the address bar when it appears and pick{' '}
+            <em>Always allow pop-ups from this site</em>. Or: Settings →
+            Privacy → Site settings → Pop-ups and redirects → Add this
+            site to "Allowed".
+          </li>
+          <li>
+            <strong>Firefox</strong> — a yellow bar appears when a popup
+            is blocked; choose <em>Preferences</em> →{' '}
+            <em>Allow pop-ups for this site</em>. Or: Settings → Privacy
+            &amp; Security → Permissions → Block pop-up windows →
+            Exceptions.
+          </li>
+          <li>
+            <strong>Safari</strong> — Safari → Settings → Websites →
+            Pop-up Windows → set this site to <em>Allow</em>.
+          </li>
+        </ul>
+        <p style={helpP}>
+          In <code style={code}>--app</code> mode (next section) popups
+          from the app window inherit the allowance once the origin is
+          allowed.
+        </p>
+      </Section>
+
       <Section title="Hide the browser address bar (app mode)">
         <p style={helpP}>
           Modern browsers require an address bar on regular tabs and popups for
@@ -501,9 +572,10 @@ function HelpPage() {
           taskbar/dock.
         </p>
         <p style={helpP}>
-          The URL for local dev is{' '}
-          <code style={code}>http://localhost:5173/</code>. Swap it for your
-          production URL later.
+          The commands below are baked with{' '}
+          <code style={code}>{appOrigin()}</code> — the address you're
+          reading this from — so they're copy-paste correct wherever the
+          app is served.
         </p>
 
         <h4 style={subHeading}>Linux (GNOME / Pop!_OS / KDE)</h4>
@@ -666,16 +738,56 @@ function HelpPage() {
   );
 }
 
+const blockedBanner = {
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'space-between',
+  gap: 12,
+  margin: '10px 24px 0',
+  padding: '8px 12px',
+  borderRadius: 6,
+  border: '1px solid var(--border-soft)',
+  background: 'rgba(255, 180, 0, 0.14)',
+  fontSize: 13,
+  lineHeight: 1.4,
+} as const;
+
+const bannerAction = {
+  background: 'var(--accent)',
+  color: '#fff',
+  border: 'none',
+  borderRadius: 4,
+  padding: '3px 10px',
+  cursor: 'pointer',
+  fontSize: 12,
+  fontWeight: 600,
+} as const;
+
+const bannerDismiss = {
+  background: 'transparent',
+  color: 'var(--fg-dim)',
+  border: 'none',
+  cursor: 'pointer',
+  fontSize: 14,
+  padding: '0 4px',
+} as const;
+
 const helpLink = {
   color: 'var(--accent)',
   textDecoration: 'none',
 } as const;
 
+/** The origin the app is actually served from — localhost in dev, the
+ *  production host once deployed. Keeps the Help scripts always-true. */
+function appOrigin(): string {
+  return typeof window !== 'undefined' ? `${window.location.origin}/` : 'http://localhost:5173/';
+}
+
 const DESKTOP_FILE_CONTENTS =
   `[Desktop Entry]
 Type=Application
 Name=Raptor3000
-Exec=brave-browser --app=http://localhost:5173/
+Exec=brave-browser --app=${appOrigin()}
 Icon=brave-browser
 Terminal=false
 Categories=Network;Game;
@@ -683,16 +795,16 @@ StartupWMClass=Raptor3000
 `;
 
 const WINDOWS_TARGET_BRAVE =
-  `"C:\\Program Files\\BraveSoftware\\Brave-Browser\\Application\\brave.exe" --app=http://localhost:5173/`;
+  `"C:\\Program Files\\BraveSoftware\\Brave-Browser\\Application\\brave.exe" --app=${appOrigin()}`;
 
 const WINDOWS_TARGET_CHROME =
-  `"C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe" --app=http://localhost:5173/`;
+  `"C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe" --app=${appOrigin()}`;
 
 const MACOS_SHELL_BRAVE =
-  `/Applications/Brave\\ Browser.app/Contents/MacOS/Brave\\ Browser --app=http://localhost:5173/`;
+  `/Applications/Brave\\ Browser.app/Contents/MacOS/Brave\\ Browser --app=${appOrigin()}`;
 
 const MACOS_SHELL_CHROME =
-  `/Applications/Google\\ Chrome.app/Contents/MacOS/Google\\ Chrome --app=http://localhost:5173/`;
+  `/Applications/Google\\ Chrome.app/Contents/MacOS/Google\\ Chrome --app=${appOrigin()}`;
 
 function Section({
   title,

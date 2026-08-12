@@ -166,5 +166,10 @@ export function announceBlockedBoardWindows(
     chatService.publish(
       makeChatEvent(ChatEventType.INTERNAL, message, { message, gameId }),
     );
+    // The console line is easy to scroll past; the main window also
+    // raises a banner pointing at Help → Allow popups (deploy thinking,
+    // 2026-08-12: on a fresh production origin EVERY first observe hits
+    // this, so it has to be unmissable and self-explanatory).
+    window.dispatchEvent(new CustomEvent('raptor:popup-blocked', { detail: gameId }));
   };
 }
