@@ -292,6 +292,7 @@ export const BoardWindow = observer(function BoardWindow({
           viewablePlies={replay.grids.length - 1}
           viewPly={viewPly}
           onViewPly={setViewPly}
+          showEngine={prefs.showEngineAnalysis}
         />
       }
       toolbar={<Toolbar mode={mode} handlers={toolbarHandlers} />}
@@ -1115,6 +1116,7 @@ function SidePanel({
   viewablePlies,
   viewPly,
   onViewPly,
+  showEngine,
 }: {
   context: RaptorContext;
   s12: Style12Message | undefined;
@@ -1124,6 +1126,8 @@ function SidePanel({
   viewablePlies: number;
   viewPly: number | null;
   onViewPly: (ply: number | null) => void;
+  /** Options → Engine → "Stockfish analysis available" — finally wired. */
+  showEngine: boolean;
 }) {
   // Order per Carson (2026-08-12): status first, engine next, moves at
   // the bottom. Captured is gone — it never earned its pixels.
@@ -1133,7 +1137,7 @@ function SidePanel({
         <span style={{ fontWeight: 700, opacity: 0.75 }}>Status:</span>{' '}
         <span style={{ opacity: 0.85 }}>{modeLabel(mode)}</span>
       </div>
-      {engineAnalysisAllowed(mode) && (
+      {showEngine && engineAnalysisAllowed(mode) && (
         <EnginePanel context={context} gameId={gameId} s12={s12} />
       )}
       <MovesSection
