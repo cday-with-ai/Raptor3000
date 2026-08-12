@@ -47,6 +47,7 @@ import {
   useLivePreferences,
   type LayoutBucket,
 } from '../useLivePreferences.js';
+import { gameEndSound, playSound, soundForSan } from '../sounds.js';
 
 /**
  * Board window — per-game popup. Subscribes to GameService for its
@@ -111,6 +112,30 @@ export const BoardWindow = observer(function BoardWindow({
     const t = setTimeout(() => setTheater(false), 4000);
     return () => clearTimeout(t);
   }, [gameEnd]);
+
+  // Sounds (Carson): a subtle piano note per session start, move and
+  // verdict. Session start = this window opening — playing, observing
+  // and examining windows all open at their session's start.
+  useEffect(() => {
+    playSound('notify');
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  const soundPlyRef = useRef<number | null>(null);
+  useEffect(() => {
+    if (!s12 || ended) return;
+    const ply = plyOf(s12);
+    const prev = soundPlyRef.current;
+    soundPlyRef.current = ply;
+    // First s12 is the position the window opened onto, not a move; a
+    // same-or-earlier ply is a refresh or takeback. Neither makes noise.
+    if (prev === null || ply <= prev) return;
+    const sound = soundForSan(s12.san);
+    if (sound) playSound(sound);
+  }, [s12, ended]);
+  useEffect(() => {
+    if (!gameEnd) return;
+    playSound(gameEndSound(gameEnd, context.connector.getLoggedInAs()));
+  }, [gameEnd, context]);
 
   // Subscribe to GameService for THIS game's updates.
   useEffect(() => {

@@ -646,10 +646,13 @@ the client plays. What remains, in rough order of value:
    chain in `queue/suggestions.md` cleared every link; this needs a live
    browser with a temporary log in `EngineManager.refresh()` — id, FEN,
    resulting depth — while an observed game plays.
-3. **Wire the three unconsumed preferences**: `moveListVisible` (the side
-   panel ignores it), `showEngineAnalysis` (EnginePanel gates on mode only),
-   `soundMode` (no sound system exists at all — this one is a feature, not
-   a wire).
+3. **Wire the three unconsumed preferences**: ~~`moveListVisible`~~ (the
+   per-mode layout memory consumes it as the observing/examining fallback,
+   2026-08-12), `showEngineAnalysis` (EnginePanel gates on mode only),
+   ~~`soundMode`~~ (consumed 2026-08-12: `sounds.ts` + the piano set.
+   Licensing note for the attribution page: lichess's STANDARD sounds are
+   in lila COPYING.md's "Exceptions (non-free)" — the free sets are
+   futuristic/nes/piano/sfx, AGPLv3+ by Enigmahack; we ship piano).
 4. **Day-mode chat palette.** Partially answered late on 2026-08-12: the
    per-type colours are preferences now (Options → Console), so Carson can
    fix any washed-out type himself. Still open: the STOCK palette's light-
