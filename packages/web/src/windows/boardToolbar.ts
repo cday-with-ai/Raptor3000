@@ -51,15 +51,9 @@ function live(id: string, label: string): ToolbarItem {
   return { id, label, implemented: true };
 }
 
-// Wired 2026-08-12: EXAMINING navigates server-side (backward/forward),
-// every other mode browses the window-local move history. Handlers live
-// in BoardWindow's `toolbarHandlers`.
-const navItems: ToolbarItem[] = [
-  live('nav-first', '⏮'),
-  live('nav-back', '◀'),
-  live('nav-forward', '▶'),
-  live('nav-last', '⏭'),
-];
+// Nav arrows moved INTO the Moves control on 2026-08-12 (Carson) —
+// under its header collapsed, after the list expanded. The toolbar
+// keeps window-level actions only.
 
 /** Buttons to the right of the gap, excluding Flip and the engine toggle. */
 function modeItems(
@@ -123,7 +117,7 @@ export function toolbarLayoutFor(
   }
 
   return {
-    left: navItems,
+    left: [],
     right: [live('flip', 'Flip'), ...modeItems(mode, endedFrom)],
   };
 }

@@ -49,11 +49,12 @@ describe('toolbarLayoutFor', () => {
     }
   });
 
-  it('puts navigation and Flip on every mode except SETUP', () => {
+  it('puts Flip on every mode except SETUP; nav lives in the Moves control', () => {
+    // The arrows moved into the Moves control on 2026-08-12 (Carson).
     for (const mode of ALL_MODES) {
       if (mode === BoardMode.SETUP) continue;
-      expect(labels(mode).slice(0, 4), mode).toEqual(['⏮', '◀', '▶', '⏭']);
       expect(labels(mode), mode).toContain('Flip');
+      expect(labels(mode), mode).not.toContain('⏮');
     }
   });
 
@@ -87,10 +88,6 @@ describe('toolbarLayoutFor', () => {
 
   it('gives PLAYING the game-management buttons and no others', () => {
     expect(labels(BoardMode.PLAYING)).toEqual([
-      '⏮',
-      '◀',
-      '▶',
-      '⏭',
       'Flip',
       'Draw',
       'Abort',

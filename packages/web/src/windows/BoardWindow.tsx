@@ -304,10 +304,6 @@ export const BoardWindow = observer(function BoardWindow({
   };
 
   const toolbarHandlers: Record<string, () => void> = {
-    'nav-first': () => nav('first'),
-    'nav-back': () => nav('back'),
-    'nav-forward': () => nav('forward'),
-    'nav-last': () => nav('last'),
     flip: () => setFlipOverride(o => !o),
     // PLAYING-mode one-liners.
     draw: () => context.connector.sendMessageHidden('draw'),
@@ -376,6 +372,7 @@ export const BoardWindow = observer(function BoardWindow({
             // just "1) … e5" until you ask for the list.
             mode !== BoardMode.PLAYING && prefs.moveListVisible
           }
+          onNav={nav}
         />
       }
       toolbar={<Toolbar mode={mode} endedFrom={endedFrom} handlers={toolbarHandlers} />}
@@ -1272,6 +1269,7 @@ function SidePanel({
   openingFen,
   analysisFen,
   startMovesExpanded,
+  onNav,
 }: {
   context: RaptorContext;
   s12: Style12Message | undefined;
@@ -1281,6 +1279,7 @@ function SidePanel({
   viewablePlies: number;
   viewPly: number | null;
   onViewPly: (ply: number | null) => void;
+  onNav: (which: 'first' | 'back' | 'forward' | 'last') => void;
   /** Options → Engine → "Stockfish analysis available" — finally wired. */
   showEngine: boolean;
   opening: Opening | null;
@@ -1305,6 +1304,7 @@ function SidePanel({
         viewablePlies={viewablePlies}
         viewPly={viewPly}
         onViewPly={onViewPly}
+        onNav={onNav}
       />
       {showEngine && engineAnalysisAllowed(mode) && (
         <EnginePanel context={context} gameId={gameId} fen={analysisFen} viewing={viewPly !== null} />
@@ -1345,6 +1345,7 @@ function MovesSection({
   viewablePlies,
   viewPly,
   onViewPly,
+  onNav,
 }: {
   s12: Style12Message | undefined;
   opening: Opening | null;
@@ -1352,6 +1353,7 @@ function MovesSection({
   openingFen: string | null;
   /** The moveListVisible preference — open the list without a click. */
   startExpanded: boolean;
+  onNav: (which: 'first' | 'back' | 'forward' | 'last') => void;
   sans: ReadonlyMap<number, string>;
   viewablePlies: number;
   viewPly: number | null;
@@ -1425,6 +1427,7 @@ function MovesSection({
           {expanded ? '(hide)' : '(movelist)'}
         </button>
       </div>
+      {!expanded && <NavArrows onNav={onNav} />}
       {expanded && (
         <div
           style={{
@@ -1462,6 +1465,37 @@ function MovesSection({
           )}
         </div>
       )}
+      {expanded && <NavArrows onNav={onNav} />}
+    </div>
+  );
+}
+
+/** ⏮ ◀ ▶ ⏭ — Moves-control navigation, all modes (server-side walk in
+ *  examine, local history browse elsewhere). */
+function NavArrows({ onNav }: { onNav: (w: 'first' | 'back' | 'forward' | 'last') => void }) {
+  const btn = (w: 'first' | 'back' | 'forward' | 'last', label: string) => (
+    <button
+      key={w}
+      onClick={() => onNav(w)}
+      style={{
+        background: 'var(--bg-input)',
+        color: 'var(--fg)',
+        border: '1px solid var(--border-strong)',
+        borderRadius: 3,
+        cursor: 'pointer',
+        fontSize: 11,
+        padding: '1px 8px',
+      }}
+    >
+      {label}
+    </button>
+  );
+  return (
+    <div style={{ display: 'flex', gap: 4, marginTop: 4 }}>
+      {btn('first', '⏮')}
+      {btn('back', '◀')}
+      {btn('forward', '▶')}
+      {btn('last', '⏭')}
     </div>
   );
 }
