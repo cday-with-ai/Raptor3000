@@ -268,6 +268,8 @@ export class FicsParser {
   ): string {
     const moves = this.chunkParsers.moves?.parse(inboundMessage);
     if (moves) {
+      // Record before firing, so a listener woken by the event can read it.
+      this.gameService?.recordMoves(moves);
       this.gameService?.fireGameMovesAdded(moves.gameId);
       events.push(
         makeChatEvent(ChatEventType.MOVES, inboundMessage, {

@@ -10,7 +10,7 @@ describe('parseUciInfo', () => {
     expect(info.scoreCp).toBe(27);
     expect(info.scoreMate).toBeNull();
     expect(info.pv).toEqual(['e2e4', 'e7e5', 'g1f3']);
-    expect(info.bestMove).toBe('e2e4');
+    expect(info.multipv).toBe(1);
     expect(info.nps).toBe(67890);
   });
 
@@ -19,7 +19,7 @@ describe('parseUciInfo', () => {
     const info = parseUciInfo(line)!;
     expect(info.scoreMate).toBe(3);
     expect(info.scoreCp).toBeNull();
-    expect(info.bestMove).toBe('f6f7');
+    expect(info.pv[0]).toBe('f6f7');
   });
 
   it('parses negative mate (getting mated)', () => {
@@ -40,6 +40,15 @@ describe('parseUciInfo', () => {
     expect(info.depth).toBe(14);
     expect(info.scoreCp).toBe(-45);
     expect(info.pv).toEqual([]);
-    expect(info.bestMove).toBeNull();
+  });
+});
+
+describe('multipv parsing', () => {
+  it('reads the multipv rank and defaults it to 1', () => {
+    const l2 =
+      'info depth 12 multipv 2 score cp -15 nodes 999 nps 100 pv d2d4 d7d5';
+    expect(parseUciInfo(l2)!.multipv).toBe(2);
+    const noRank = 'info depth 10 score cp 5 pv e2e4';
+    expect(parseUciInfo(noRank)!.multipv).toBe(1);
   });
 });

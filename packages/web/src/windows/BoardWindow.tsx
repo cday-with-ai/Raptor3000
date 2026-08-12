@@ -7,6 +7,7 @@ import {
   lastMoveSquares,
   parseSquare,
   squareName,
+  style12ToFen,
   isWhitePiece,
   isBlackPiece,
   isPawn,
@@ -14,6 +15,12 @@ import {
   type BoardModeCode,
   type Style12Message,
 } from '@raptor3000/shared';
+import {
+  formatEvalWhitePov,
+  formatSanLine,
+  pvToSan,
+  replaySans,
+} from '../game/chessBridge.js';
 import type { RaptorContext } from './appContext.js';
 import { BoardLayout } from '../layout/BoardLayout.js';
 import {
@@ -65,6 +72,13 @@ export const BoardWindow = observer(function BoardWindow({
     gameId ? context.gameService.getLatestStyle12(gameId) : undefined,
   );
 
+  // Window-local move history (the 2026-08-12 decision — no central
+  // store): ply number → SAN. Fed live from Style12 updates and seeded
+  // by the `moves` response when the move list is opened.
+  const [sans, setSans] = useState<ReadonlyMap<number, string>>(new Map());
+  // Which ply the board is showing: null = live.
+  const [viewPly, setViewPly] = useState<number | null>(null);
+
   // Subscribe to GameService for THIS game's updates.
   useEffect(() => {
     if (!gameId) return undefined;
@@ -72,7 +86,32 @@ export const BoardWindow = observer(function BoardWindow({
       gameStateChanged: (id: string) => {
         if (id !== gameId) return;
         const latest = context.gameService.getLatestStyle12(gameId);
-        if (latest) setS12(latest);
+        if (!latest) return;
+        setS12(latest);
+        if (latest.san !== 'none') {
+          const ply = plyOf(latest);
+          setSans(prev => {
+            if (prev.get(ply) === latest.san) return prev;
+            const next = new Map(prev);
+            // A position at ply N invalidates anything later — that's
+            // what a takeback looks like from here.
+            for (const k of [...next.keys()]) if (k > ply) next.delete(k);
+            next.set(ply, latest.san);
+            return next;
+          });
+        }
+      },
+      gameMovesAdded: (id: string) => {
+        if (id !== gameId) return;
+        const mm = context.gameService.getLatestMoves(gameId);
+        if (!mm) return;
+        setSans(prev => {
+          const next = new Map(prev);
+          mm.moves.forEach((san, i) => {
+            if (!next.has(i + 1)) next.set(i + 1, san);
+          });
+          return next;
+        });
       },
       gameInactive: (id: string) => {
         if (id !== gameId) return;
@@ -84,6 +123,20 @@ export const BoardWindow = observer(function BoardWindow({
     if (initial) setS12(initial);
     return () => context.gameService.removeListener(listener);
   }, [context, gameId]);
+
+  // Replay the contiguous prefix of the history into per-ply grids —
+  // grids[p] is the position after ply p. Plies beyond the replayable
+  // prefix (variant games, holes before a seed arrives) aren't viewable.
+  const replay = useMemo(() => {
+    const list: string[] = [];
+    for (let p = 1; sans.has(p); p++) list.push(sans.get(p)!);
+    return replaySans(list);
+  }, [sans]);
+
+  const viewGrid =
+    viewPly !== null && viewPly < replay.grids.length
+      ? replay.grids[viewPly]
+      : null;
 
   const fallbackMode: BoardModeCode = useMemo(() => {
     const p = new URLSearchParams(window.location.search).get('mode');
@@ -128,12 +181,40 @@ export const BoardWindow = observer(function BoardWindow({
     <BoardLayout
       topBar={topBar}
       bottomBar={bottomBar}
-      board={<Board context={context} s12={s12} gameId={gameId} mode={mode} />}
-      side={<SidePanel context={context} s12={s12} gameId={gameId} mode={mode} />}
+      board={
+        <Board
+          context={context}
+          s12={s12}
+          gameId={gameId}
+          mode={mode}
+          viewGrid={viewGrid}
+          viewPly={viewPly}
+          viewSan={viewPly !== null ? sans.get(viewPly) ?? null : null}
+          onBackToLive={() => setViewPly(null)}
+        />
+      }
+      side={
+        <SidePanel
+          context={context}
+          s12={s12}
+          gameId={gameId}
+          mode={mode}
+          sans={sans}
+          viewablePlies={replay.grids.length - 1}
+          viewPly={viewPly}
+          onViewPly={setViewPly}
+        />
+      }
       toolbar={<Toolbar mode={mode} />}
     />
   );
 });
+
+/** Plies played so far, per the Style12 turn/move-number convention:
+ *  fullMoveNumber is the NEXT move's number. */
+function plyOf(s12: Style12Message): number {
+  return (s12.fullMoveNumber - 1) * 2 + (s12.isWhitesMoveAfterMoveIsMade ? 0 : 1);
+}
 
 function isBoardMode(v: string | null): v is BoardModeCode {
   return (
@@ -313,16 +394,27 @@ function Board({
   s12,
   gameId,
   mode,
+  viewGrid,
+  viewPly,
+  viewSan,
+  onBackToLive,
 }: {
   context: RaptorContext;
   s12: Style12Message | undefined;
   gameId: string | null;
   mode: BoardModeCode;
+  /** When set, render this historical position instead of the live one. */
+  viewGrid: number[][] | null;
+  viewPly: number | null;
+  viewSan: string | null;
+  onBackToLive: () => void;
 }) {
   const flipped = !!s12?.isWhiteOnTop;
+  // Viewing history is read-only — moves belong to the live position.
+  const viewing = viewGrid !== null;
   const interactive =
-    mode === BoardMode.PLAYING || mode === BoardMode.EXAMINING;
-  const canPremove = mode === BoardMode.PLAYING;
+    !viewing && (mode === BoardMode.PLAYING || mode === BoardMode.EXAMINING);
+  const canPremove = !viewing && mode === BoardMode.PLAYING;
 
   const [selected, setSelected] = useState<string | null>(null);
   const [premove, setPremove] = useState<{ from: string; to: string } | null>(null);
@@ -377,9 +469,13 @@ function Board({
     setSelected(null);
   }, [s12]);
 
-  const lastMove = s12 ? lastMoveSquares(s12) : null;
+  // Live-position decorations don't apply to a viewed historical one.
+  const lastMove = !viewing && s12 ? lastMoveSquares(s12) : null;
 
-  const kingInCheckSq = s12 && s12.san.includes('+') ? findKingSquareInCheck(s12) : null;
+  const kingInCheckSq =
+    !viewing && s12 && s12.san.includes('+') ? findKingSquareInCheck(s12) : null;
+
+  const grid = viewGrid ?? s12?.position;
 
   /** Destination chosen (by second tap or by drop): send, queue as
    *  premove, or open the promotion picker. Shared by tap and drag. */
@@ -534,7 +630,7 @@ function Board({
       const file = flipped ? 7 - fi : fi;
       const isLight = (rank + file) % 2 === 1;
       const sq = squareName(rank, file);
-      const code = s12?.position[rank]?.[file] ?? 0;
+      const code = grid?.[rank]?.[file] ?? 0;
 
       const isLastFrom = lastMove?.from === sq;
       const isLastTo = lastMove?.to === sq;
@@ -665,6 +761,43 @@ function Board({
           <div style={{ fontSize: 11, opacity: 0.8 }}>
             {modeLabel(mode)} · waiting for position
           </div>
+        </div>
+      )}
+      {viewing && (
+        <div
+          style={{
+            position: 'absolute',
+            top: 4,
+            left: 4,
+            // Fixed dark chip over the board, same idea as the premove
+            // badge — deliberately not theme vars.
+            background: 'rgba(20, 24, 32, 0.85)',
+            color: '#fff',
+            padding: '2px 8px',
+            borderRadius: 3,
+            fontSize: 11,
+            display: 'flex',
+            alignItems: 'center',
+            gap: 8,
+            zIndex: 5,
+          }}
+        >
+          viewing {viewPly !== null ? plyLabel(viewPly, viewSan) : ''}
+          <button
+            onClick={onBackToLive}
+            style={{
+              background: 'var(--accent)',
+              color: '#fff',
+              border: 'none',
+              borderRadius: 3,
+              padding: '1px 8px',
+              cursor: 'pointer',
+              fontSize: 11,
+              fontWeight: 600,
+            }}
+          >
+            live
+          </button>
         </div>
       )}
       {premove && (
@@ -835,45 +968,36 @@ function SidePanel({
   s12,
   gameId,
   mode,
+  sans,
+  viewablePlies,
+  viewPly,
+  onViewPly,
 }: {
   context: RaptorContext;
   s12: Style12Message | undefined;
   gameId: string | null;
   mode: BoardModeCode;
+  sans: ReadonlyMap<number, string>;
+  viewablePlies: number;
+  viewPly: number | null;
+  onViewPly: (ply: number | null) => void;
 }) {
   return (
     <>
-      <Section title="Last move">
-        <div style={{ fontSize: 13 }}>
-          {s12 ? (
-            <>
-              <strong>{s12.san}</strong>
-              {s12.lan && s12.lan !== 'none' && (
-                <span style={{ opacity: 0.7 }}> ({s12.lan})</span>
-              )}
-            </>
-          ) : (
-            <span style={{ opacity: 0.6 }}>(none)</span>
-          )}
-        </div>
-      </Section>
-      <Section title="Move">
-        <div style={{ fontSize: 13 }}>
-          {s12 ? (
-            <>
-              #{s12.fullMoveNumber} ·{' '}
-              {s12.isWhitesMoveAfterMoveIsMade ? 'white to move' : 'black to move'}
-            </>
-          ) : (
-            <span style={{ opacity: 0.6 }}>—</span>
-          )}
-        </div>
-      </Section>
+      <MovesSection
+        context={context}
+        s12={s12}
+        gameId={gameId}
+        sans={sans}
+        viewablePlies={viewablePlies}
+        viewPly={viewPly}
+        onViewPly={onViewPly}
+      />
       <Section title={mode === BoardMode.BUGHOUSE_SUGGEST ? 'Holdings' : 'Captured'}>
         <div style={{ opacity: 0.6, fontSize: 12 }}>—</div>
       </Section>
       {engineAnalysisAllowed(mode) && (
-        <EnginePanel context={context} gameId={gameId} />
+        <EnginePanel context={context} gameId={gameId} s12={s12} />
       )}
       <Section title="Status">
         <div style={{ opacity: 0.8, fontSize: 12 }}>{modeLabel(mode)}</div>
@@ -881,6 +1005,151 @@ function SidePanel({
     </>
   );
 }
+
+/** `26) … Rg8` — the collapsed one-line summary of where the game is. */
+function lastMoveLabel(s12: Style12Message | undefined): string {
+  if (!s12 || s12.san === 'none') return '(none)';
+  const blackJustMoved = s12.isWhitesMoveAfterMoveIsMade;
+  const num = blackJustMoved ? s12.fullMoveNumber - 1 : s12.fullMoveNumber;
+  return `${num}) ${blackJustMoved ? '… ' : ''}${s12.san}`;
+}
+
+/** `26) … Rg8` for an arbitrary ply in the history list / view banner. */
+function plyLabel(ply: number, san: string | null): string {
+  const moveNo = Math.ceil(ply / 2);
+  const black = ply % 2 === 0;
+  return `${moveNo})${black ? ' …' : ''} ${san ?? ''}`.trimEnd();
+}
+
+/**
+ * The combined moves control (Carson's design, 2026-08-12): one line
+ * showing the last move, expandable to the full move list. Expanding
+ * asks FICS for `moves <id>` once to seed history from before this
+ * window opened; live moves keep appending. Plies whose position the
+ * chessops replay reached are clickable and show that position on the
+ * board (read-only, with a "live" button to come back).
+ */
+function MovesSection({
+  context,
+  s12,
+  gameId,
+  sans,
+  viewablePlies,
+  viewPly,
+  onViewPly,
+}: {
+  context: RaptorContext;
+  s12: Style12Message | undefined;
+  gameId: string | null;
+  sans: ReadonlyMap<number, string>;
+  viewablePlies: number;
+  viewPly: number | null;
+  onViewPly: (ply: number | null) => void;
+}) {
+  const [expanded, setExpanded] = useState(false);
+  const requested = useRef(false);
+
+  const toggle = () => {
+    setExpanded(e => !e);
+    // Seed once: everything before this window opened comes from FICS.
+    if (!requested.current && gameId) {
+      requested.current = true;
+      context.connector.sendMessageHidden(`moves ${gameId}`);
+    }
+  };
+
+  const maxPly = sans.size === 0 ? 0 : Math.max(...sans.keys());
+  const rows: React.ReactNode[] = [];
+  for (let n = 1; (n - 1) * 2 + 1 <= maxPly; n++) {
+    const wPly = (n - 1) * 2 + 1;
+    const bPly = wPly + 1;
+    rows.push(
+      <div key={n} style={{ display: 'flex', gap: 6, alignItems: 'baseline' }}>
+        <span style={{ opacity: 0.5, minWidth: 24, textAlign: 'right' }}>{n}.</span>
+        <PlyButton ply={wPly} san={sans.get(wPly)} viewablePlies={viewablePlies} viewPly={viewPly} onViewPly={onViewPly} />
+        <PlyButton ply={bPly} san={sans.get(bPly)} viewablePlies={viewablePlies} viewPly={viewPly} onViewPly={onViewPly} />
+      </div>,
+    );
+  }
+
+  return (
+    <Section title="Moves">
+      <div style={{ fontSize: 13, display: 'flex', alignItems: 'baseline', gap: 8 }}>
+        <strong>{lastMoveLabel(s12)}</strong>
+        <button onClick={toggle} style={movelistLink}>
+          {expanded ? '(hide)' : '(movelist)'}
+        </button>
+      </div>
+      {expanded && (
+        <div
+          style={{
+            marginTop: 6,
+            maxHeight: 220,
+            overflowY: 'auto',
+            fontSize: 13,
+            fontFamily: '"SF Mono", Consolas, monospace',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 1,
+          }}
+        >
+          {rows.length === 0 ? (
+            <span style={{ opacity: 0.5 }}>(waiting for movelist…)</span>
+          ) : (
+            rows
+          )}
+        </div>
+      )}
+    </Section>
+  );
+}
+
+function PlyButton({
+  ply,
+  san,
+  viewablePlies,
+  viewPly,
+  onViewPly,
+}: {
+  ply: number;
+  san: string | undefined;
+  viewablePlies: number;
+  viewPly: number | null;
+  onViewPly: (ply: number | null) => void;
+}) {
+  if (!san) return <span style={{ minWidth: 52 }} />;
+  const clickable = ply <= viewablePlies;
+  const active = viewPly === ply;
+  return (
+    <button
+      onClick={clickable ? () => onViewPly(active ? null : ply) : undefined}
+      title={clickable ? undefined : 'position not replayable (gap or variant)'}
+      style={{
+        background: active ? 'var(--accent-soft)' : 'transparent',
+        color: clickable ? 'var(--fg)' : 'var(--fg-dim)',
+        border: 'none',
+        borderRadius: 3,
+        padding: '0 4px',
+        minWidth: 52,
+        textAlign: 'left',
+        cursor: clickable ? 'pointer' : 'default',
+        fontFamily: 'inherit',
+        fontSize: 'inherit',
+      }}
+    >
+      {san}
+    </button>
+  );
+}
+
+const movelistLink = {
+  background: 'none',
+  border: 'none',
+  color: 'var(--accent)',
+  cursor: 'pointer',
+  fontSize: 12,
+  padding: 0,
+} as const;
 
 /**
  * Engine analysis section. Shows live depth/eval/PV from EngineService.
@@ -890,10 +1159,14 @@ function SidePanel({
 function EnginePanel({
   context,
   gameId,
+  s12,
 }: {
   context: RaptorContext;
   gameId: string | null;
+  s12: Style12Message | undefined;
 }) {
+  // (best line) shows one PV; (multi line) searches and shows three.
+  const [lineMode, setLineMode] = useState<'best' | 'multi'>('best');
   // Engine lives on the main window; popup boards reach it via context
   // (which already resolved to window.opener.raptor).
   const engine = context.engineManager;
@@ -928,7 +1201,19 @@ function EnginePanel({
   }
 
   const isFocused = gameId !== null && focusedGameId === gameId;
-  const evalText = formatEval(analysis);
+  // Eval and lines are always shown from White's perspective — the
+  // convention every engine GUI uses. UCI reports side-to-move, so the
+  // flip needs the analyzed position's turn.
+  const whiteToMove = s12?.isWhitesMoveAfterMoveIsMade ?? true;
+  const fen = s12 ? style12ToFen(s12) : null;
+  const lines = analysis?.lines ?? [];
+  const shown = lineMode === 'best' ? lines.slice(0, 1) : lines.slice(0, 3);
+
+  const pickMode = (m: 'best' | 'multi') => {
+    setLineMode(m);
+    engine.setMultiPv(m === 'multi' ? 3 : 1);
+  };
+
   return (
     <Section title="Engine">
       {!isFocused ? (
@@ -943,22 +1228,50 @@ function EnginePanel({
         </button>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-          <div style={{ fontSize: 13, fontWeight: 600 }}>
-            {evalText}{' '}
+          <div style={{ fontSize: 15, fontWeight: 700 }}>
+            {analysis
+              ? formatEvalWhitePov(analysis.scoreCp, analysis.scoreMate, whiteToMove)
+              : '…'}{' '}
             {analysis && analysis.depth > 0 && (
-              <span style={{ fontWeight: 400, opacity: 0.7 }}>· depth {analysis.depth}</span>
+              <span style={{ fontSize: 11, fontWeight: 400, opacity: 0.7 }}>
+                depth {analysis.depth}
+              </span>
             )}
           </div>
-          {analysis && analysis.pv.length > 0 && (
-            <div style={{ fontSize: 11, opacity: 0.85, fontFamily: '"SF Mono", Consolas, monospace' }}>
-              {analysis.pv.slice(0, 6).join(' ')}
-            </div>
-          )}
+          {shown.map(line => {
+            const san = fen ? pvToSan(fen, line.pv) : null;
+            return (
+              <div
+                key={line.multipv}
+                style={{
+                  fontSize: 11,
+                  opacity: 0.9,
+                  fontFamily: '"SF Mono", Consolas, monospace',
+                }}
+              >
+                {lineMode === 'multi' && (
+                  <strong style={{ marginRight: 6 }}>
+                    {formatEvalWhitePov(line.scoreCp, line.scoreMate, whiteToMove)}
+                  </strong>
+                )}
+                {san ? formatSanLine(san) : line.pv.slice(0, 8).join(' ')}
+              </div>
+            );
+          })}
           <div style={{ display: 'flex', gap: 6, marginTop: 2 }}>
             <button
-              style={smallBtn}
-              onClick={() => engine.unfocus()}
+              style={{ ...smallBtn, fontWeight: lineMode === 'best' ? 700 : 400 }}
+              onClick={() => pickMode('best')}
             >
+              best line
+            </button>
+            <button
+              style={{ ...smallBtn, fontWeight: lineMode === 'multi' ? 700 : 400 }}
+              onClick={() => pickMode('multi')}
+            >
+              multi line
+            </button>
+            <button style={smallBtn} onClick={() => engine.unfocus()}>
               Stop
             </button>
           </div>
@@ -966,16 +1279,6 @@ function EnginePanel({
       )}
     </Section>
   );
-}
-
-function formatEval(a: EngineAnalysis | null): string {
-  if (!a) return '…';
-  if (a.scoreMate !== null) {
-    return a.scoreMate > 0 ? `M${a.scoreMate}` : `-M${Math.abs(a.scoreMate)}`;
-  }
-  if (a.scoreCp === null) return '…';
-  const v = a.scoreCp / 100;
-  return (v >= 0 ? '+' : '') + v.toFixed(2);
 }
 
 const focusBtn = {

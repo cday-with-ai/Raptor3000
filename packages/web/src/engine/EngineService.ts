@@ -18,8 +18,21 @@
  * `analyze()`. We never auto-start on PLAYING-mode games.
  */
 
+/** One search line. With MultiPV=1 there is exactly one, rank 1. */
+export interface EngineLine {
+  /** 1-based MultiPV rank (1 = best). */
+  multipv: number;
+  depth: number;
+  /** Centipawn score from the side-to-move's perspective, or null on mate. */
+  scoreCp: number | null;
+  /** Mate-in-N, positive=side-to-move mates, negative=gets mated. Null if eval. */
+  scoreMate: number | null;
+  /** Principal variation as a sequence of UCI moves ("e2e4 e7e5 ..."). */
+  pv: readonly string[];
+}
+
 export interface EngineAnalysis {
-  /** UCI search depth reached. */
+  /** UCI search depth reached (best line's). */
   depth: number;
   /** Centipawn score from the side-to-move's perspective, or null on mate. */
   scoreCp: number | null;
@@ -31,6 +44,8 @@ export interface EngineAnalysis {
   nps: number;
   /** Best move found so far (first PV move; updated as PV updates). */
   bestMove: string | null;
+  /** All current lines, sorted by multipv rank. Length tracks MultiPV. */
+  lines: readonly EngineLine[];
 }
 
 export type EngineState = 'idle' | 'starting' | 'ready' | 'analyzing' | 'stopped';
@@ -46,6 +61,8 @@ export class EngineService {
   private readonly analysisListeners = new Set<AnalysisListener>();
   private readonly stateListeners = new Set<StateListener>();
   private currentAnalysis: EngineAnalysis | null = null;
+  private multiPv = 1;
+  private lastRequest: { fen: string; opts: { depth?: number; movetime?: number } } | null = null;
 
   /** Start the Stockfish worker and run UCI handshake. Idempotent. */
   start(): void {
@@ -72,6 +89,24 @@ export class EngineService {
     this.setState('stopped');
   }
 
+  /**
+   * Number of lines the engine searches. Changing it restarts the
+   * current analysis (UCI requires setoption outside a search).
+   */
+  setMultiPv(n: number): void {
+    const clamped = Math.max(1, Math.min(5, Math.floor(n)));
+    if (clamped === this.multiPv) return;
+    this.multiPv = clamped;
+    if (!this.worker) return;
+    this.send('stop');
+    this.send(`setoption name MultiPV value ${clamped}`);
+    if (this.lastRequest) this.analyze(this.lastRequest.fen, this.lastRequest.opts);
+  }
+
+  getMultiPv(): number {
+    return this.multiPv;
+  }
+
   /** Replace the position and start a new analysis. Cancels any prior search. */
   analyze(fen: string, opts: { depth?: number; movetime?: number } = {}): void {
     if (!this.worker || this.state === 'starting') {
@@ -80,6 +115,7 @@ export class EngineService {
       return;
     }
     this.pending = null;
+    this.lastRequest = { fen, opts };
     this.send('stop');
     this.send(`position fen ${fen}`);
     this.currentAnalysis = null;
@@ -171,13 +207,14 @@ export class EngineService {
  * Parse a `info depth ... score cp/mate ... pv ...` line into a partial
  * EngineAnalysis. Returns null for non-search info lines (currmove, etc).
  */
-export function parseUciInfo(line: string): Partial<EngineAnalysis> | null {
+export function parseUciInfo(line: string): ParsedUciInfo | null {
   // Only act on lines that contain a depth + (score|pv).
   if (!/\bdepth\b/.test(line)) return null;
   if (!/(\bscore\b|\bpv\b)/.test(line)) return null;
 
   const tokens = line.split(/\s+/);
   let depth: number | undefined;
+  let multipv = 1;
   let scoreCp: number | null = null;
   let scoreMate: number | null = null;
   let nps: number | undefined;
@@ -187,6 +224,8 @@ export function parseUciInfo(line: string): Partial<EngineAnalysis> | null {
     const t = tokens[i];
     if (t === 'depth' && tokens[i + 1]) {
       depth = parseInt(tokens[i + 1], 10);
+    } else if (t === 'multipv' && tokens[i + 1]) {
+      multipv = parseInt(tokens[i + 1], 10) || 1;
     } else if (t === 'nps' && tokens[i + 1]) {
       nps = parseInt(tokens[i + 1], 10);
     } else if (t === 'score' && tokens[i + 1] && tokens[i + 2]) {
@@ -202,26 +241,46 @@ export function parseUciInfo(line: string): Partial<EngineAnalysis> | null {
 
   if (depth === undefined) return null;
   const pv = pvIdx >= 0 ? tokens.slice(pvIdx) : [];
-  return {
-    depth,
-    scoreCp,
-    scoreMate,
-    pv,
-    nps: nps ?? 0,
-    bestMove: pv[0] ?? null,
-  };
+  return { multipv, depth, scoreCp, scoreMate, pv, nps };
 }
 
+export interface ParsedUciInfo {
+  multipv: number;
+  depth: number;
+  scoreCp: number | null;
+  scoreMate: number | null;
+  pv: string[];
+  nps: number | undefined;
+}
+
+/**
+ * Fold one parsed info line into the analysis. Each MultiPV rank keeps
+ * its own line; the analysis-level fields mirror rank 1 so existing
+ * single-line consumers see exactly what they always saw.
+ */
 function mergeAnalysis(
   prev: EngineAnalysis | null,
-  next: Partial<EngineAnalysis>,
+  next: ParsedUciInfo,
 ): EngineAnalysis {
+  const newLine: EngineLine = {
+    multipv: next.multipv,
+    depth: next.depth,
+    scoreCp: next.scoreCp,
+    scoreMate: next.scoreMate,
+    pv: next.pv,
+  };
+  const lines = (prev?.lines ?? [])
+    .filter(l => l.multipv !== next.multipv)
+    .concat(newLine)
+    .sort((a, b) => a.multipv - b.multipv);
+  const best = lines[0];
   return {
-    depth: next.depth ?? prev?.depth ?? 0,
-    scoreCp: next.scoreCp !== undefined ? next.scoreCp : prev?.scoreCp ?? null,
-    scoreMate: next.scoreMate !== undefined ? next.scoreMate : prev?.scoreMate ?? null,
-    pv: next.pv ?? prev?.pv ?? [],
+    depth: best.depth,
+    scoreCp: best.scoreCp,
+    scoreMate: best.scoreMate,
+    pv: best.pv,
     nps: next.nps ?? prev?.nps ?? 0,
-    bestMove: next.bestMove ?? prev?.bestMove ?? null,
+    bestMove: best.pv[0] ?? prev?.bestMove ?? null,
+    lines,
   };
 }

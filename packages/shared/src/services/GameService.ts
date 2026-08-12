@@ -3,6 +3,7 @@ import type { GameInfo } from '../models/GameInfo.js';
 import type { Style12Message } from '../models/messages/Style12Message.js';
 import type { G1Message } from '../models/messages/G1Message.js';
 import type { B1Message } from '../models/messages/B1Message.js';
+import type { MovesMessage } from '../models/messages/MovesMessage.js';
 import { BoardMode, modeFromRelation, type BoardModeCode } from '../models/BoardMode.js';
 
 /**
@@ -93,6 +94,7 @@ export class GameService {
   private readonly latestStyle12 = new Map<string, Style12Message>();
   private readonly latestG1 = new Map<string, G1Message>();
   private readonly latestB1 = new Map<string, B1Message>();
+  private readonly latestMoves = new Map<string, MovesMessage>();
   /** Current derived mode per game — tracked so lifecycle hooks know
    *  which end-event to fire, and so mode transitions (obs→examine)
    *  can be detected without consumers re-deriving from the relation. */
@@ -125,6 +127,20 @@ export class GameService {
    * appropriate end-then-start transition hooks (e.g. obs→ex when
    * someone examines a game you were observing).
    */
+  /**
+   * Store the parsed `moves` response so consumers woken by
+   * `gameMovesAdded` can read it — same latest-cache pattern as
+   * Style12/G1/B1. Before 2026-08-12 the parser fired the event and
+   * dropped the message, so the history was announced but unreadable.
+   */
+  recordMoves(msg: MovesMessage): void {
+    this.latestMoves.set(msg.gameId, msg);
+  }
+
+  getLatestMoves(gameId: string): MovesMessage | undefined {
+    return this.latestMoves.get(gameId);
+  }
+
   recordStyle12(msg: Style12Message): void {
     this.latestStyle12.set(msg.gameId, msg);
     const nextMode = modeFromRelation(msg.relation);

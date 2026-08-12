@@ -65,6 +65,15 @@ export class EngineManager {
     this.engine.stop();
   }
 
+  /** How many lines the engine searches (MultiPV). Restarts analysis. */
+  setMultiPv(n: number): void {
+    this.engine.setMultiPv(n);
+  }
+
+  getMultiPv(): number {
+    return this.engine.getMultiPv();
+  }
+
   /** The game currently being analyzed, or null. */
   getFocusedGameId(): string | null {
     return this.focusedGameId;

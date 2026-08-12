@@ -141,6 +141,11 @@
     "@babel/helper-string-parser" "^7.29.7"
     "@babel/helper-validator-identifier" "^7.29.7"
 
+"@badrap/result@^0.3":
+  version "0.3.1"
+  resolved "https://registry.yarnpkg.com/@badrap/result/-/result-0.3.1.tgz#19af522daeaa353746a7e6dfdba4fecf4b09f611"
+  integrity sha512-ECvpsyZYknoRD0peG1K+UkX5llld3TyK1Ot9Cq2epSoWK19nyzpGKVl98sadSmohu5wHNuiDl+Ex9SVdcIjiFg==
+
 "@emnapi/core@1.9.2":
   version "1.9.2"
   resolved "https://registry.yarnpkg.com/@emnapi/core/-/core-1.9.2.tgz#3870265ecffc7352d01ead62d8d83d8358a2d034"
@@ -753,6 +758,13 @@ chai@^6.2.2:
   version "6.2.2"
   resolved "https://registry.yarnpkg.com/chai/-/chai-6.2.2.tgz#ae41b52c9aca87734505362717f3255facda360e"
   integrity sha512-NUPRluOfOiTKBKvWPtSD4PhFvWCqOi0BGStNWs57X9js7XGTprSmFoz5F0tWhR4WPjNeR9jXqdC7/UpSJTnlRg==
+
+chessops@^0.15.1:
+  version "0.15.1"
+  resolved "https://registry.yarnpkg.com/chessops/-/chessops-0.15.1.tgz#417b64239585959bb4fea35d46aea96b79b25edf"
+  integrity sha512-hQDwv90AFkrPEsRJBebh3ZE+xDga25TCCv4lavNT2plZmd33UKNFYaZsE+7rafMbnBRrDEWUVsSYFqY3qCIGZw==
+  dependencies:
+    "@badrap/result" "^0.3"
 
 convert-source-map@^2.0.0:
   version "2.0.0"
