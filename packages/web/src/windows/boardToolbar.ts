@@ -65,13 +65,15 @@ const navItems: ToolbarItem[] = [
 function modeItems(mode: BoardModeCode): ToolbarItem[] {
   switch (mode) {
     case BoardMode.PLAYING:
+      // Wired 2026-08-12: each is a one-line FICS send from BoardWindow's
+      // toolbarHandlers (castles go through the normal move path).
       return [
-        dead('castle-short', 'O-O'),
-        dead('castle-long', 'O-O-O'),
-        dead('draw', 'Draw'),
-        dead('abort', 'Abort'),
-        dead('adjourn', 'Adjourn'),
-        dead('resign', 'Resign'),
+        live('castle-short', 'O-O'),
+        live('castle-long', 'O-O-O'),
+        live('draw', 'Draw'),
+        live('abort', 'Abort'),
+        live('adjourn', 'Adjourn'),
+        live('resign', 'Resign'),
       ];
     case BoardMode.OBSERVING:
       // Just Flip (Carson): the engine has its own control in the side
@@ -84,7 +86,9 @@ function modeItems(mode: BoardModeCode): ToolbarItem[] {
         dead('revert', 'Revert'),
       ];
     case BoardMode.INACTIVE:
-      return [dead('rematch', 'Rematch'), dead('save-pgn', 'Save PGN')];
+      // Save PGN wired 2026-08-12 — the window-local history + chessops
+      // finally made it a pure export. Rematch stays dead.
+      return [dead('rematch', 'Rematch'), live('save-pgn', 'Save PGN')];
     case BoardMode.BUGHOUSE_SUGGEST:
       return [dead('update', 'Update')];
     default:

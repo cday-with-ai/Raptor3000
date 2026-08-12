@@ -224,6 +224,12 @@ export const BoardWindow = observer(function BoardWindow({
 
   const whiteName = s12?.whiteName ?? 'white';
   const blackName = s12?.blackName ?? 'black';
+  // Ratings ride the <g1> gameinfo, cached per game. Guests show ++++
+  // there, which reads better hidden.
+  const g1 = gameId ? context.gameService.getLatestG1(gameId) : undefined;
+  const rating = (r: string | undefined) => (r && /\d/.test(r) ? r : '');
+  const whiteRating = rating(g1?.whiteRating);
+  const blackRating = rating(g1?.blackRating);
   const baseWhiteMs = s12?.whiteRemainingTimeMillis ?? 5 * 60 * 1000;
   const baseBlackMs = s12?.blackRemainingTimeMillis ?? 5 * 60 * 1000;
   const whiteTicking = !ended && !!(s12?.isClockTicking && s12.isWhitesMoveAfterMoveIsMade);
@@ -237,6 +243,8 @@ export const BoardWindow = observer(function BoardWindow({
 
   const topName = flipped ? whiteName : blackName;
   const bottomName = flipped ? blackName : whiteName;
+  const topRating = flipped ? whiteRating : blackRating;
+  const bottomRating = flipped ? blackRating : whiteRating;
   const topClock = flipped ? whiteClock : blackClock;
   const bottomClock = flipped ? blackClock : whiteClock;
   const topTicking = flipped ? whiteTicking : blackTicking;
@@ -287,16 +295,25 @@ export const BoardWindow = observer(function BoardWindow({
     'nav-forward': () => nav('forward'),
     'nav-last': () => nav('last'),
     flip: () => setFlipOverride(o => !o),
+    // PLAYING-mode one-liners. Castles go through the move path FICS
+    // already accepts; the rest are their own commands.
+    'castle-short': () => context.connector.sendMessageHidden('o-o'),
+    'castle-long': () => context.connector.sendMessageHidden('o-o-o'),
+    draw: () => context.connector.sendMessageHidden('draw'),
+    abort: () => context.connector.sendMessageHidden('abort'),
+    adjourn: () => context.connector.sendMessageHidden('adjourn'),
+    resign: () => context.connector.sendMessageHidden('resign'),
+    'save-pgn': () => savePgn(s12, sans),
   };
 
 
   const prefs = useLivePreferences();
 
   const topBar = (
-    <InfoBar side="opponent" name={topName} rating="" clockMs={topClock} ticking={topTicking} prefs={prefs} />
+    <InfoBar side="opponent" name={topName} rating={topRating} clockMs={topClock} ticking={topTicking} prefs={prefs} />
   );
   const bottomBar = (
-    <InfoBar side="me" name={bottomName} rating="" clockMs={bottomClock} ticking={bottomTicking} prefs={prefs} />
+    <InfoBar side="me" name={bottomName} rating={bottomRating} clockMs={bottomClock} ticking={bottomTicking} prefs={prefs} />
   );
 
   return (
@@ -332,6 +349,42 @@ export const BoardWindow = observer(function BoardWindow({
     />
   );
 });
+
+/**
+ * Download the window's game as a .pgn file. Movetext from the
+ * window-local history; result is unknown to this window (FICS's end
+ * message isn't retained), so `*` — every importer accepts it.
+ */
+function savePgn(
+  s12: Style12Message | undefined,
+  sans: ReadonlyMap<number, string>,
+): void {
+  const moves: string[] = [];
+  for (let p = 1; sans.has(p); p++) {
+    if (p % 2 === 1) moves.push(`${(p + 1) / 2}.`);
+    moves.push(sans.get(p)!);
+  }
+  const today = new Date();
+  const date = `${today.getFullYear()}.${String(today.getMonth() + 1).padStart(2, '0')}.${String(today.getDate()).padStart(2, '0')}`;
+  const pgn = [
+    '[Event "FICS game"]',
+    '[Site "freechess.org"]',
+    `[Date "${date}"]`,
+    `[White "${s12?.whiteName ?? '?'}"]`,
+    `[Black "${s12?.blackName ?? '?'}"]`,
+    '[Result "*"]',
+    '',
+    moves.join(' ') + (moves.length ? ' *' : '*'),
+    '',
+  ].join('\n');
+  const blob = new Blob([pgn], { type: 'application/x-chess-pgn' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `${s12?.whiteName ?? 'white'}-vs-${s12?.blackName ?? 'black'}.pgn`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
 
 /** Plies played so far, per the Style12 turn/move-number convention:
  *  fullMoveNumber is the NEXT move's number. */
