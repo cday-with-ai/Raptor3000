@@ -1586,10 +1586,28 @@ function MovesSection({
       {!expanded && <NavArrows onNav={onNav} />}
       {expanded && (
         <div
+          // Keyboard navigation (Carson): click the list to focus it,
+          // then arrow through the game. Same handlers as the buttons.
+          tabIndex={0}
+          onKeyDown={e => {
+            const map: Record<string, 'first' | 'back' | 'forward' | 'last'> = {
+              ArrowLeft: 'back',
+              ArrowUp: 'back',
+              ArrowRight: 'forward',
+              ArrowDown: 'forward',
+              Home: 'first',
+              End: 'last',
+            };
+            const which = map[e.key];
+            if (!which) return;
+            e.preventDefault();
+            onNav(which);
+          }}
           style={{
             marginTop: 6,
             maxHeight: 220,
             overflowY: 'auto',
+            outline: 'none',
             fontSize: 13,
             fontFamily: '"SF Mono", Consolas, monospace',
             display: 'flex',
