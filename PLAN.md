@@ -16,7 +16,23 @@ back rank, 2026-08-09.
 ## Where this is
 
 The connector, the parser and the board renderer all exist and are wired
-together. 321 unit tests pass in `packages/shared`, 144 in `packages/web`.
+together. 321 unit tests pass in `packages/shared`, 159 in `packages/web`.
+
+**The board is Chess Ascent's board now, and it plays (2026-08-12).** The
+full visual port from chessascent.app — its color themes plus the custom
+picker (brown default), its five piece SVG sets (cburnett default), its
+4px-rounded, light-mode-shadowed chrome, its in-square coordinates, its
+board-width info bands, its measured perfect-square sizing — plus a
+pointer-events port of its drag-and-drop (10px threshold so taps stay
+taps; click-to-move, premove and the promotion picker all route through
+the same path; touchAction:none for mobile). Verified against live FICS
+the same day as an anonymous guest: a synthetic pointer drag e2→e4 on an
+examine board came back from the server as `P/e2-e4`, and a live observed
+game rendered with the ported colors, coordinates, chrome and SVGs — all
+asserted from the DOM, not eyeballed. Board popups pick up options-page
+changes live via storage events. Legal-move dots are NOT ported: this
+client has no client-side move generator, so illegal moves are FICS's to
+reject (it does, and the IllegalMoveMessage parser exists).
 
 **"Won't connect to FICS" was three bugs wearing one symptom (2026-08-12).**
 FICS allows one session per handle. Registered handles: a new login wins and
@@ -587,8 +603,6 @@ than code:
 
 ## Known broken right now — not bugs to report
 
-- **Drag and drop is unimplemented.** The README has it unticked. A board that
-  renders a position but won't accept moves is the expected state.
 - Engine, variants and Stockfish are unstarted.
 - The e2e specs (`observe-bugs`, `two-guests-play`) need a live FICS connection
   and have not run since April.

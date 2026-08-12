@@ -447,7 +447,15 @@ function Board({
       (interactive || canPremove) &&
       piece !== 0 &&
       pieceIsMineInStyle12(piece, s12, mode);
-    if (draggable) rootRef.current?.setPointerCapture(e.pointerId);
+    if (draggable) {
+      try {
+        rootRef.current?.setPointerCapture(e.pointerId);
+      } catch {
+        // Unknown pointerId (synthetic events, or a pointer that ended
+        // between the event firing and this call). Drag still works —
+        // capture only guards against losing the pointer mid-drag.
+      }
+    }
   }
 
   function onPointerMove(e: React.PointerEvent) {
