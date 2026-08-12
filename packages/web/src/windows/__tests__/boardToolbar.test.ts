@@ -92,8 +92,6 @@ describe('toolbarLayoutFor', () => {
       '▶',
       '⏭',
       'Flip',
-      'O-O',
-      'O-O-O',
       'Draw',
       'Abort',
       'Adjourn',

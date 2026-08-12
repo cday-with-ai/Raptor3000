@@ -68,11 +68,9 @@ function modeItems(
 ): ToolbarItem[] {
   switch (mode) {
     case BoardMode.PLAYING:
-      // Wired 2026-08-12: each is a one-line FICS send from BoardWindow's
-      // toolbarHandlers (castles go through the normal move path).
+      // Wired 2026-08-12; castle buttons dropped the same day (Carson)
+      // — castling is just a king move on the board now.
       return [
-        live('castle-short', 'O-O'),
-        live('castle-long', 'O-O-O'),
         live('draw', 'Draw'),
         live('abort', 'Abort'),
         live('adjourn', 'Adjourn'),

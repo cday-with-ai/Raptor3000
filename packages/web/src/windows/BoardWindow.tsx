@@ -309,10 +309,7 @@ export const BoardWindow = observer(function BoardWindow({
     'nav-forward': () => nav('forward'),
     'nav-last': () => nav('last'),
     flip: () => setFlipOverride(o => !o),
-    // PLAYING-mode one-liners. Castles go through the move path FICS
-    // already accepts; the rest are their own commands.
-    'castle-short': () => context.connector.sendMessageHidden('o-o'),
-    'castle-long': () => context.connector.sendMessageHidden('o-o-o'),
+    // PLAYING-mode one-liners.
     draw: () => context.connector.sendMessageHidden('draw'),
     abort: () => context.connector.sendMessageHidden('abort'),
     adjourn: () => context.connector.sendMessageHidden('adjourn'),
@@ -1485,9 +1482,12 @@ function PlyButton({
   if (!san) return <span style={{ minWidth: 52 }} />;
   const clickable = ply <= viewablePlies;
   const active = viewPly === ply;
+  // The final ply IS the live position — selecting it means live
+  // (Carson): keep following new moves, no read-only viewing state.
+  const target = ply === viewablePlies ? null : ply;
   return (
     <button
-      onClick={clickable ? () => onViewPly(active ? null : ply) : undefined}
+      onClick={clickable ? () => onViewPly(active ? null : target) : undefined}
       title={clickable ? undefined : 'position not replayable (gap or variant)'}
       style={{
         background: active ? 'var(--accent-soft)' : 'transparent',
