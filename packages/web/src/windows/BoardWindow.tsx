@@ -249,7 +249,6 @@ export const BoardWindow = observer(function BoardWindow({
 
   // Toolbar nav: EXAMINING walks the game server-side; everything else
   // browses the window-local history (same machinery as the move list).
-  const navMovesRequested = useRef(false);
   const viewablePlies = replay.grids.length - 1;
   const nav = (which: 'first' | 'back' | 'forward' | 'last') => {
     if (mode === BoardMode.EXAMINING) {
@@ -261,10 +260,6 @@ export const BoardWindow = observer(function BoardWindow({
       }[which];
       context.connector.sendMessageHidden(cmd);
       return;
-    }
-    if (!navMovesRequested.current && gameId) {
-      navMovesRequested.current = true;
-      context.connector.sendMessageHidden(`moves ${gameId}`);
     }
     const current = viewPly ?? viewablePlies;
     switch (which) {
@@ -1179,9 +1174,7 @@ function SidePanel({
         <EnginePanel context={context} gameId={gameId} s12={s12} />
       )}
       <MovesSection
-        context={context}
         s12={s12}
-        gameId={gameId}
         sans={sans}
         viewablePlies={viewablePlies}
         viewPly={viewPly}
@@ -1215,33 +1208,23 @@ function plyLabel(ply: number, san: string | null): string {
  * board (read-only, with a "live" button to come back).
  */
 function MovesSection({
-  context,
   s12,
-  gameId,
   sans,
   viewablePlies,
   viewPly,
   onViewPly,
 }: {
-  context: RaptorContext;
   s12: Style12Message | undefined;
-  gameId: string | null;
   sans: ReadonlyMap<number, string>;
   viewablePlies: number;
   viewPly: number | null;
   onViewPly: (ply: number | null) => void;
 }) {
   const [expanded, setExpanded] = useState(false);
-  const requested = useRef(false);
 
-  const toggle = () => {
-    setExpanded(e => !e);
-    // Seed once: everything before this window opened comes from FICS.
-    if (!requested.current && gameId) {
-      requested.current = true;
-      context.connector.sendMessageHidden(`moves ${gameId}`);
-    }
-  };
+  // History is seeded when the window opens (the opening-detection
+  // seed), so expanding is pure UI.
+  const toggle = () => setExpanded(e => !e);
 
   const maxPly = sans.size === 0 ? 0 : Math.max(...sans.keys());
   const rows: React.ReactNode[] = [];
