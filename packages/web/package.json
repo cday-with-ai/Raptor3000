@@ -10,7 +10,8 @@
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
     "lint": "eslint src",
-    "e2e": "playwright test"
+    "e2e": "playwright test",
+    "deploy": "yarn build && wrangler pages deploy dist --project-name raptor3000 --branch master"
   },
   "dependencies": {
     "@raptor3000/shared": "0.0.1",

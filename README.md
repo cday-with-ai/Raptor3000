@@ -1,5 +1,9 @@
 # Raptor3000
 
+**Live: <https://raptor3000.pages.dev>** — sign in as a guest and `observe /b`.
+(Allow popups for the site; boards and chat are real windows. Help inside
+explains the one-time fix and the chromeless `--app` mode.)
+
 Modern web FICS chess client. Spiritual successor to Raptor (2005–2016), rebuilt
 with an event-driven architecture that cleanly separates FICS-protocol parsing
 from UI concerns.
@@ -135,6 +139,7 @@ packages/
 yarn install
 yarn workspace @raptor3000/shared test       # parser unit tests
 yarn dev                                      # web dev server on :5173
+yarn workspace @raptor3000/web deploy        # build + Cloudflare Pages deploy
 ```
 
 ## License
