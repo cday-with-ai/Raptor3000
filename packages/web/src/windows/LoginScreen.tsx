@@ -111,7 +111,8 @@ export function LoginScreen({
   }
 
   return (
-    <div style={shell}>
+    <div style={{ ...shell, position: 'relative', overflow: 'auto' }}>
+      <StarField />
       <form
         style={card}
         onSubmit={e => {
@@ -235,16 +236,51 @@ export function LoginScreen({
   );
 }
 
+// The landing moment is deep space in every theme — the card on top
+// stays theme-colored, so day mode is a bright card floating in the
+// dark rather than a squint. (Carson: "cool home page".)
 const shell = {
   width: '100vw',
   height: '100vh',
   display: 'flex',
   alignItems: 'center',
   justifyContent: 'center',
-  background: 'var(--bg)',
+  background:
+    'radial-gradient(ellipse at 30% 20%, #16223f 0%, #060a18 70%)',
   color: 'var(--fg)',
   fontFamily: 'system-ui, -apple-system, sans-serif',
 } as const;
+
+/** A few fixed stars so the void isn't flat. Deterministic on purpose —
+ *  the login screen shouldn't twinkle differently every render. */
+const STARS: ReadonlyArray<[number, number, number, number]> = [
+  [8, 12, 2, 0.9], [22, 78, 1.5, 0.5], [35, 30, 1, 0.7], [48, 88, 2, 0.4],
+  [61, 15, 1.5, 0.8], [72, 55, 1, 0.5], [83, 25, 2, 0.7], [93, 70, 1.5, 0.6],
+  [15, 45, 1, 0.4], [55, 40, 1, 0.35], [88, 90, 1, 0.5], [42, 8, 1.5, 0.6],
+];
+
+function StarField() {
+  return (
+    <>
+      {STARS.map(([x, y, r, o], i) => (
+        <div
+          key={i}
+          style={{
+            position: 'absolute',
+            left: `${x}vw`,
+            top: `${y}vh`,
+            width: r * 2,
+            height: r * 2,
+            borderRadius: '50%',
+            background: '#e8f4ff',
+            opacity: o * 0.6,
+            pointerEvents: 'none',
+          }}
+        />
+      ))}
+    </>
+  );
+}
 
 const loginIcon = {
   width: 72,
@@ -265,6 +301,7 @@ const mobileNote = {
 } as const;
 
 const card = {
+  margin: '24px 0',
   display: 'flex',
   flexDirection: 'column',
   gap: 10,
