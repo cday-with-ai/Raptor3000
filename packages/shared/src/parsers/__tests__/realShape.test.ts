@@ -286,3 +286,11 @@ describe('FICS line-wrap continuations rejoin before parsing (2026-08-12)', () =
     expect(events[0].raw).toContain('\\ backslash');
   });
 });
+
+describe('<pt> pending-offer lines are eaten (2026-08-12)', () => {
+  it('never reaches chat, parsed or not', () => {
+    const p = new FicsParser({ chatParsers: defaultChatParsers() });
+    const events = p.parse('\n<pt> 7 w=GuestNHJJ t=match p=raptortest (----) GuestNHJJ (----) unrated standard 15 0\n');
+    expect(events.filter(e => e.raw.includes('<pt>'))).toHaveLength(0);
+  });
+});

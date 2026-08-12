@@ -107,7 +107,9 @@ const MAX_GAME_MESSAGE = 65_536;
 // `<sr>` (seek removed) was missing, so every withdrawn seek printed raw into the
 // chat view once `iset seekinfo 1` was enabled. `<sn>` is kept but is not a token
 // FICS is known to send — it looks like the transposition that lost `<sr>`.
-const GAME_CONTROL_PREFIXES = ['<12>', '<g1>', '<b1>', '<pf>', '<pr>', '<sc>', '<sr>', '<sn>', '<s>'] as const;
+// `<pt>` (pending offer TO someone) leaked into chat on 2026-08-12 when a
+// guest match offer went out — same family as <pf>/<pr>, same fate.
+const GAME_CONTROL_PREFIXES = ['<12>', '<g1>', '<b1>', '<pf>', '<pr>', '<pt>', '<sc>', '<sr>', '<sn>', '<s>'] as const;
 
 export class FicsParser {
   readonly chatParsers: ChatEventParser[];
