@@ -419,6 +419,20 @@ function OptionsPage({
             />
             <Note>Comma-separated channel numbers.</Note>
           </Row>
+          <Row label="History backfill">
+            <input
+              style={textInput}
+              value={prefs.channelHistoryUrl}
+              onChange={e => update('channelHistoryUrl', e.target.value)}
+              placeholder="https://… (empty = off)"
+              spellCheck={false}
+            />
+            <Note>
+              Channel-log API (the chessascent bot). On chat-window open,
+              each auto-join channel is backfilled with up to 24h of tells
+              from before login — scroll up to read them. Empty disables.
+            </Note>
+          </Row>
         </Section>
       </main>
   );

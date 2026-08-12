@@ -59,6 +59,11 @@ export interface AppPreferences {
   soundMode: SoundMode;
   showEngineAnalysis: boolean;
   autoJoinChannels: string;
+  /**
+   * Base URL of the chessascent channel-log API for chat backfill —
+   * scrollback from before login, up to 24h. Empty string disables.
+   */
+  channelHistoryUrl: string;
   boardCoordinates: boolean;
   flipOnPlayAsBlack: boolean;
   moveListVisible: boolean;
@@ -78,6 +83,8 @@ export const DEFAULT_PREFERENCES: AppPreferences = {
   soundMode: 'on',
   showEngineAnalysis: true,
   autoJoinChannels: '1,4,53',
+  channelHistoryUrl:
+    'https://chessascent-app-back-end-861468272048.us-central1.run.app',
   boardCoordinates: true,
   flipOnPlayAsBlack: true,
   moveListVisible: true,
@@ -214,6 +221,8 @@ export function loadPreferences(): AppPreferences {
     ),
     autoJoinChannels:
       getRaw('autoJoinChannels') ?? DEFAULT_PREFERENCES.autoJoinChannels,
+    channelHistoryUrl:
+      getRaw('channelHistoryUrl') ?? DEFAULT_PREFERENCES.channelHistoryUrl,
     boardCoordinates: readBool(
       'boardCoordinates',
       DEFAULT_PREFERENCES.boardCoordinates,
@@ -243,6 +252,7 @@ export function savePreferences(prefs: AppPreferences): void {
   setRaw('soundMode', prefs.soundMode);
   setRaw('showEngineAnalysis', String(prefs.showEngineAnalysis));
   setRaw('autoJoinChannels', prefs.autoJoinChannels);
+  setRaw('channelHistoryUrl', prefs.channelHistoryUrl);
   setRaw('boardCoordinates', String(prefs.boardCoordinates));
   setRaw('flipOnPlayAsBlack', String(prefs.flipOnPlayAsBlack));
   setRaw('moveListVisible', String(prefs.moveListVisible));

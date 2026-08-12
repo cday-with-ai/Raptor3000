@@ -6,6 +6,12 @@ import {
 } from '@raptor3000/shared';
 import type { RaptorContext } from './appContext.js';
 import { installPositionTracker, windowStorageKey } from './windowPosition.js';
+import {
+  fetchChannelHistory,
+  mergeHistory,
+  parseChannels,
+} from '../channelHistory.js';
+import { loadPreferences } from '../preferences.js';
 
 /**
  * Chat window — connected FICS console with per-channel / per-person tabs.
@@ -52,6 +58,29 @@ export const ChatWindow = function ChatWindow({
     context.chatService.addMainConsoleListener(listener);
     return () => context.chatService.removeListener(id);
   }, [context]);
+
+  // Backfill: the chessascent channel logger keeps the last 24h of
+  // channel tells. Fetch each auto-join channel once and prepend, so
+  // scrolling up shows the conversation from before login. Its channel
+  // tabs also appear immediately instead of waiting for the first live
+  // tell. Failures are silent — backfill must never break the console.
+  const backfilled = useRef(false);
+  useEffect(() => {
+    if (backfilled.current) return;
+    backfilled.current = true;
+    const prefs = loadPreferences();
+    if (!prefs.channelHistoryUrl) return;
+    for (const channel of parseChannels(prefs.autoJoinChannels)) {
+      void fetchChannelHistory(prefs.channelHistoryUrl, channel).then(history => {
+        if (history.length === 0) return;
+        setEvents(prev => {
+          const next = mergeHistory(history, prev, channel);
+          if (next.length > MAX_EVENTS) next.splice(0, next.length - MAX_EVENTS);
+          return next;
+        });
+      });
+    }
+  }, []);
 
   // Derive tab list from events. Stable order: main, then channels by
   // first-seen order, then persons by first-seen order, then partner.
@@ -260,6 +289,8 @@ function tabAcceptsBy(tab: Tab, e: ChatEvent): boolean {
       return true;
     case 'channel': {
       if (e.type === ChatEventType.CHANNEL_TELL && e.channel === tab.channel) return true;
+      // Channel-scoped internal notes (the history separator).
+      if (e.type === ChatEventType.INTERNAL && e.channel === tab.channel) return true;
       if (e.type === ChatEventType.OUTBOUND) {
         return e.message.startsWith(`tell ${tab.channel} `);
       }
@@ -392,7 +423,24 @@ function colorFor(e: ChatEvent): string {
   }
 }
 
+/** When this window opened — events older than this are backfill and get
+ *  a timestamp prefix, since "when" is the point of reading history. */
+const WINDOW_OPENED = Date.now();
+
+function historyStamp(e: ChatEvent): string {
+  if (e.time >= WINDOW_OPENED - 5_000) return '';
+  const d = new Date(e.time);
+  const hhmm = `${d.getHours().toString().padStart(2, '0')}:${d.getMinutes().toString().padStart(2, '0')}`;
+  const sameDay = new Date(WINDOW_OPENED).toDateString() === d.toDateString();
+  const day = d.toLocaleDateString(undefined, { weekday: 'short' });
+  return sameDay ? `[${hhmm}] ` : `[${day} ${hhmm}] `;
+}
+
 function formatLine(e: ChatEvent): string {
+  return historyStamp(e) + formatLineBody(e);
+}
+
+function formatLineBody(e: ChatEvent): string {
   switch (e.type) {
     case ChatEventType.INTERNAL: return `· ${e.message}`;
     case ChatEventType.OUTBOUND: return `> ${e.message}`;
