@@ -41,29 +41,37 @@
   <circle cx="32" cy="27" r="17.5" fill="#0c1526"/>
   <circle cx="32" cy="27" r="17.5" fill="url(#dome)" stroke="#c0cad9" stroke-width="2"/>
 
-  <!-- the raptor: teal head in profile, long snout to the right -->
-  <path d="M21 31
-           c0-7 4-12 9-13
-           c1.5-2.5 5-3.5 7-2.5
-           l5 2.5
-           c3.5 0.5 6.5 2.5 7 5
-           l-9 1.5
-           c1.5 1 2.5 2.5 2.5 4
-           l-6.5-0.5
-           c0.5 3-1.5 6-5 6.5
-           l-10 1.5 z"
+  <!-- the raptor: dromaeosaur profile. Upper skull and lower jaw are
+       separate shapes so the dark dome shows through the open gape —
+       that gap is what makes it read as a hunting jaw, not a chin. -->
+  <path d="M21 23
+           c0-5 2.5-8 6.5-8.5
+           l6-0.3
+           l1.5 1.6
+           l10 5.2
+           l-0.5 2.3
+           l-14.5 2.2
+           l-3 3.5
+           c-3.5 0.5-6-2.5-6-6 z"
         fill="#3fa08a"/>
-  <!-- mouth: a slightly open jaw, the raptor grin -->
-  <path d="M31 28.5 c3.5 1.5 8 1.5 11.5 0.5" stroke="#0c1526" stroke-width="1.4" stroke-linecap="round" fill="none"/>
-  <path d="M31.5 29.5 c3 1.8 7 2 10 1 l-1.5 2.5 c-2.5 0.8-5.5 0.3-7.5-1 z" fill="#2c7a68"/>
+  <!-- lower jaw, hinged open -->
+  <path d="M26.5 26.5
+           l15 1.6
+           l-1.2 2.4
+           l-11 0.3
+           c-1.8 0-2.8-2-2.8-4.3 z"
+        fill="#2c7a68"/>
+  <!-- teeth hanging from the upper jaw -->
+  <path d="M33.5 25.5 l1.7-0.25 l-0.65 2 z" fill="#e8f4ff"/>
+  <path d="M36.8 25 l1.7-0.25 l-0.65 2 z" fill="#e8f4ff"/>
+  <path d="M40.1 24.5 l1.7-0.25 l-0.65 2 z" fill="#e8f4ff"/>
   <!-- nostril -->
-  <circle cx="45" cy="24.5" r="0.8" fill="#0c1526"/>
-  <!-- eye -->
-  <circle cx="33.5" cy="20.5" r="1.8" fill="#0c1526"/>
-  <circle cx="34.1" cy="19.9" r="0.6" fill="#e8f4ff"/>
-  <!-- brow ridge, the raptor attitude -->
-  <path d="M30.5 17.5 l6-1.5" stroke="#2c7a68" stroke-width="1.6" stroke-linecap="round" fill="none"/>
-
+  <circle cx="42.8" cy="20" r="0.7" fill="#0c1526"/>
+  <!-- the eye: yellow with a slit pupil, clear of the brow -->
+  <path d="M28 18.2 l5.5-0.7 l-1.2 3 l-4.6 0.5 z" fill="#e8c33a"/>
+  <path d="M30.9 17.9 l1.2-0.15 l-1 2.75 l-1.2 0.15 z" fill="#0c1526"/>
+  <!-- brow ridge -->
+  <path d="M27 15.8 l7.5-0.9" stroke="#2c7a68" stroke-width="1.7" stroke-linecap="round" fill="none"/>
   <!-- dome glare -->
   <path d="M20.5 19 c2-4.5 6-7.5 10-8" stroke="#e8f4ff" stroke-width="1.8" stroke-linecap="round" fill="none" opacity="0.65"/>
 </svg>
