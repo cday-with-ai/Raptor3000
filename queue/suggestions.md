@@ -386,3 +386,23 @@ Worth knowing: upstream Raptor never parses that field at all — it works from
 the SAN and its own move generator. So this is our code with no upstream to
 compare against, and if the ChessAPI port ever lands it's a candidate for
 deletion rather than repair.
+
+## 2026-08-09 — Carson
+
+the background color for active clock looks like crap i think the text should be white on the dark green possibly.
+
+## 2026-08-09 — Carson
+
+the background color for active clock looks like crap i think the text should be white on the dark green possibly.
+
+## 2026-08-09 — Carson
+
+the interface we are using for chessascent is really nice — the coordinates and labels are even in good positions. possible to clone it for the board on fics? a lot of time was put into that design.
+
+## 2026-08-09 — Carson
+
+more on that: the shadows, the piece set, the fonts, the font sizes — everything about the chessascent board is nice. it's the whole treatment, not one detail.
+
+## 2026-08-09 — Carson
+
+and the word for what makes it work: minimalist and clean. that's the target, not just copying the assets across.
