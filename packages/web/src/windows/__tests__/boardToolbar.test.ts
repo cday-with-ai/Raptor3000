@@ -113,11 +113,17 @@ describe('toolbarLayoutFor', () => {
       'Commit',
       'Revert',
     ]);
-    expect(right(BoardMode.INACTIVE)).toEqual([
-      'Flip',
-      'Rematch',
-      'Save PGN',
-    ]);
+    // Rematch only when the ended game was ours (Carson, 2026-08-12);
+    // an observed/examined game that went inactive has nobody to rematch.
+    expect(right(BoardMode.INACTIVE)).toEqual(['Flip', 'Save PGN']);
+    expect(
+      toolbarLayoutFor(BoardMode.INACTIVE, { endedFrom: BoardMode.PLAYING })
+        .right.map((i) => i.label),
+    ).toEqual(['Flip', 'Rematch', 'Save PGN']);
+    expect(
+      toolbarLayoutFor(BoardMode.INACTIVE, { endedFrom: BoardMode.OBSERVING })
+        .right.map((i) => i.label),
+    ).toEqual(['Flip', 'Save PGN']);
     expect(right(BoardMode.BUGHOUSE_SUGGEST)).toEqual(['Flip', 'Update']);
   });
 

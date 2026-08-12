@@ -62,7 +62,10 @@ const navItems: ToolbarItem[] = [
 ];
 
 /** Buttons to the right of the gap, excluding Flip and the engine toggle. */
-function modeItems(mode: BoardModeCode): ToolbarItem[] {
+function modeItems(
+  mode: BoardModeCode,
+  endedFrom: BoardModeCode | null,
+): ToolbarItem[] {
   switch (mode) {
     case BoardMode.PLAYING:
       // Wired 2026-08-12: each is a one-line FICS send from BoardWindow's
@@ -87,8 +90,12 @@ function modeItems(mode: BoardModeCode): ToolbarItem[] {
       ];
     case BoardMode.INACTIVE:
       // Save PGN wired 2026-08-12 — the window-local history + chessops
-      // finally made it a pure export. Rematch stays dead.
-      return [dead('rematch', 'Rematch'), live('save-pgn', 'Save PGN')];
+      // finally made it a pure export. Rematch (still dead) is only
+      // offered when the ended game was OURS — an observed or examined
+      // game has nobody to rematch (Carson, 2026-08-12).
+      return endedFrom === BoardMode.PLAYING
+        ? [dead('rematch', 'Rematch'), live('save-pgn', 'Save PGN')]
+        : [live('save-pgn', 'Save PGN')];
     case BoardMode.BUGHOUSE_SUGGEST:
       return [dead('update', 'Update')];
     default:
@@ -101,7 +108,11 @@ function modeItems(mode: BoardModeCode): ToolbarItem[] {
  * flip, because there is no move list to walk and the board is being built
  * rather than watched.
  */
-export function toolbarLayoutFor(mode: BoardModeCode): ToolbarLayout {
+export function toolbarLayoutFor(
+  mode: BoardModeCode,
+  opts: { endedFrom?: BoardModeCode | null } = {},
+): ToolbarLayout {
+  const endedFrom = opts.endedFrom ?? null;
   if (mode === BoardMode.SETUP) {
     return {
       left: [
@@ -115,7 +126,7 @@ export function toolbarLayoutFor(mode: BoardModeCode): ToolbarLayout {
 
   return {
     left: navItems,
-    right: [live('flip', 'Flip'), ...modeItems(mode)],
+    right: [live('flip', 'Flip'), ...modeItems(mode, endedFrom)],
   };
 }
 

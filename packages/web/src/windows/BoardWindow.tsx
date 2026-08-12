@@ -80,10 +80,14 @@ export const BoardWindow = observer(function BoardWindow({
   const [sans, setSans] = useState<ReadonlyMap<number, string>>(new Map());
   // Which ply the board is showing: null = live.
   const [viewPly, setViewPly] = useState<number | null>(null);
-  // Set when FICS ends the game. The parser forgets the game's cached
-  // state at that moment, so this window's s12 is the only copy of the
-  // final position — and mode/clocks must stop pretending it's live.
-  const [ended, setEnded] = useState(false);
+  // Set when FICS ends the game — to the mode the window held at that
+  // moment (rematch only makes sense if we were PLAYING). The parser
+  // forgets the game's cached state on end, so this window's s12 is the
+  // only copy of the final position — and mode/clocks must stop
+  // pretending it's live.
+  const [endedFrom, setEndedFrom] = useState<BoardModeCode | null>(null);
+  const ended = endedFrom !== null;
+  const liveModeRef = useRef<BoardModeCode>(BoardMode.OBSERVING);
 
   // Subscribe to GameService for THIS game's updates.
   useEffect(() => {
@@ -124,7 +128,7 @@ export const BoardWindow = observer(function BoardWindow({
         // Keep the final position visible, but stop being "live":
         // freezes the clocks, flips the mode to inactive, and lets the
         // engine panel analyze the final position.
-        setEnded(true);
+        setEndedFrom(liveModeRef.current);
       },
     };
     context.gameService.addListener(listener);
@@ -217,6 +221,7 @@ export const BoardWindow = observer(function BoardWindow({
     : s12
       ? modeFromRelation(s12.relation)
       : fallbackMode;
+  if (!ended) liveModeRef.current = mode;
 
   // Locally-ticked clock offsets, applied to the server clocks between
   // Style12 updates. Reset on every new Style12; frozen once the game ends.
@@ -351,7 +356,7 @@ export const BoardWindow = observer(function BoardWindow({
           startMovesExpanded={prefs.moveListVisible}
         />
       }
-      toolbar={<Toolbar mode={mode} handlers={toolbarHandlers} />}
+      toolbar={<Toolbar mode={mode} endedFrom={endedFrom} handlers={toolbarHandlers} />}
     />
   );
 });
@@ -1646,12 +1651,14 @@ function Section({
  */
 function Toolbar({
   mode,
+  endedFrom,
   handlers,
 }: {
   mode: BoardModeCode;
+  endedFrom: BoardModeCode | null;
   handlers: Record<string, () => void>;
 }) {
-  const { left, right } = toolbarLayoutFor(mode);
+  const { left, right } = toolbarLayoutFor(mode, { endedFrom });
   return (
     <ToolbarShell>
       {left.map((item) => (
