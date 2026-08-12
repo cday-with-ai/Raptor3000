@@ -52,3 +52,46 @@ describe('multipv parsing', () => {
     expect(parseUciInfo(noRank)!.multipv).toBe(1);
   });
 });
+
+
+class FakeWorker {
+  static instances: FakeWorker[] = [];
+  posted: string[] = [];
+  onmessage: ((ev: MessageEvent) => void) | null = null;
+  onerror: ((err: ErrorEvent) => void) | null = null;
+  constructor(_url: string | URL) {
+    FakeWorker.instances.push(this);
+  }
+  postMessage(cmd: string): void {
+    this.posted.push(cmd);
+    if (cmd === 'uci') queueMicrotask(() => this.fire('uciok'));
+    if (cmd === 'isready') queueMicrotask(() => this.fire('readyok'));
+  }
+  terminate(): void {}
+  private fire(line: string): void {
+    this.onmessage?.({ data: line } as MessageEvent);
+  }
+}
+// @ts-expect-error — test override
+globalThis.Worker = FakeWorker;
+
+describe('setMultiPv mid-search (2026-08-12)', () => {
+  it('defers setoption until bestmove — Stockfish ignores it while searching', async () => {
+    const { EngineService } = await import('../EngineService.js');
+    const svc = new EngineService();
+    svc.start();
+    await new Promise(r => setTimeout(r, 0)); // uciok handshake
+    svc.analyze('8/8/8/8/8/5k2/6q1/7K w - - 0 1');
+    const worker = (globalThis as unknown as { Worker: { instances: Array<{ posted: string[]; onmessage: ((ev: MessageEvent) => void) | null }> } }).Worker.instances[0];
+    svc.setMultiPv(3); // arrives mid-search
+    expect(worker.posted.filter(c => c.startsWith('setoption name MultiPV'))).toHaveLength(0);
+    expect(worker.posted[worker.posted.length - 1]).toBe('stop');
+    // search ends
+    worker.onmessage?.({ data: 'bestmove g2g1' } as MessageEvent);
+    expect(worker.posted).toContain('setoption name MultiPV value 3');
+    // and the analysis restarted with the same position
+    const positions = worker.posted.filter(c => c.startsWith('position fen'));
+    expect(positions.length).toBeGreaterThanOrEqual(2);
+    svc.stop();
+  });
+});

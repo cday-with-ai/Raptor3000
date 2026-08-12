@@ -1422,41 +1422,53 @@ function EnginePanel({
       }}
       onClick={() => engageIn(m)}
     >
-      ({label})
+      ({isFocused && lineMode === m ? '*' : ''}{label})
     </button>
   );
 
+  // Layout per Carson: when on, line 1 is "Engine: +0.29 d16 (off)" and
+  // line 2 the mode links with the active one starred; when off, one
+  // line — "Engine: (best line) (multi line)".
   return (
     <div style={{ paddingBottom: 6 }}>
-      <div style={{ display: 'flex', alignItems: 'baseline', gap: 6, fontSize: 12, flexWrap: 'wrap' }}>
+      <div style={{ display: 'flex', alignItems: 'baseline', gap: 6, fontSize: 12 }}>
         <strong style={{ opacity: 0.75 }}>Engine:</strong>
-        {isFocused && (
-          <span style={{ fontSize: 14, fontWeight: 700 }}>
-            {analysis
-              ? formatEvalWhitePov(analysis.scoreCp, analysis.scoreMate, whiteToMove)
-              : '…'}
-            {analysis && analysis.depth > 0 && (
-              <span style={{ fontSize: 11, fontWeight: 400, opacity: 0.7 }}>
-                {' '}
-                d{analysis.depth}
-              </span>
-            )}
-          </span>
-        )}
-        {modeLink('best', 'best line')}
-        {modeLink('multi', 'multi line')}
-        {isFocused && (
-          <button
-            style={inlineLink}
-            onClick={() => {
-              engine.unfocus();
-              setFocusedGameId(engine.getFocusedGameId());
-            }}
-          >
-            (off)
-          </button>
+        {isFocused ? (
+          <>
+            <span style={{ fontSize: 14, fontWeight: 700 }}>
+              {analysis
+                ? formatEvalWhitePov(analysis.scoreCp, analysis.scoreMate, whiteToMove)
+                : '…'}
+              {analysis && analysis.depth > 0 && (
+                <span style={{ fontSize: 11, fontWeight: 400, opacity: 0.7 }}>
+                  {' '}
+                  d{analysis.depth}
+                </span>
+              )}
+            </span>
+            <button
+              style={inlineLink}
+              onClick={() => {
+                engine.unfocus();
+                setFocusedGameId(engine.getFocusedGameId());
+              }}
+            >
+              (off)
+            </button>
+          </>
+        ) : (
+          <>
+            {modeLink('best', 'best line')}
+            {modeLink('multi', 'multi line')}
+          </>
         )}
       </div>
+      {isFocused && (
+        <div style={{ display: 'flex', gap: 6, marginTop: 2 }}>
+          {modeLink('multi', 'multi line')}
+          {modeLink('best', 'best line')}
+        </div>
+      )}
       {isFocused &&
         shown.map(line => {
           const san = fen ? pvToSan(fen, line.pv) : null;

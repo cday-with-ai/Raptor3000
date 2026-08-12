@@ -62,6 +62,7 @@ export class EngineService {
   private readonly stateListeners = new Set<StateListener>();
   private currentAnalysis: EngineAnalysis | null = null;
   private multiPv = 1;
+  private pendingMultiPv: number | null = null;
   private lastRequest: { fen: string; opts: { depth?: number; movetime?: number } } | null = null;
 
   /** Start the Stockfish worker and run UCI handshake. Idempotent. */
@@ -98,8 +99,19 @@ export class EngineService {
     if (clamped === this.multiPv) return;
     this.multiPv = clamped;
     if (!this.worker) return;
-    this.send('stop');
-    this.send(`setoption name MultiPV value ${clamped}`);
+    if (this.state === 'analyzing') {
+      // Stockfish silently ignores setoption while searching — the
+      // 2026-08-12 "multi line shows one line" bug. Stop the search and
+      // apply the option when its bestmove confirms it actually ended.
+      this.pendingMultiPv = clamped;
+      this.send('stop');
+      return;
+    }
+    this.applyMultiPv(clamped);
+  }
+
+  private applyMultiPv(n: number): void {
+    this.send(`setoption name MultiPV value ${n}`);
     if (this.lastRequest) this.analyze(this.lastRequest.fen, this.lastRequest.opts);
   }
 
@@ -199,6 +211,13 @@ export class EngineService {
         for (const l of this.analysisListeners) l(this.currentAnalysis);
       }
       this.setState('ready');
+      // A MultiPV change that arrived mid-search applies now that the
+      // search has provably ended, then restarts the analysis.
+      if (this.pendingMultiPv !== null) {
+        const n = this.pendingMultiPv;
+        this.pendingMultiPv = null;
+        this.applyMultiPv(n);
+      }
     }
   }
 }
