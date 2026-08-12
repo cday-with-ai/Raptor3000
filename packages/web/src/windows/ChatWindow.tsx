@@ -723,7 +723,7 @@ function SplitView({
         }}
         onPointerCancel={() => setLive(null)}
       >
-        Main:
+        *MAIN
       </div>
       <div style={{ flex: `${1 - r} 1 0%`, minHeight: 0, overflow: 'hidden' }}>{bottom}</div>
     </div>
