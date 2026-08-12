@@ -661,6 +661,16 @@ the client plays. What remains, in rough order of value:
 5. **Ratings in the board info bands.** The bands show name + clock;
    FICS sends ratings in `<g1>` (`rt=1586E,2100`) and G1Message already
    parses. Chess Ascent shows a rating badge there; parity says we should.
+5a. **Mobile, if it ever matters.** 2026-08-12: shipped the honest
+   version — `mobile.ts` detection + a login-screen note that this is a
+   windowed desktop app (Carson pre-approved the note path if a switcher
+   wasn't cheap; it wasn't). The real fix, when wanted, is a
+   single-window mode: a parallel WindowManager path that mounts
+   BoardWindow/ChatWindow full-viewport in the MAIN document behind a
+   bottom tab strip. In-document actually DISSOLVES the popup
+   reactivity boundary (same window, MobX just works), but every popup
+   assumption — watchForClose, positioning, beforeunload disconnect,
+   window titles — needs gating. A day's careful work, not an evening's.
 5b. **Move history is window-local — a decision, not a gap.** Carson,
    2026-08-12: no central per-game store. Each BoardWindow accumulates
    its own SAN list from `gameStateChanged` (local React state, exactly

@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { isMobileish } from '../mobile.js';
 import {
   PROFILE_NAMES,
   loadProfile,
@@ -121,6 +122,15 @@ export function LoginScreen({
         <div style={brand}>Raptor3000</div>
         <div style={tagline}>Sign in to FICS</div>
 
+        {isMobileish() && (
+          <div style={mobileNote}>
+            Heads up: Raptor3000 is a <strong>windowed desktop app</strong> —
+            boards and chat open as real browser windows. Phones and tablets
+            aren&apos;t supported (popup blockers eat the windows). It&apos;ll
+            let you try, but bring a desktop for the real thing.
+          </div>
+        )}
+
         <label style={row}>
           <span style={label}>Profile</span>
           <select
@@ -233,6 +243,17 @@ const shell = {
   background: 'var(--bg)',
   color: 'var(--fg)',
   fontFamily: 'system-ui, -apple-system, sans-serif',
+} as const;
+
+const mobileNote = {
+  background: 'var(--banner-bg, rgba(255, 200, 0, 0.12))',
+  border: '1px solid var(--border-soft)',
+  borderRadius: 6,
+  padding: '8px 10px',
+  fontSize: 12.5,
+  lineHeight: 1.45,
+  opacity: 0.95,
+  marginBottom: 4,
 } as const;
 
 const card = {
