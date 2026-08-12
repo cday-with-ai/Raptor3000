@@ -118,7 +118,7 @@ packages/
 - [x] Day / Night / System theme toggle in top-right, persisted
 - [x] Inline Seek tab (placeholder — scatter-plot rendering pending)
 - [x] Help page with Linux/Windows/macOS instructions for chromeless `--app` mode
-- [ ] Per-gameId GameStore + GameRegistry (replace single-game assumption)
+- [x] ~~Per-gameId GameStore + GameRegistry~~ — overtaken: GameService went per-id maps on its own; move history is deliberately window-local instead (Carson, 2026-08-12 — see PLAN "Next thing")
 - [ ] Tab stores: MainConsole, Channel, Person, RegEx, GameChat, BughousePartner
 - [x] Real chess piece sets + drag/drop board interaction (2026-08-12, ported from chessascent.app)
 - [ ] Seek graph scatter-plot rendering

@@ -635,6 +635,20 @@ the client plays. What remains, in rough order of value:
 5. **Ratings in the board info bands.** The bands show name + clock;
    FICS sends ratings in `<g1>` (`rt=1586E,2100`) and G1Message already
    parses. Chess Ascent shows a rating badge there; parity says we should.
+5b. **Move history is window-local — a decision, not a gap.** Carson,
+   2026-08-12: no central per-game store. Each BoardWindow accumulates
+   its own SAN list from `gameStateChanged` (local React state, exactly
+   the ChatWindow pattern), and seeds mid-game joins by sending `moves`
+   on mount — `MovesParser` already handles the reply. Rationale: MobX
+   observables from the main window are not reactive in popups (the
+   documented ChatWindow constraint), so a central store sits on the
+   wrong side of the boundary for every consumer; window-local state
+   also gets lifecycle for free. Close-and-reopen re-seeds itself. This
+   is what unblocks the move-list panel (item 3's `moveListVisible`),
+   the examine-mode nav arrows, and eventually PGN export. The old
+   README item "Per-gameId GameStore + GameRegistry" is overtaken —
+   GameService's maps already went per-id, and the rest of that plan
+   should not be built.
 6. **Toolbar wiring**, one button at a time — `boardToolbar.ts` is data,
    flip `implemented` per button as each handler lands. Nav arrows need
    `forward`/`back` (examine mode); Resign/Draw/Abort are one-line sends.
