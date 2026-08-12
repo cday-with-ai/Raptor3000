@@ -65,16 +65,16 @@ describe('pvToSan', () => {
 });
 
 describe('formatSanLine', () => {
-  it('numbers a white-first line', () => {
+  it('numbers a white-first line (figurines default)', () => {
     expect(
       formatSanLine({ sans: ['e4', 'e5', 'Nf3'], moveNumber: 1, startsWithBlack: false }),
-    ).toBe('1. e4 e5 2. Nf3');
+    ).toBe('1. e4 e5 2. ♘f3');
   });
 
   it("numbers a black-first line with the ellipsis convention", () => {
     expect(
       formatSanLine({ sans: ['Rg8', 'Rxg8', 'Qxg8'], moveNumber: 26, startsWithBlack: true }),
-    ).toBe('26... Rg8 27. Rxg8 Qxg8');
+    ).toBe('26... ♜g8 27. ♖xg8 ♛xg8');
   });
 });
 
