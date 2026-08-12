@@ -73,6 +73,9 @@ export interface AppPreferences {
   /** Board window: the side panel's share of the width, 0.1–0.5.
    *  Set by dragging the divider between board and panel. */
   boardPanelRatio: number;
+  /** Board window: side panel and toolbar visibility (the triangles). */
+  boardPanelOpen: boolean;
+  boardToolbarOpen: boolean;
   /** Console (chat window) look: base font, and per-event-type styling. */
   chatFontFamily: string;
   chatFontSize: number;
@@ -111,6 +114,8 @@ export const DEFAULT_PREFERENCES: AppPreferences = {
   chatLayout: 'split',
   chatSplitRatio: 0.6,
   boardPanelRatio: 0.22,
+  boardPanelOpen: true,
+  boardToolbarOpen: true,
   chatFontFamily: '"SF Mono", Consolas, monospace',
   chatFontSize: 13,
   chatColorChannel: 'auto',
@@ -275,6 +280,8 @@ export function loadPreferences(): AppPreferences {
     chatLayout: readString('chatLayout', DEFAULT_PREFERENCES.chatLayout, CHAT_LAYOUTS),
     chatSplitRatio: readRatio('chatSplitRatio', DEFAULT_PREFERENCES.chatSplitRatio),
     boardPanelRatio: readBoardPanelRatio('boardPanelRatio', DEFAULT_PREFERENCES.boardPanelRatio),
+    boardPanelOpen: readBool('boardPanelOpen', DEFAULT_PREFERENCES.boardPanelOpen),
+    boardToolbarOpen: readBool('boardToolbarOpen', DEFAULT_PREFERENCES.boardToolbarOpen),
     chatFontFamily: getRaw('chatFontFamily') ?? DEFAULT_PREFERENCES.chatFontFamily,
     chatFontSize: readFontSize('chatFontSize', DEFAULT_PREFERENCES.chatFontSize),
     chatColorChannel: readClockColor('chatColorChannel'),
@@ -322,6 +329,8 @@ export function savePreferences(prefs: AppPreferences): void {
   setRaw('chatLayout', prefs.chatLayout);
   setRaw('chatSplitRatio', String(prefs.chatSplitRatio));
   setRaw('boardPanelRatio', String(prefs.boardPanelRatio));
+  setRaw('boardPanelOpen', String(prefs.boardPanelOpen));
+  setRaw('boardToolbarOpen', String(prefs.boardToolbarOpen));
   setRaw('chatFontFamily', prefs.chatFontFamily);
   setRaw('chatFontSize', String(prefs.chatFontSize));
   setRaw('chatColorChannel', prefs.chatColorChannel);

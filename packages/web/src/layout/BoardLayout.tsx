@@ -56,6 +56,11 @@ export function BoardLayout(props: BoardLayoutProps) {
   const [liveRatio, setLiveRatio] = useState<number | null>(null);
   const panelRatio = liveRatio ?? prefs.boardPanelRatio;
   const clampRatio = (v: number) => Math.min(0.5, Math.max(0.1, v));
+  // The triangles (Carson): collapse the side panel and/or the toolbar
+  // entirely — the board takes the space, the ResizeObserver re-squares.
+  // Both controls live in the BOARD area, remembered as preferences.
+  const panelOpen = prefs.boardPanelOpen;
+  const toolbarOpen = prefs.boardToolbarOpen;
 
   useLayoutEffect(() => {
     const cell = cellRef.current;
@@ -88,7 +93,9 @@ export function BoardLayout(props: BoardLayoutProps) {
       style={{
         display: 'grid',
         gridTemplateRows: 'minmax(0, 1fr) auto',
-        gridTemplateColumns: `minmax(0, 1fr) 6px ${(panelRatio * 100).toFixed(2)}%`,
+        gridTemplateColumns: panelOpen
+          ? `minmax(0, 1fr) 6px ${(panelRatio * 100).toFixed(2)}%`
+          : 'minmax(0, 1fr) 0px 0%',
         height: '100vh',
         width: '100vw',
         background: 'var(--bg)',
@@ -105,8 +112,25 @@ export function BoardLayout(props: BoardLayoutProps) {
         <div ref={bottomRef} style={{ width: size || undefined, marginTop: BAND_GAP_BELOW }}>
           {bottomBar}
         </div>
+        <div style={cornerControls}>
+          <button
+            style={triangleBtn}
+            title={panelOpen ? 'hide the side panel' : 'show the side panel'}
+            onClick={() => saveLivePreference('boardPanelOpen', !panelOpen)}
+          >
+            {panelOpen ? '▸' : '◂'}
+          </button>
+          <button
+            style={triangleBtn}
+            title={toolbarOpen ? 'hide the toolbar' : 'show the toolbar'}
+            onClick={() => saveLivePreference('boardToolbarOpen', !toolbarOpen)}
+          >
+            {toolbarOpen ? '▾' : '▴'}
+          </button>
+        </div>
       </div>
 
+      {panelOpen && (
       <div
         style={dividerStyle}
         onPointerDown={e => {
@@ -125,15 +149,34 @@ export function BoardLayout(props: BoardLayoutProps) {
         }}
         onPointerCancel={() => setLiveRatio(null)}
       />
+      )}
 
-      <div style={sidePanelStyle}>{side}</div>
+      {panelOpen && <div style={sidePanelStyle}>{side}</div>}
 
-      {toolbar && (
+      {toolbar && toolbarOpen && (
         <div style={{ gridRow: '2', gridColumn: '1 / span 3' }}>{toolbar}</div>
       )}
     </div>
   );
 }
+
+const cornerControls = {
+  position: 'absolute',
+  right: 4,
+  bottom: 4,
+  display: 'flex',
+  gap: 2,
+} as const;
+
+const triangleBtn = {
+  background: 'transparent',
+  color: 'var(--fg-dim)',
+  border: 'none',
+  cursor: 'pointer',
+  fontSize: 13,
+  padding: '0 3px',
+  lineHeight: 1.2,
+} as const;
 
 const dividerStyle = {
   gridRow: '1',
@@ -146,6 +189,7 @@ const dividerStyle = {
 const boardCellStyle = {
   gridRow: '1',
   gridColumn: '1',
+  position: 'relative',
   display: 'flex',
   flexDirection: 'column',
   alignItems: 'center',
