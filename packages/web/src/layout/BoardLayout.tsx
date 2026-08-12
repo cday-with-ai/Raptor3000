@@ -92,7 +92,9 @@ export function BoardLayout(props: BoardLayoutProps) {
       ref={rootRef}
       style={{
         display: 'grid',
-        gridTemplateRows: 'minmax(0, 1fr) auto',
+        gridTemplateRows: toolbarOpen
+          ? 'minmax(0, 1fr) 6px auto'
+          : 'minmax(0, 1fr) 0px 0px',
         gridTemplateColumns: panelOpen
           ? `minmax(0, 1fr) 6px ${(panelRatio * 100).toFixed(2)}%`
           : 'minmax(0, 1fr) 0px 0%',
@@ -166,26 +168,35 @@ export function BoardLayout(props: BoardLayoutProps) {
       {panelOpen && <div style={sidePanelStyle}>{side}</div>}
 
       {toolbar && toolbarOpen && (
-        <div style={{ gridRow: '2', gridColumn: '1', position: 'relative' }}>
-          <button
-            style={toolbarCollapse}
-            title="hide the toolbar"
-            onClick={() => saveLivePreference('boardToolbarOpen', false)}
-          >
-            ▾
-          </button>
-          {toolbar}
-        </div>
+        <>
+          <div style={hDividerStyle}>
+            <button
+              style={toolbarCollapse}
+              title="hide the toolbar"
+              onClick={() => saveLivePreference('boardToolbarOpen', false)}
+            >
+              ▾
+            </button>
+          </div>
+          <div style={{ gridRow: '3', gridColumn: '1' }}>{toolbar}</div>
+        </>
       )}
     </div>
   );
 }
 
-// Horizontally centered on the toolbar's top edge — the same treatment
-// as the divider triangle (Carson).
+// The horizontal seam above the toolbar — same 6px flesh as the
+// vertical divider (Carson), carrying its centered ▾.
+const hDividerStyle = {
+  gridRow: '2',
+  gridColumn: '1',
+  background: 'var(--border-soft)',
+  position: 'relative',
+} as const;
+
 const toolbarCollapse = {
   position: 'absolute',
-  top: 0,
+  top: '50%',
   left: '50%',
   transform: 'translate(-50%, -50%)',
   background: 'var(--bg-raised)',
@@ -215,7 +226,7 @@ const bottomReopen = {
 } as const;
 
 const dividerStyle = {
-  gridRow: '1 / span 2',
+  gridRow: '1 / span 3',
   gridColumn: '2',
   cursor: 'col-resize',
   background: 'var(--border-soft)',
@@ -269,7 +280,7 @@ const boardCellStyle = {
 } as const;
 
 const sidePanelStyle = {
-  gridRow: '1 / span 2',
+  gridRow: '1 / span 3',
   gridColumn: '3',
   padding: 8,
   overflow: 'auto',
