@@ -12,7 +12,7 @@ import {
   helpContainer,
   optionsGrid,
 } from './shellStyles.js';
-import { loadProfile, loadSelection } from '../loginProfiles.js';
+import { loadProfile, loadSelection, saveSelection } from '../loginProfiles.js';
 import {
   applyTheme,
   loadThemeMode,
@@ -22,6 +22,7 @@ import {
 import {
   boardColors,
   CLOCK_AUTO,
+  DEFAULT_PREFERENCES,
   loadPreferences,
   savePreferences,
   type AppPreferences,
@@ -242,6 +243,9 @@ function OptionsPage({
   reconnect: () => void;
 }) {
   const [prefs, setPrefs] = useState<AppPreferences>(() => loadPreferences());
+  // Two-step reset: first click arms it, second click resets. Avoids a
+  // blocking confirm() dialog and still can't fire by accident.
+  const [resetArmed, setResetArmed] = useState(false);
 
   function update<K extends keyof AppPreferences>(k: K, v: AppPreferences[K]) {
     setPrefs(p => {
@@ -249,6 +253,16 @@ function OptionsPage({
       savePreferences(next);
       return next;
     });
+  }
+
+  function resetToDefaults() {
+    if (!resetArmed) {
+      setResetArmed(true);
+      return;
+    }
+    savePreferences(DEFAULT_PREFERENCES);
+    setPrefs(DEFAULT_PREFERENCES);
+    setResetArmed(false);
   }
 
   return (
@@ -269,6 +283,7 @@ function OptionsPage({
               session — it takes the account back (FICS kicks them in turn).
             </Note>
           </Row>
+          <AutoLoginRow />
         </Section>
 
         <Section title="Board">
@@ -291,19 +306,17 @@ function OptionsPage({
           {prefs.boardTheme === 'custom' && (
             <>
               <Row label="Light squares">
-                <input
-                  type="color"
+                <ColorField
+                  title="Light squares"
                   value={prefs.customLightSquareColor}
-                  onChange={e => update('customLightSquareColor', e.target.value)}
-                  style={colorInput}
+                  onChange={hex => update('customLightSquareColor', hex)}
                 />
               </Row>
               <Row label="Dark squares">
-                <input
-                  type="color"
+                <ColorField
+                  title="Dark squares"
                   value={prefs.customDarkSquareColor}
-                  onChange={e => update('customDarkSquareColor', e.target.value)}
-                  style={colorInput}
+                  onChange={hex => update('customDarkSquareColor', hex)}
                 />
               </Row>
             </>
@@ -349,6 +362,28 @@ function OptionsPage({
             Auto follows the app theme (idle) and the stock green/red chips
             (active, low). Pick colors to override — background, then text.
           </Note>
+        </Section>
+
+        <Section title="Defaults">
+          <Row label="All options">
+            <button
+              style={{
+                ...linkBtn,
+                ...(resetArmed
+                  ? { borderColor: '#a04040', color: '#d86868', fontWeight: 600 }
+                  : {}),
+              }}
+              onClick={resetToDefaults}
+              onMouseLeave={() => setResetArmed(false)}
+            >
+              {resetArmed ? 'Click again to confirm' : 'Reset to defaults'}
+            </button>
+            <Note>
+              Restores every option above — board colors, pieces, clock
+              colors, toggles — to the shipped defaults. Login profiles are
+              not touched.
+            </Note>
+          </Row>
         </Section>
 
         <Section title="Engine">
@@ -655,6 +690,65 @@ const colorInput = {
 } as const;
 
 /**
+ * A color control that works even where the native color dialog doesn't
+ * (Brave/Wayland notoriously fails to open it): the swatch is a normal
+ * <input type=color> for browsers where it works AND a live preview, and
+ * the hex field beside it always works — type a #rrggbb and press enter.
+ */
+function ColorField({
+  value,
+  onChange,
+  title,
+}: {
+  value: string;
+  onChange: (hex: string) => void;
+  title: string;
+}) {
+  const [text, setText] = useState(value);
+  // Follow external changes (Auto toggles, storage sync).
+  useEffect(() => setText(value), [value]);
+  const commit = () => {
+    const v = text.trim();
+    if (/^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/.test(v)) onChange(v);
+    else setText(value); // revert bad input
+  };
+  return (
+    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+      <input
+        type="color"
+        title={title}
+        value={value}
+        onChange={e => onChange(e.target.value)}
+        style={colorInput}
+      />
+      <input
+        type="text"
+        title={`${title} (hex)`}
+        value={text}
+        onChange={e => setText(e.target.value)}
+        onBlur={commit}
+        onKeyDown={e => {
+          if (e.key === 'Enter') commit();
+        }}
+        spellCheck={false}
+        style={hexInput}
+      />
+    </span>
+  );
+}
+
+const hexInput = {
+  width: 72,
+  padding: '3px 6px',
+  fontFamily: '"SF Mono", Consolas, monospace',
+  fontSize: 12,
+  background: 'var(--bg-input)',
+  color: 'var(--fg)',
+  border: '1px solid var(--border-strong)',
+  borderRadius: 4,
+} as const;
+
+/**
  * One clock state's color controls: an Auto checkbox and, when custom,
  * background + text pickers. Turning Auto off seeds the pickers with what
  * auto currently resolves to — for the idle chip that means reading the
@@ -698,23 +792,43 @@ function ClockColorRow({
         Auto
       </label>
       {!isAuto && (
-        <>
-          <input
-            type="color"
+        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8, marginLeft: 10 }}>
+          <ColorField
             title="Background"
             value={bg === 'auto' ? stockHex(state, 'bg') : bg}
-            onChange={e => update(bgKey, e.target.value)}
-            style={{ ...colorInput, marginLeft: 10 }}
+            onChange={hex => update(bgKey, hex)}
           />
-          <input
-            type="color"
+          <ColorField
             title="Text"
             value={text === 'auto' ? stockHex(state, 'text') : text}
-            onChange={e => update(textKey, e.target.value)}
-            style={{ ...colorInput, marginLeft: 6 }}
+            onChange={hex => update(textKey, hex)}
           />
-        </>
+        </span>
       )}
+    </Row>
+  );
+}
+
+/**
+ * Auto-login toggle — the escape from the trap where auto-login is only
+ * settable on the login screen, which auto-login itself skips forever.
+ */
+function AutoLoginRow() {
+  const [autoConnect, setAutoConnect] = useState(() => loadSelection().autoConnect);
+  return (
+    <Row label="Auto-login">
+      <Toggle
+        checked={autoConnect}
+        onChange={v => {
+          const sel = loadSelection();
+          saveSelection({ ...sel, autoConnect: v });
+          setAutoConnect(v);
+        }}
+      />
+      <Note>
+        Off shows the login screen on the next launch instead of connecting
+        with the saved profile.
+      </Note>
     </Row>
   );
 }
