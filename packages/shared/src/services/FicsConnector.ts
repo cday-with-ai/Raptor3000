@@ -4,6 +4,7 @@ import type { FicsParser } from '../parsers/FicsParser.js';
 import { ChatEventType } from '../events/ChatEventType.js';
 import { makeChatEvent, type ChatEvent } from '../events/ChatEvent.js';
 import { BaseConnector, type Connector } from './Connector.js';
+import { filterOutbound } from './IcsUtils.js';
 
 /**
  * Timeseal2 + WebSocket connector for FICS. Ported from
@@ -186,7 +187,11 @@ export class FicsConnector extends BaseConnector implements Connector {
   protected sendRawString(line: string): void {
     if (!this.ws) return;
     const plain = line.endsWith('\n') ? line.slice(0, -1) : line;
-    this.ws.send(encodeTimeseal(plain));
+    // Maciejg-encode unicode + strip control chars for EVERYTHING that
+    // goes out. The overridden sendMessage bypassed BaseConnector's
+    // doSend, so `tell x ㄒ乇丂ㄒ` reached FICS raw and bounced with
+    // "unprintable characters" (Carson, 2026-08-12). One choke point.
+    this.ws.send(encodeTimeseal(filterOutbound(plain)));
   }
 
   override sendMessage(msg: string): boolean {
