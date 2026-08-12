@@ -1,4 +1,4 @@
-import { parseFen } from 'chessops/fen';
+import { makeFen, parseFen } from 'chessops/fen';
 import { Chess } from 'chessops/chess';
 import type { Position } from 'chessops/chess';
 import { parseSan, makeSanAndPlay } from 'chessops/san';
@@ -45,16 +45,20 @@ export function positionToGrid(pos: Position): number[][] {
  * first move chessops can't parse (variant, corrupt list): every ply
  * beyond `grids.length - 1` is simply not viewable.
  */
-export function replaySans(sans: readonly string[]): { grids: number[][][] } {
+export function replaySans(
+  sans: readonly string[],
+): { grids: number[][][]; fens: string[] } {
   const pos = Chess.default();
   const grids: number[][][] = [positionToGrid(pos)];
+  const fens: string[] = [makeFen(pos.toSetup())];
   for (const san of sans) {
     const move = parseSan(pos, san);
     if (!move) break;
     pos.play(move);
     grids.push(positionToGrid(pos));
+    fens.push(makeFen(pos.toSetup()));
   }
-  return { grids };
+  return { grids, fens };
 }
 
 export interface SanLine {

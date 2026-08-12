@@ -78,6 +78,10 @@ export const BoardWindow = observer(function BoardWindow({
   const [sans, setSans] = useState<ReadonlyMap<number, string>>(new Map());
   // Which ply the board is showing: null = live.
   const [viewPly, setViewPly] = useState<number | null>(null);
+  // Set when FICS ends the game. The parser forgets the game's cached
+  // state at that moment, so this window's s12 is the only copy of the
+  // final position — and mode/clocks must stop pretending it's live.
+  const [ended, setEnded] = useState(false);
 
   // Subscribe to GameService for THIS game's updates.
   useEffect(() => {
@@ -115,7 +119,10 @@ export const BoardWindow = observer(function BoardWindow({
       },
       gameInactive: (id: string) => {
         if (id !== gameId) return;
-        // keep final position visible
+        // Keep the final position visible, but stop being "live":
+        // freezes the clocks, flips the mode to inactive, and lets the
+        // engine panel analyze the final position.
+        setEnded(true);
       },
     };
     context.gameService.addListener(listener);
@@ -138,25 +145,53 @@ export const BoardWindow = observer(function BoardWindow({
       ? replay.grids[viewPly]
       : null;
 
+  // Clicking the move list focuses the engine there (Carson, 2026-08-12):
+  // viewing a ply pins analysis to that position; back to live unpins.
+  // For an ended game "live" is the final position, which only this
+  // window still holds — hand its fen in explicitly.
+  useEffect(() => {
+    const em = context.engineManager;
+    if (!em || !gameId) return;
+    if (mode === BoardMode.PLAYING) return;
+    if (viewPly !== null) {
+      const fen = replay.fens[viewPly];
+      if (fen) em.focusFen(gameId, fen);
+    } else if (em.getFocusedGameId() === gameId) {
+      if (context.gameService.getLatestStyle12(gameId)) {
+        em.unpin();
+      } else if (s12) {
+        em.focusFen(gameId, style12ToFen(s12));
+      }
+    }
+    // Deliberately keyed on the view alone: re-running on every live
+    // move would restart the pinned search for an unchanged position.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [viewPly]);
+
   const fallbackMode: BoardModeCode = useMemo(() => {
     const p = new URLSearchParams(window.location.search).get('mode');
     return isBoardMode(p) ? p : BoardMode.OBSERVING;
   }, []);
 
-  const mode: BoardModeCode = s12
-    ? modeFromRelation(s12.relation)
-    : fallbackMode;
+  // The final Style12 still carries the live relation and a running
+  // clock flag — the game being over is signalled separately, so it
+  // overrides both here.
+  const mode: BoardModeCode = ended
+    ? BoardMode.INACTIVE
+    : s12
+      ? modeFromRelation(s12.relation)
+      : fallbackMode;
 
   // Locally-ticked clock offsets, applied to the server clocks between
-  // Style12 updates. Reset on every new Style12.
-  const tick = useClockTick(s12);
+  // Style12 updates. Reset on every new Style12; frozen once the game ends.
+  const tick = useClockTick(ended ? undefined : s12);
 
   const whiteName = s12?.whiteName ?? 'white';
   const blackName = s12?.blackName ?? 'black';
   const baseWhiteMs = s12?.whiteRemainingTimeMillis ?? 5 * 60 * 1000;
   const baseBlackMs = s12?.blackRemainingTimeMillis ?? 5 * 60 * 1000;
-  const whiteTicking = !!(s12?.isClockTicking && s12.isWhitesMoveAfterMoveIsMade);
-  const blackTicking = !!(s12?.isClockTicking && !s12?.isWhitesMoveAfterMoveIsMade);
+  const whiteTicking = !ended && !!(s12?.isClockTicking && s12.isWhitesMoveAfterMoveIsMade);
+  const blackTicking = !ended && !!(s12?.isClockTicking && !s12?.isWhitesMoveAfterMoveIsMade);
   const whiteClock = Math.max(0, baseWhiteMs - (whiteTicking ? tick : 0));
   const blackClock = Math.max(0, baseBlackMs - (blackTicking ? tick : 0));
 
@@ -188,9 +223,6 @@ export const BoardWindow = observer(function BoardWindow({
           gameId={gameId}
           mode={mode}
           viewGrid={viewGrid}
-          viewPly={viewPly}
-          viewSan={viewPly !== null ? sans.get(viewPly) ?? null : null}
-          onBackToLive={() => setViewPly(null)}
         />
       }
       side={
@@ -395,19 +427,14 @@ function Board({
   gameId,
   mode,
   viewGrid,
-  viewPly,
-  viewSan,
-  onBackToLive,
 }: {
   context: RaptorContext;
   s12: Style12Message | undefined;
   gameId: string | null;
   mode: BoardModeCode;
-  /** When set, render this historical position instead of the live one. */
+  /** When set, render this historical position instead of the live one
+   *  (read-only; the Moves control owns the viewing/live affordance). */
   viewGrid: number[][] | null;
-  viewPly: number | null;
-  viewSan: string | null;
-  onBackToLive: () => void;
 }) {
   const flipped = !!s12?.isWhiteOnTop;
   // Viewing history is read-only — moves belong to the live position.
@@ -763,43 +790,6 @@ function Board({
           </div>
         </div>
       )}
-      {viewing && (
-        <div
-          style={{
-            position: 'absolute',
-            top: 4,
-            left: 4,
-            // Fixed dark chip over the board, same idea as the premove
-            // badge — deliberately not theme vars.
-            background: 'rgba(20, 24, 32, 0.85)',
-            color: '#fff',
-            padding: '2px 8px',
-            borderRadius: 3,
-            fontSize: 11,
-            display: 'flex',
-            alignItems: 'center',
-            gap: 8,
-            zIndex: 5,
-          }}
-        >
-          viewing {viewPly !== null ? plyLabel(viewPly, viewSan) : ''}
-          <button
-            onClick={onBackToLive}
-            style={{
-              background: 'var(--accent)',
-              color: '#fff',
-              border: 'none',
-              borderRadius: 3,
-              padding: '1px 8px',
-              cursor: 'pointer',
-              fontSize: 11,
-              fontWeight: 600,
-            }}
-          >
-            live
-          </button>
-        </div>
-      )}
       {premove && (
         <div
           style={{
@@ -1072,11 +1062,50 @@ function MovesSection({
     );
   }
 
+  const viewing = viewPly !== null;
   return (
     <Section title="Moves">
-      <div style={{ fontSize: 13, display: 'flex', alignItems: 'baseline', gap: 8 }}>
-        <strong>{lastMoveLabel(s12)}</strong>
-        <button onClick={toggle} style={movelistLink}>
+      <div
+        style={{
+          // One compact line, always — the 220px panel must not wrap this.
+          fontSize: viewing ? 11 : 13,
+          display: 'flex',
+          alignItems: 'center',
+          gap: 6,
+          whiteSpace: 'nowrap',
+          overflow: 'hidden',
+        }}
+      >
+        {viewing ? (
+          <>
+            <span style={{ opacity: 0.7 }}>viewing</span>
+            <strong style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>
+              {plyLabel(viewPly, sans.get(viewPly) ?? null)}
+            </strong>
+            <button
+              onClick={() => onViewPly(null)}
+              style={{
+                background: 'var(--accent)',
+                color: '#fff',
+                border: 'none',
+                borderRadius: 3,
+                padding: '0 6px',
+                cursor: 'pointer',
+                fontSize: 10,
+                fontWeight: 600,
+                lineHeight: '16px',
+                flexShrink: 0,
+              }}
+            >
+              live
+            </button>
+          </>
+        ) : (
+          <strong style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>
+            {lastMoveLabel(s12)}
+          </strong>
+        )}
+        <button onClick={toggle} style={{ ...movelistLink, flexShrink: 0 }}>
           {expanded ? '(hide)' : '(movelist)'}
         </button>
       </div>
@@ -1220,7 +1249,15 @@ function EnginePanel({
         <button
           style={focusBtn}
           onClick={() => {
-            if (gameId) engine.focus(gameId);
+            if (!gameId) return;
+            // A live game follows updates via focus(); an ended game's
+            // state was forgotten service-side, so the final position
+            // goes in as a fen from this window's copy.
+            if (context.gameService.getLatestStyle12(gameId)) {
+              engine.focus(gameId);
+            } else if (s12) {
+              engine.focusFen(gameId, style12ToFen(s12));
+            }
             setFocusedGameId(engine.getFocusedGameId());
           }}
         >

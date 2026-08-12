@@ -28,6 +28,7 @@ export class EngineManager {
   private readonly gameService: GameService;
   private readonly listener: GameServiceListener;
   private focusedGameId: string | null = null;
+  private pinnedFen: string | null = null;
   private disposed = false;
 
   constructor(gameService: GameService) {
@@ -104,14 +105,40 @@ export class EngineManager {
   focus(gameId: string): void {
     const mode = this.gameService.getMode(gameId);
     if (!mode || mode === BoardMode.PLAYING) return;
+    this.pinnedFen = null;
     this.focusedGameId = gameId;
     this.engine.start();
+    this.refresh();
+  }
+
+  /**
+   * Analyze a specific position for a game, pinned: live updates stop
+   * re-analyzing until `unpin()` or another focusFen. This is how the
+   * move-list click works (analyze the viewed ply) and how an ENDED
+   * game gets analysis at all — game end forgets the game's cached
+   * state, so the final position exists only window-locally and has to
+   * be handed in as a fen. `getMode` returning undefined therefore
+   * passes the gate here; only a live PLAYING game is refused.
+   */
+  focusFen(gameId: string, fen: string): void {
+    const mode = this.gameService.getMode(gameId);
+    if (mode === BoardMode.PLAYING) return;
+    this.focusedGameId = gameId;
+    this.pinnedFen = fen;
+    this.engine.start();
+    this.engine.analyze(fen, { depth: 18 });
+  }
+
+  /** Drop the pin and go back to following the live position. */
+  unpin(): void {
+    this.pinnedFen = null;
     this.refresh();
   }
 
   /** Stop analyzing the focused game and idle the engine search. */
   unfocus(): void {
     this.focusedGameId = null;
+    this.pinnedFen = null;
     this.engine.pause();
   }
 
@@ -130,6 +157,8 @@ export class EngineManager {
 
   private refresh(): void {
     if (!this.focusedGameId) return;
+    // A pinned position doesn't move when the live game does.
+    if (this.pinnedFen) return;
     const s12 = this.gameService.getLatestStyle12(this.focusedGameId);
     if (!s12) return;
     const fen = style12ToFen(s12);
