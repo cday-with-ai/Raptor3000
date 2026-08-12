@@ -1387,83 +1387,90 @@ function EnginePanel({
   const lines = analysis?.lines ?? [];
   const shown = lineMode === 'best' ? lines.slice(0, 1) : lines.slice(0, 3);
 
-  const pickMode = (m: 'best' | 'multi') => {
+  // The mode links double as the on-switch (Carson): clicking either
+  // while off focuses the engine here in that mode. A live game follows
+  // updates via focus(); an ended game's state was forgotten
+  // service-side, so its final position goes in as a fen.
+  const engageIn = (m: 'best' | 'multi') => {
+    if (!gameId) return;
     setLineMode(m);
     engine.setMultiPv(m === 'multi' ? 3 : 1);
+    if (!isFocused) {
+      if (context.gameService.getLatestStyle12(gameId)) {
+        engine.focus(gameId);
+      } else if (s12) {
+        engine.focusFen(gameId, style12ToFen(s12));
+      }
+      setFocusedGameId(engine.getFocusedGameId());
+    }
   };
 
+  const modeLink = (m: 'best' | 'multi', label: string) => (
+    <button
+      style={{
+        ...inlineLink,
+        fontWeight: isFocused && lineMode === m ? 700 : 400,
+      }}
+      onClick={() => engageIn(m)}
+    >
+      ({label})
+    </button>
+  );
+
   return (
-    <Section title="Engine">
-      {!isFocused ? (
-        <button
-          style={inlineLink}
-          onClick={() => {
-            if (!gameId) return;
-            // A live game follows updates via focus(); an ended game's
-            // state was forgotten service-side, so the final position
-            // goes in as a fen from this window's copy.
-            if (context.gameService.getLatestStyle12(gameId)) {
-              engine.focus(gameId);
-            } else if (s12) {
-              engine.focusFen(gameId, style12ToFen(s12));
-            }
-            setFocusedGameId(engine.getFocusedGameId());
-          }}
-        >
-          (focus engine here)
-        </button>
-      ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-          <div style={{ fontSize: 15, fontWeight: 700 }}>
+    <div style={{ paddingBottom: 6 }}>
+      <div style={{ display: 'flex', alignItems: 'baseline', gap: 6, fontSize: 12, flexWrap: 'wrap' }}>
+        <strong style={{ opacity: 0.75 }}>Engine:</strong>
+        {isFocused && (
+          <span style={{ fontSize: 14, fontWeight: 700 }}>
             {analysis
               ? formatEvalWhitePov(analysis.scoreCp, analysis.scoreMate, whiteToMove)
-              : '…'}{' '}
+              : '…'}
             {analysis && analysis.depth > 0 && (
               <span style={{ fontSize: 11, fontWeight: 400, opacity: 0.7 }}>
-                depth {analysis.depth}
+                {' '}
+                d{analysis.depth}
               </span>
             )}
-          </div>
-          {shown.map(line => {
-            const san = fen ? pvToSan(fen, line.pv) : null;
-            return (
-              <div
-                key={line.multipv}
-                style={{
-                  fontSize: 11,
-                  opacity: 0.9,
-                  fontFamily: '"SF Mono", Consolas, monospace',
-                }}
-              >
-                {lineMode === 'multi' && (
-                  <strong style={{ marginRight: 6 }}>
-                    {formatEvalWhitePov(line.scoreCp, line.scoreMate, whiteToMove)}
-                  </strong>
-                )}
-                {san ? formatSanLine(san) : line.pv.slice(0, 8).join(' ')}
-              </div>
-            );
-          })}
-          <div style={{ display: 'flex', gap: 6, marginTop: 2 }}>
-            <button
-              style={{ ...smallBtn, fontWeight: lineMode === 'best' ? 700 : 400 }}
-              onClick={() => pickMode('best')}
+          </span>
+        )}
+        {modeLink('best', 'best line')}
+        {modeLink('multi', 'multi line')}
+        {isFocused && (
+          <button
+            style={inlineLink}
+            onClick={() => {
+              engine.unfocus();
+              setFocusedGameId(engine.getFocusedGameId());
+            }}
+          >
+            (off)
+          </button>
+        )}
+      </div>
+      {isFocused &&
+        shown.map(line => {
+          const san = fen ? pvToSan(fen, line.pv) : null;
+          return (
+            <div
+              key={line.multipv}
+              style={{
+                fontSize: 11,
+                opacity: 0.9,
+                fontFamily: '"SF Mono", Consolas, monospace',
+                marginTop: 3,
+              }}
             >
-              best line
-            </button>
-            <button
-              style={{ ...smallBtn, fontWeight: lineMode === 'multi' ? 700 : 400 }}
-              onClick={() => pickMode('multi')}
-            >
-              multi line
-            </button>
-            <button style={smallBtn} onClick={() => engine.unfocus()}>
-              Stop
-            </button>
-          </div>
-        </div>
-      )}
-    </Section>
+              {lineMode === 'multi' && (
+                <strong style={{ marginRight: 6 }}>
+                  {formatEvalWhitePov(line.scoreCp, line.scoreMate, whiteToMove)}
+                </strong>
+              )}
+              {san ? formatSanLine(san) : line.pv.slice(0, 8).join(' ')}
+            </div>
+          );
+        })}
+    </div>
   );
 }
 
@@ -1478,15 +1485,6 @@ const inlineLink = {
 } as const;
 
 
-const smallBtn = {
-  padding: '2px 8px',
-  background: 'transparent',
-  color: 'var(--fg)',
-  border: '1px solid var(--border-strong)',
-  borderRadius: 3,
-  cursor: 'pointer',
-  fontSize: 11,
-} as const;
 
 function Section({
   title,

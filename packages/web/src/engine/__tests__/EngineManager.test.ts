@@ -211,3 +211,53 @@ describe('EngineManager — anti-cheat & lifecycle gating', () => {
     expect(FakeWorker.instances.length).toBe(1);
   });
 });
+
+describe('focusFen — ended games and history browsing (2026-08-12)', () => {
+  it('analyzes a caller-supplied fen for a game the service forgot', async () => {
+    const gs = new GameService();
+    const em = new EngineManager(gs);
+    // Simulate the game-end path: the game was known, then forgotten.
+    gs.recordStyle12(makeStyle12('42', 0));
+    gs.fireGameStateChanged('42', true);
+    gs.forgetGame('42');
+    expect(gs.getMode('42')).toBeUndefined();
+    expect(gs.getLatestStyle12('42')).toBeUndefined();
+
+    const FEN = '8/8/8/8/8/5k2/6q1/7K w - - 0 1';
+    em.focusFen('42', FEN);
+    await new Promise(r => setTimeout(r, 0)); // let the fake UCI handshake run
+    em.focusFen('42', FEN); // engine now ready — this one must reach analyze
+
+    const posted = FakeWorker.instances.flatMap(w => w.posted);
+    expect(em.getFocusedGameId()).toBe('42');
+    expect(posted).toContain(`position fen ${FEN}`);
+    em.dispose();
+  });
+
+  it('still refuses a live PLAYING game', () => {
+    const gs = new GameService();
+    const em = new EngineManager(gs);
+    gs.recordStyle12(makeStyle12('7', 1)); // relation 1 = playing, my move
+    em.focusFen('7', '8/8/8/8/8/5k2/6q1/7K w - - 0 1');
+    expect(em.getFocusedGameId()).toBeNull();
+    em.dispose();
+  });
+
+  it('a pinned fen ignores live refreshes until unpin', async () => {
+    const gs = new GameService();
+    const em = new EngineManager(gs);
+    gs.recordStyle12(makeStyle12('9', 0));
+    em.focus('9');
+    await new Promise(r => setTimeout(r, 0));
+    const FEN = '8/8/8/8/8/5k2/6q1/7K w - - 0 1';
+    em.focusFen('9', FEN);
+    const before = FakeWorker.instances.flatMap(w => w.posted).filter(c => c.startsWith('position')).length;
+    gs.fireGameStateChanged('9', true); // live move arrives
+    const after = FakeWorker.instances.flatMap(w => w.posted).filter(c => c.startsWith('position')).length;
+    expect(after).toBe(before); // pinned: no re-analyze
+    em.unpin();
+    const final = FakeWorker.instances.flatMap(w => w.posted).filter(c => c.startsWith('position')).length;
+    expect(final).toBeGreaterThan(after); // unpin refreshes to live
+    em.dispose();
+  });
+});
