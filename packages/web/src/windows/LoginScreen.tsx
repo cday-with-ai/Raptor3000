@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { isMobileish } from '../mobile.js';
+import { PopupGate, popupsVerified } from './PopupGate.js';
 import {
   PROFILE_NAMES,
   loadProfile,
@@ -111,8 +112,9 @@ export function LoginScreen({
   }
 
   return (
-    <div style={{ ...shell, position: 'relative', overflow: 'auto' }}>
+    <div style={{ ...shell, position: 'relative', overflow: 'auto', flexDirection: 'column' }}>
       <StarField />
+      {!popupsVerified() && <PopupGate />}
       <form
         style={card}
         onSubmit={e => {
