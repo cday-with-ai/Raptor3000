@@ -130,6 +130,8 @@ export interface RowAction {
 }
 
 const GAMES_ROW_RE = /^\s{0,3}(\d{1,4})\s+(?:\d{1,4}|\+{4})\s+\S+\s+(?:\d{1,4}|\+{4})\s+\S+\s+\[/;
+// `GuestLTND (++++) seeking 15 0 unrated standard ("play 38" to respond)`
+const SEEK_ROW_RE = /\("play (\d+)" to respond\)/;
 // `  1: - 22 W  1291 CDay        [ br  5  12] B23 Res Aug 12, 2026`
 const HISTORY_ROW_RE = /^\s{0,3}(\d{1,3}):\s+[+=-]\s+\d+\s+[WB]\s+\d+\s+(\S+)/;
 // `  %01: + 33 W 1291 CDay ...` — journal slots are %NN
@@ -142,6 +144,10 @@ const JOURNAL_ROW_RE = /^\s{0,3}%(\d{2}):/;
  * which disables history/journal actions but not games rows.
  */
 export function rowAction(line: string, listOwner: string | null): RowAction | null {
+  const seek = SEEK_ROW_RE.exec(line);
+  if (seek) {
+    return { command: `play ${seek[1]}`, label: `accept seek ${seek[1]}` };
+  }
   const games = GAMES_ROW_RE.exec(line);
   if (games) {
     return { command: `observe ${games[1]}`, label: `observe game ${games[1]}` };

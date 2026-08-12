@@ -88,3 +88,14 @@ describe('listOwnerFrom', () => {
     expect(listOwnerFrom('blore(39): History for me')).toBeNull();
   });
 });
+
+describe('seek rows (2026-08-12)', () => {
+  it('makes a seek ad a play-N click target', () => {
+    const a = rowAction('GuestLTND (++++) seeking 15 0 unrated standard ("play 38" to respond)', null);
+    expect(a?.command).toBe('play 38');
+  });
+
+  it('ignores chat that merely quotes the phrase shape without the tail', () => {
+    expect(rowAction('someone said seeking 15 0 games are fun', null)).toBeNull();
+  });
+});
