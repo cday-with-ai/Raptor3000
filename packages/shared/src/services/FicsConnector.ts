@@ -19,7 +19,21 @@ import { BaseConnector, type Connector } from './Connector.js';
  *   3. If guest: server asks `Press return to enter the server as "<name>":`
  *      → send empty line.
  *   4. If registered: server prompts `password:` → send password.
- *   5. Server sends session-start banner → we fire SESSION_STARTED.
+ *   5. Server prints `**** Starting FICS session as <name> ****` → authed.
+ *      Only that line makes the session authed — never our own optimism
+ *      after step 3/4, so a rejected password or refused handle can't
+ *      leave the connector believing it logged in.
+ *
+ * One-session-per-account handling (both directions, 2026-08-12):
+ *   - Registered handle already logged in elsewhere → FICS kicks the OLD
+ *     session ("kicking them out") and continues this login. Surfaced as
+ *     an INTERNAL notice.
+ *   - Unregistered handle already logged in → FICS refuses THIS login and
+ *     closes the socket. Surfaced, stage becomes 'failed'.
+ *   - This session kicked mid-play ("you can't both be logged in") →
+ *     surfaced, and the following onclose says kicked, not just closed.
+ *   - Invalid password → 'failed' with no automatic retry; the console
+ *     stays live so the user can log in by hand.
  */
 
 export interface FicsConnectorOptions {
@@ -48,8 +62,16 @@ export class FicsConnector extends BaseConnector implements Connector {
   private ws: WebSocket | null = null;
   private connected = false;
   private pendingCreds: LoginCredentials | null = null;
-  private loginStage: 'pre' | 'sent-handle' | 'guest-confirm' | 'authed' =
-    'pre';
+  private loginStage:
+    | 'pre'
+    | 'sent-handle'
+    | 'guest-confirm'
+    | 'sent-password'
+    | 'failed'
+    | 'authed' = 'pre';
+  /** Set when FICS announces this session lost the account to a newer
+   *  login, so the onclose that follows can say why the socket died. */
+  private kicked = false;
   private readonly options: Required<Omit<FicsConnectorOptions, 'gameService' | 'parser'>> &
     Pick<FicsConnectorOptions, 'gameService' | 'parser'>;
 
@@ -86,6 +108,7 @@ export class FicsConnector extends BaseConnector implements Connector {
     }
     this.pendingCreds = creds;
     this.loginStage = 'pre';
+    this.kicked = false;
 
     const scheme = this.options.secure ? 'wss' : 'ws';
     const url = `${scheme}://${this.options.host}:${this.options.port}`;
@@ -112,12 +135,16 @@ export class FicsConnector extends BaseConnector implements Connector {
 
     ws.onclose = ev => {
       console.log(`[FicsConnector] WebSocket onclose: code=${ev.code} reason=${ev.reason}`);
+      const wasKicked = this.kicked;
+      const wasMidLogin = this.loginStage !== 'authed' && this.loginStage !== 'failed';
       this.connected = false;
       this.ws = null;
       this.loginStage = 'pre';
       this.pendingCreds = null;
       this.publishInternal(
-        `WebSocket closed${ev.reason ? `: ${ev.reason}` : ''}`,
+        wasKicked
+          ? 'Connection closed — this session was kicked by a newer login as the same account. Reconnect to take it back.'
+          : `WebSocket closed${wasMidLogin ? ' during login' : ''}${ev.reason ? `: ${ev.reason}` : ''}`,
       );
     };
 
@@ -183,6 +210,15 @@ export class FicsConnector extends BaseConnector implements Connector {
     // Login-stage detection before handing bytes to FicsParser.
     if (this.loginStage !== 'authed') {
       this.checkLoginProgress(normalized);
+    } else if (/you can'?t both be logged in/i.test(normalized)) {
+      // FICS's farewell to the losing session when the same account logs
+      // in elsewhere ("**** cday has arrived - you can't both be logged
+      // in. ****"). The server closes the socket right after; flag it so
+      // onclose reports a kick instead of a generic close.
+      this.kicked = true;
+      this.publishInternal(
+        'Kicked: a newer login as this account has taken over the session.',
+      );
     }
 
     // Parse and dispatch.
@@ -231,6 +267,61 @@ export class FicsConnector extends BaseConnector implements Connector {
     if (!this.pendingCreds) return;
     const creds = this.pendingCreds;
 
+    // Verdict lines first, prompt responses after: FICS batches output, so
+    // a verdict routinely shares a chunk with the next prompt and must win.
+
+    // FICS kicked a previous session of this account to admit this one
+    // ("**** cday is already logged in - kicking them out. ****").
+    // Informational — the server continues the login on its own.
+    if (/is already logged in.{0,3} kicking them out/i.test(text)) {
+      this.publishInternal(
+        'FICS kicked an existing session of this account to let this one in.',
+      );
+    }
+
+    // The login actually completed: FICS names the session it started.
+    // This — not our own optimism after sending the password — is what
+    // makes the session authed, so a rejected password or a refused guest
+    // name can never leave the connector believing it logged in.
+    const started = /\*{4} Starting FICS session as (\w+)/.exec(text);
+    if (started) {
+      this.loginStage = 'authed';
+      this.publishInternal(`Logged in as ${started[1]}`);
+      this.onLoggedIn();
+      return;
+    }
+
+    // Password rejected. No automatic retry — resending the same stored
+    // password would loop forever. The console stays live, so the user can
+    // finish by hand: the server's fresh `login:` prompt is already there.
+    if (this.loginStage === 'sent-password' && /Invalid password/i.test(text)) {
+      this.loginStage = 'failed';
+      this.publishInternal(
+        `FICS rejected the password for ${creds.handle}. Fix the profile and reconnect — or type into this console to log in by hand (the login prompt is live).`,
+      );
+      return;
+    }
+
+    // Handle collision, refusal variant: for unregistered handles FICS
+    // refuses the NEW connection instead of kicking the old one, then
+    // closes the socket. (Observed 2026-08-12: second named-guest login
+    // was dropped while the first survived.)
+    if (
+      this.loginStage !== 'pre' &&
+      /is already logged in/i.test(text) &&
+      !/kicking them out/i.test(text)
+    ) {
+      this.loginStage = 'failed';
+      this.publishInternal(
+        'FICS refused this login: that handle is already logged in, and unregistered handles are not kicked. Close the other session or pick another name.',
+      );
+      return;
+    }
+
+    // Terminal: the user can still type commands through the console, but
+    // the automatic state machine is done for this connection.
+    if (this.loginStage === 'failed') return;
+
     // Stage 1: server has sent login banner, asks for handle.
     if (this.loginStage === 'pre' && /login:\s*$/m.test(text)) {
       const handle = creds.isGuest && creds.handle === '' ? 'guest' : creds.handle || 'guest';
@@ -239,24 +330,22 @@ export class FicsConnector extends BaseConnector implements Connector {
       return;
     }
 
-    // Stage 2a (guest): "Press return to enter the server as ..."
+    // Stage 2a (guest): "Press return to enter the server as ..." — answer,
+    // then wait for the session-start line like every other path.
     if (
       this.loginStage === 'guest-confirm' &&
       /Press return to enter the server/.test(text)
     ) {
       this.sendRawString('');
-      this.loginStage = 'authed';
-      this.publishInternal('Logged in as guest');
-      this.onLoggedIn();
+      this.loginStage = 'sent-password';
       return;
     }
 
-    // Stage 2b (registered): "password:"
+    // Stage 2b (registered): "password:" — answer, but authed comes only
+    // from the "Starting FICS session" confirmation above.
     if (this.loginStage === 'sent-handle' && /password:\s*$/m.test(text)) {
       this.sendRawString(creds.password);
-      this.loginStage = 'authed';
-      this.publishInternal(`Logged in as ${creds.handle}`);
-      this.onLoggedIn();
+      this.loginStage = 'sent-password';
       return;
     }
 
@@ -268,9 +357,7 @@ export class FicsConnector extends BaseConnector implements Connector {
       creds.isGuest
     ) {
       this.sendRawString('');
-      this.loginStage = 'authed';
-      this.publishInternal('Logged in as guest');
-      this.onLoggedIn();
+      this.loginStage = 'sent-password';
     }
   }
 

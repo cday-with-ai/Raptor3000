@@ -54,11 +54,7 @@ export const MainWindow = observer(function MainWindow({
   // synchronously out of a click (or setTimeout 0) as user-gesture.
   useEffect(() => {
     if (!session) return;
-    loginWithContext(context, {
-      handle: session.creds.userName,
-      password: session.creds.password,
-      isGuest: session.creds.isNamedGuest || session.creds.isAnonGuest,
-    });
+    loginWithContext(context, connectorCreds(session));
     if (wm.isOpen({ kind: 'chat' })) return;
     const t = setTimeout(() => wm.open({ kind: 'chat' }), 0);
     return () => clearTimeout(t);
@@ -78,9 +74,19 @@ export const MainWindow = observer(function MainWindow({
       session={session}
       sessionId={context.sessionId}
       reopenChat={() => wm.open({ kind: 'chat' })}
+      reconnect={() => loginWithContext(context, connectorCreds(session))}
     />
   );
 });
+
+/** Map a login-screen submission to the connector's credential shape. */
+function connectorCreds(session: LoginSubmission) {
+  return {
+    handle: session.creds.userName,
+    password: session.creds.password,
+    isGuest: session.creds.isNamedGuest || session.creds.isAnonGuest,
+  };
+}
 
 type NavTab = 'options' | 'seek' | 'help';
 
@@ -94,11 +100,13 @@ function PostLoginShell({
   session,
   sessionId,
   reopenChat,
+  reconnect,
 }: {
   context: RaptorContext;
   session: LoginSubmission;
   sessionId: number;
   reopenChat: () => void;
+  reconnect: () => void;
 }) {
   const [tab, setTab] = useState<NavTab>('options');
   const [themeMode, setThemeMode] = useState<ThemeMode>(() => loadThemeMode());
@@ -144,7 +152,7 @@ function PostLoginShell({
         </div>
       </header>
 
-      {tab === 'options' && <OptionsPage reopenChat={reopenChat} />}
+      {tab === 'options' && <OptionsPage reopenChat={reopenChat} reconnect={reconnect} />}
       {tab === 'seek' && <SeekGraphTab context={context} />}
       {tab === 'help' && <HelpPage />}
 
@@ -223,7 +231,13 @@ function ThemeToggle({
   );
 }
 
-function OptionsPage({ reopenChat }: { reopenChat: () => void }) {
+function OptionsPage({
+  reopenChat,
+  reconnect,
+}: {
+  reopenChat: () => void;
+  reconnect: () => void;
+}) {
   const [prefs, setPrefs] = useState<AppPreferences>(() => loadPreferences());
 
   function update<K extends keyof AppPreferences>(k: K, v: AppPreferences[K]) {
@@ -242,6 +256,15 @@ function OptionsPage({ reopenChat }: { reopenChat: () => void }) {
               Reopen
             </button>
             <Note>The chat window auto-opens at login; reopen here if closed.</Note>
+          </Row>
+          <Row label="Connection">
+            <button style={linkBtn} onClick={reconnect}>
+              Reconnect
+            </button>
+            <Note>
+              No-op while connected. Use it after another login kicks this
+              session — it takes the account back (FICS kicks them in turn).
+            </Note>
           </Row>
         </Section>
 

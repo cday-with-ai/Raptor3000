@@ -16,7 +16,54 @@ back rank, 2026-08-09.
 ## Where this is
 
 The connector, the parser and the board renderer all exist and are wired
-together. 315 unit tests pass in `packages/shared`, 144 in `packages/web`.
+together. 321 unit tests pass in `packages/shared`, 144 in `packages/web`.
+
+**"Won't connect to FICS" was three bugs wearing one symptom (2026-08-12).**
+FICS allows one session per handle. Registered handles: a new login wins and
+the incumbent is kicked ("kicking them out" to the winner, "you can't both be
+logged in" to the loser). Unregistered handles: the incumbent wins and the
+newcomer is refused. With auto-connect on, every main-window document load —
+new launches (run.sh opens a new tab each time and old tabs stay live),
+reloads, Vite full-reloads of background tabs — logged in as the account and
+kicked whichever session had it, so at any moment the window being looked at
+had usually just lost. Three code changes, all landed:
+
+1. **Login is confirmed, not assumed.** The connector used to set `authed`
+   the moment it *sent* the password, then blast the 15 bootstrap commands.
+   A rejected password or refused guest name left it deaf, feeding `iset`
+   commands into a login prompt until FICS timed the connection out —
+   which read as "never connected". Now only the server's
+   `**** Starting FICS session as <name> ****` line makes the session
+   authed; `Invalid password` and the handle-collision verdicts (both
+   directions) surface as INTERNAL console lines, land in a terminal
+   `failed` stage, and never auto-retry. The console stays live in
+   `failed`, so a login can be finished by hand by typing into it.
+2. **The twin-context bug — connected but silent.** `MainWindowRoot`'s
+   `useState` initializer created the context with a side effect
+   (`window.raptor = c`), and StrictMode runs initializers twice: the tree
+   kept one context while `window.raptor` — what the chat popup resolves
+   through `window.opener` — pointed at its twin. The popup rendered the
+   twin's forever-empty main console ("Connecting to FICS… events will
+   appear here.") while the real session scrolled unseen. Surfaced by the
+   React 19 upgrade. The initializer now reuses `window.raptor` if set, so
+   both StrictMode runs return the same context and the twin (and its
+   never-connected FicsConnector) is never created.
+3. **Unload logs out.** `beforeunload` now calls `connector.disconnect()`
+   (best-effort `quit` + close) before dropping `window.raptor`, so a
+   reload frees the account instead of leaving a ghost session FICS has to
+   kick on the next login. A **Reconnect** button in the Options SESSION
+   panel re-runs login with the current session's creds — the manual "take
+   the account back" after being kicked; it no-ops while connected.
+
+What is deliberately NOT here yet: a cross-tab lock (BroadcastChannel) so a
+background tab doesn't re-login after a Vite full-reload while another window
+holds the account. With disconnect-on-unload and confirmed login the war is
+mostly defused; the lock is the remaining piece if two long-lived windows are
+ever wanted at once. The exact registered-side farewell line is matched
+tolerantly (`/you can'?t both be logged in/i`) — the kicker-side and
+session-start lines were captured live on 2026-08-12, the guest-refusal
+wording was not (the socket closed before it was logged), so its test pins
+our regex, not verified server text.
 
 **A black castle no longer highlights white's back rank.** `parseLanMove`
 resolved both `o-o` and `o-o-o` to `e1`→`g1` / `e1`→`c1` unconditionally, and

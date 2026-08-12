@@ -56,13 +56,28 @@ export function App() {
  */
 function MainWindowRoot() {
   const [ctx] = useState<RaptorContext>(() => {
-    const c = createContext();
+    // StrictMode runs this initializer twice. Reusing window.raptor makes
+    // both runs return the SAME context — otherwise the tree keeps one
+    // context while window.raptor (what popups resolve) points at its twin,
+    // and the chat window renders an empty console forever while the real
+    // one scrolls unseen. That was the post-React-19 "connected but silent"
+    // bug of 2026-08-12; it also stops the twin's FicsConnector from ever
+    // existing, so one page load can never race itself for the account.
+    const c = window.raptor ?? createContext();
     window.raptor = c;
     return c;
   });
-  // Clean up on unload so reloading the page doesn't leak stale context.
+  // Clean up on unload so reloading the page doesn't leak stale context —
+  // and log out first, best-effort: `quit` + close frees the account on
+  // FICS immediately instead of leaving a ghost session it would otherwise
+  // have to kick on our next login.
   useEffect(() => {
     const onUnload = () => {
+      try {
+        window.raptor?.connector.disconnect();
+      } catch {
+        // socket already gone; the page is going away regardless
+      }
       delete window.raptor;
     };
     window.addEventListener('beforeunload', onUnload);
