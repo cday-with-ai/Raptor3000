@@ -1335,8 +1335,12 @@ function SidePanel({
         onViewPly={onViewPly}
         onNav={onNav}
       />
-      {showEngine && engineAnalysisAllowed(mode) && (
+      {showEngine && engineAnalysisAllowed(mode) ? (
         <EnginePanel context={context} gameId={gameId} fen={analysisFen} viewing={viewPly !== null} />
+      ) : (
+        // No engine (playing, or toggled off): a spacer keeps Moves in
+        // the middle instead of pinned to the bottom (Carson).
+        <div />
       )}
     </>
   );
