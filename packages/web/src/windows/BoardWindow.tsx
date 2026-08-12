@@ -444,6 +444,23 @@ function savePgn(
   URL.revokeObjectURL(url);
 }
 
+/**
+ * "blitz 3 0", "wild24 1 12" — the game's flavor for the Status line,
+ * from <g1> (type + initial time/inc) with the moves header type as a
+ * fallback (which lacks the clock numbers).
+ */
+function gameFlavor(context: RaptorContext, gameId: string | null): string | null {
+  if (!gameId) return null;
+  const g1 = context.gameService.getLatestG1(gameId);
+  if (g1) {
+    const mins = Math.round(g1.initialWhiteTimeMillis / 60000);
+    const inc = Math.round(g1.initialWhiteIncMillis / 1000);
+    return `${g1.gameTypeDescription} ${mins} ${inc}`.trim();
+  }
+  const mm = context.gameService.getLatestMoves(gameId);
+  return mm?.gameType ?? null;
+}
+
 /** `1-0`, `0-1`, `½-½`, `Adjourned`, `Aborted` — the big overlay text. */
 function formatResultBig(ge: GameEndMessage): string {
   switch (ge.type) {
@@ -1419,7 +1436,12 @@ function SidePanel({
     <>
       <div style={{ borderBottom: '1px solid var(--border-soft)', paddingBottom: 6, fontSize: 12 }}>
         <span style={{ fontWeight: 700, opacity: 0.75 }}>Status:</span>{' '}
-        <span style={{ opacity: 0.85 }}>{modeLabel(mode)}</span>
+        <span style={{ opacity: 0.85 }}>
+          {modeLabel(mode)}
+          {gameFlavor(context, gameId) && (
+            <span style={{ opacity: 0.8 }}> · {gameFlavor(context, gameId)}</span>
+          )}
+        </span>
       </div>
       <MovesSection
         s12={s12}
