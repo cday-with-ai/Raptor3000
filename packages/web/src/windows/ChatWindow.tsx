@@ -723,7 +723,7 @@ function SplitView({
         }}
         onPointerCancel={() => setLive(null)}
       >
-        main
+        Main:
       </div>
       <div style={{ flex: `${1 - r} 1 0%`, minHeight: 0, overflow: 'hidden' }}>{bottom}</div>
     </div>
@@ -738,10 +738,9 @@ const splitPane = {
 } as const;
 
 const splitDivider = {
-  fontSize: 10,
-  textTransform: 'uppercase',
-  letterSpacing: 0.8,
-  opacity: 0.55,
+  fontSize: 11,
+  fontWeight: 700,
+  opacity: 0.7,
   padding: '2px 12px',
   borderTop: '1px solid var(--border-soft)',
   borderBottom: '1px solid var(--border-soft)',
