@@ -650,9 +650,11 @@ the client plays. What remains, in rough order of value:
    panel ignores it), `showEngineAnalysis` (EnginePanel gates on mode only),
    `soundMode` (no sound system exists at all — this one is a feature, not
    a wire).
-4. **Day-mode chat palette.** The per-type chat colours (tell green, channel
-   amber) were picked for a dark background and wash out on white. Choosing
-   a light-mode set is a taste call — propose, don't just ship.
+4. **Day-mode chat palette.** Partially answered late on 2026-08-12: the
+   per-type colours are preferences now (Options → Console), so Carson can
+   fix any washed-out type himself. Still open: the STOCK palette's light-
+   mode values — the Auto colours are dark-tuned. A theme-aware stock pair
+   (like the board shadow token) is the finishing move.
 5. **Ratings in the board info bands.** The bands show name + clock;
    FICS sends ratings in `<g1>` (`rt=1586E,2100`) and G1Message already
    parses. Chess Ascent shows a rating badge there; parity says we should.
@@ -671,8 +673,11 @@ the client plays. What remains, in rough order of value:
    GameService's maps already went per-id, and the rest of that plan
    should not be built.
 6. **Toolbar wiring**, one button at a time — `boardToolbar.ts` is data,
-   flip `implemented` per button as each handler lands. Nav arrows need
-   `forward`/`back` (examine mode); Resign/Draw/Abort are one-line sends.
+   flip `implemented` per button as each handler lands. Done late
+   2026-08-12: the nav arrows (server-side in EXAMINING, local history
+   browse elsewhere) and Flip. Still dead: Resign/Draw/Abort/Adjourn and
+   the castle shortcuts (one-line sends), Update/Winners, the SETUP set,
+   Rematch/Save PGN (PGN needs the move list → chessops export).
 7. **Parked, deliberately**: SAN in the engine PV and legal-move dots — both
    blocked on a client-side move generator (the ChessAPI port). Approximating
    either is wrong exactly where it matters.
