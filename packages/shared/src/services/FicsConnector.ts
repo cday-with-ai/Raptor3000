@@ -72,6 +72,10 @@ export class FicsConnector extends BaseConnector implements Connector {
   /** Set when FICS announces this session lost the account to a newer
    *  login, so the onclose that follows can say why the socket died. */
   private kicked = false;
+  /** The handle FICS started this session as ("Starting FICS session as
+   *  X") — guests get their generated GuestXXXX name here. Null before
+   *  login completes. */
+  private loggedInAs: string | null = null;
   private readonly options: Required<Omit<FicsConnectorOptions, 'gameService' | 'parser'>> &
     Pick<FicsConnectorOptions, 'gameService' | 'parser'>;
 
@@ -97,6 +101,11 @@ export class FicsConnector extends BaseConnector implements Connector {
     return this.connected;
   }
 
+  /** The handle this session logged in as, or null before login. */
+  getLoggedInAs(): string | null {
+    return this.loggedInAs;
+  }
+
   /**
    * Connect to FICS and log in with the given creds. Chainable listeners
    * on `chatService` / `gameService` produce the UI updates.
@@ -109,6 +118,7 @@ export class FicsConnector extends BaseConnector implements Connector {
     this.pendingCreds = creds;
     this.loginStage = 'pre';
     this.kicked = false;
+    this.loggedInAs = null;
 
     const scheme = this.options.secure ? 'wss' : 'ws';
     const url = `${scheme}://${this.options.host}:${this.options.port}`;
@@ -286,6 +296,7 @@ export class FicsConnector extends BaseConnector implements Connector {
     const started = /\*{4} Starting FICS session as (\w+)/.exec(text);
     if (started) {
       this.loginStage = 'authed';
+      this.loggedInAs = started[1];
       this.publishInternal(`Logged in as ${started[1]}`);
       this.onLoggedIn();
       return;

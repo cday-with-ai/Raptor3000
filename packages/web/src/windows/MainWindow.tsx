@@ -13,6 +13,7 @@ import {
   optionsGrid,
 } from './shellStyles.js';
 import { loadProfile, loadSelection, saveSelection } from '../loginProfiles.js';
+import { CHAT_COLOR_AUTO, type ChatColorKey } from '../chatFormat.js';
 import {
   applyTheme,
   loadThemeMode,
@@ -361,6 +362,40 @@ function OptionsPage({
           <Note>
             Auto follows the app theme (idle) and the stock green/red chips
             (active, low). Pick colors to override — background, then text.
+          </Note>
+        </Section>
+
+        <Section title="Console">
+          <Row label="Font">
+            <input
+              style={{ ...textInput, width: 190 }}
+              value={prefs.chatFontFamily}
+              onChange={e => update('chatFontFamily', e.target.value)}
+              spellCheck={false}
+              title="CSS font-family for the chat window"
+            />
+            <input
+              type="number"
+              min={8}
+              max={24}
+              style={{ ...textInput, width: 52, marginLeft: 6 }}
+              value={prefs.chatFontSize}
+              onChange={e => {
+                const v = parseInt(e.target.value, 10);
+                if (Number.isInteger(v) && v >= 8 && v <= 24) update('chatFontSize', v);
+              }}
+              title="Font size (px)"
+            />
+          </Row>
+          <ChatColorRow label="Channel tells" prefKey="chatColorChannel" autoKey="channel" prefs={prefs} update={update} />
+          <ChatColorRow label="Tells" prefKey="chatColorTell" autoKey="tell" prefs={prefs} update={update} />
+          <ChatColorRow label="Shouts" prefKey="chatColorShout" autoKey="shout" prefs={prefs} update={update} />
+          <ChatColorRow label="Kibitz / whisper" prefKey="chatColorGame" autoKey="game" prefs={prefs} update={update} />
+          <ChatColorRow label="Internal" prefKey="chatColorInternal" autoKey="internal" prefs={prefs} update={update} />
+          <ChatColorRow label="Your sends" prefKey="chatColorOutbound" autoKey="outbound" prefs={prefs} update={update} />
+          <Note>
+            Colors per message type; Auto is the stock palette. Open chat
+            windows restyle live.
           </Note>
         </Section>
 
@@ -843,6 +878,51 @@ function AutoLoginRow() {
         Off shows the login screen on the next launch instead of connecting
         with the saved profile.
       </Note>
+    </Row>
+  );
+}
+
+/** One chat event type's color: Auto checkbox + picker when custom. */
+function ChatColorRow({
+  label,
+  prefKey,
+  autoKey,
+  prefs,
+  update,
+}: {
+  label: string;
+  prefKey: keyof AppPreferences;
+  autoKey: ChatColorKey;
+  prefs: AppPreferences;
+  update: <K extends keyof AppPreferences>(k: K, v: AppPreferences[K]) => void;
+}) {
+  const value = prefs[prefKey] as string;
+  const isAuto = value === 'auto';
+  const stock = () => {
+    const raw = CHAT_COLOR_AUTO[autoKey];
+    if (raw.startsWith('#')) return raw;
+    const resolved = getComputedStyle(document.documentElement)
+      .getPropertyValue(raw.startsWith('var(') ? raw.slice(4, -1) : '--fg')
+      .trim();
+    return /^#/.test(resolved) ? resolved : '#888888';
+  };
+  return (
+    <Row label={label}>
+      <label style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 13, cursor: 'pointer' }}>
+        <input
+          type="checkbox"
+          checked={isAuto}
+          onChange={e =>
+            update(prefKey, (e.target.checked ? 'auto' : stock()) as AppPreferences[typeof prefKey])
+          }
+        />
+        Auto
+      </label>
+      {!isAuto && (
+        <span style={{ marginLeft: 10, display: 'inline-flex' }}>
+          <ColorField title={label} value={value} onChange={hex => update(prefKey, hex as AppPreferences[typeof prefKey])} />
+        </span>
+      )}
     </Row>
   );
 }

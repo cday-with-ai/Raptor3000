@@ -33,9 +33,9 @@ import type { EngineAnalysis } from '../engine/EngineService.js';
 import {
   boardColors,
   clockChipColors,
-  loadPreferences,
   type AppPreferences,
 } from '../preferences.js';
+import { useLivePreferences } from '../useLivePreferences.js';
 
 /**
  * Board window — per-game popup. Subscribes to GameService for its
@@ -400,19 +400,6 @@ function PieceImg({
   );
 }
 
-/** Read preferences and keep them live: `storage` fires in this window
- *  when the options page (a different window) saves a change. */
-function useLivePreferences(): AppPreferences {
-  const [prefs, setPrefs] = useState<AppPreferences>(() => loadPreferences());
-  useEffect(() => {
-    const onStorage = (e: StorageEvent) => {
-      if (e.key === null || e.key.startsWith('pref.')) setPrefs(loadPreferences());
-    };
-    window.addEventListener('storage', onStorage);
-    return () => window.removeEventListener('storage', onStorage);
-  }, []);
-  return prefs;
-}
 
 /**
  * Interactive board — click-to-move, highlights for last move + selection

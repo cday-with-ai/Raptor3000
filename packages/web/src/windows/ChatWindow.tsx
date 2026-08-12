@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   applyTabPrefix,
   ChatEventType,
+  tokenize,
   type ChatEvent,
 } from '@raptor3000/shared';
 import type { RaptorContext } from './appContext.js';
@@ -11,7 +12,14 @@ import {
   mergeHistory,
   parseChannels,
 } from '../channelHistory.js';
-import { loadPreferences } from '../preferences.js';
+import { loadPreferences, type AppPreferences } from '../preferences.js';
+import { useLivePreferences } from '../useLivePreferences.js';
+import {
+  chatColorFor,
+  lineBody,
+  listOwnerFrom,
+  rowAction,
+} from '../chatFormat.js';
 
 /**
  * Chat window — connected FICS console with per-channel / per-person tabs.
@@ -92,6 +100,9 @@ export const ChatWindow = function ChatWindow({
     [events, activeTab],
   );
 
+  const prefs = useLivePreferences();
+  const ownHandle = context.connector.getLoggedInAs?.() ?? null;
+
   const submit = (line: string) => {
     if (line.length === 0) return;
     const sent = context.connector.sendMessage(applyTabPrefix(activeTab.prefix, line));
@@ -126,7 +137,13 @@ export const ChatWindow = function ChatWindow({
         onSelect={setActiveTabId}
         onClose={closeTab}
       />
-      <TabLog tab={activeTab} events={tabEvents} />
+      <TabLog
+        tab={activeTab}
+        events={tabEvents}
+        prefs={prefs}
+        ownHandle={ownHandle}
+        onCommand={cmd => context.connector.sendMessage(cmd)}
+      />
       <form
         style={inputRow}
         onSubmit={e => {
@@ -322,14 +339,45 @@ function placeholderFor(tab: Tab): string {
   }
 }
 
-function TabLog({ tab, events }: { tab: Tab; events: readonly ChatEvent[] }) {
+function TabLog({
+  tab,
+  events,
+  prefs,
+  ownHandle,
+  onCommand,
+}: {
+  tab: Tab;
+  events: readonly ChatEvent[];
+  prefs: AppPreferences;
+  ownHandle: string | null;
+  onCommand: (cmd: string) => void;
+}) {
   const ref = useRef<HTMLDivElement>(null);
   useEffect(() => {
     const el = ref.current;
     if (el) el.scrollTop = el.scrollHeight;
   }, [events.length, tab.id]);
+
+  // History/journal rows need the listing's owner to build the examine
+  // command; the header line carries it. Walk the events once, in order.
+  const owners = useMemo(() => {
+    let owner: string | null = null;
+    return events.map(e => {
+      const found = listOwnerFrom(e.type === ChatEventType.UNKNOWN ? e.raw : e.message);
+      if (found) owner = found;
+      return owner;
+    });
+  }, [events]);
+
   return (
-    <div ref={ref} style={logView}>
+    <div
+      ref={ref}
+      style={{
+        ...logView,
+        fontFamily: prefs.chatFontFamily,
+        fontSize: prefs.chatFontSize,
+      }}
+    >
       {events.length === 0 ? (
         <div style={{ opacity: 0.5 }}>
           {tab.kind === 'main'
@@ -338,19 +386,89 @@ function TabLog({ tab, events }: { tab: Tab; events: readonly ChatEvent[] }) {
         </div>
       ) : (
         events.map((e, i) => (
-          <div
+          <ChatLine
             key={i}
-            style={{
-              whiteSpace: 'pre-wrap',
-              color: colorFor(e),
-            }}
-          >
-            {formatLine(e)}
-          </div>
+            e={e}
+            prefs={prefs}
+            ownHandle={ownHandle}
+            listOwner={owners[i]}
+            onCommand={onCommand}
+          />
         ))
       )}
     </div>
   );
+}
+
+/**
+ * One rendered event: timestamp stamp for backfill, per-type color,
+ * Maciejg-decoded text, URLs as links, quotes set off, and server-list
+ * rows (games / history / journal) as click-to-observe/examine targets.
+ */
+function ChatLine({
+  e,
+  prefs,
+  ownHandle,
+  listOwner,
+  onCommand,
+}: {
+  e: ChatEvent;
+  prefs: AppPreferences;
+  ownHandle: string | null;
+  listOwner: string | null;
+  onCommand: (cmd: string) => void;
+}) {
+  const body = historyStamp(e) + lineBody(e, ownHandle);
+  const color = chatColorFor(e, prefs);
+  // Multi-line events (list output) get per-line row actions.
+  const lines = body.split('\n');
+  return (
+    <div style={{ whiteSpace: 'pre-wrap', color }}>
+      {lines.map((line, i) => {
+        const action = rowAction(line, listOwner);
+        const content = renderRich(line);
+        if (!action) {
+          return (
+            <div key={i}>{content.length === 0 ? ' ' : content}</div>
+          );
+        }
+        return (
+          <div
+            key={i}
+            onClick={() => onCommand(action.command)}
+            title={action.label}
+            style={{ cursor: 'pointer', textDecoration: 'underline dotted' }}
+          >
+            {content}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+/** Tokenized rich rendering: URLs become links, quoted spans italicize. */
+function renderRich(line: string): React.ReactNode[] {
+  return tokenize(line).map((t, i) => {
+    switch (t.kind) {
+      case 'url':
+        return (
+          <a
+            key={i}
+            href={t.value}
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{ color: 'inherit', textDecoration: 'underline' }}
+          >
+            {t.value}
+          </a>
+        );
+      case 'quote':
+        return <em key={i}>{t.value}</em>;
+      default:
+        return <span key={i}>{t.value}</span>;
+    }
+  });
 }
 
 function TabBar({
@@ -408,20 +526,6 @@ function TabBar({
   );
 }
 
-function colorFor(e: ChatEvent): string {
-  switch (e.type) {
-    case ChatEventType.INTERNAL: return '#888';
-    case ChatEventType.OUTBOUND: return 'var(--accent)';
-    case ChatEventType.TELL:
-    case ChatEventType.TOLD:
-    case ChatEventType.PARTNER_TELL:
-      return '#8fe08f';
-    case ChatEventType.CHANNEL_TELL:
-      return '#c9b070';
-    default:
-      return 'var(--fg)';
-  }
-}
 
 /** When this window opened — events older than this are backfill and get
  *  a timestamp prefix, since "when" is the point of reading history. */
@@ -436,40 +540,7 @@ function historyStamp(e: ChatEvent): string {
   return sameDay ? `[${hhmm}] ` : `[${day} ${hhmm}] `;
 }
 
-function formatLine(e: ChatEvent): string {
-  return historyStamp(e) + formatLineBody(e);
-}
 
-function formatLineBody(e: ChatEvent): string {
-  switch (e.type) {
-    case ChatEventType.INTERNAL: return `· ${e.message}`;
-    case ChatEventType.OUTBOUND: return `> ${e.message}`;
-    case ChatEventType.TELL:
-      return `${e.source ?? '?'} tells you: ${e.message}`;
-    case ChatEventType.TOLD:
-      return `(told ${e.source ?? '?'}): ${e.message}`;
-    case ChatEventType.CHANNEL_TELL:
-      return `${e.source ?? '?'}(${e.channel ?? '?'}): ${e.message}`;
-    case ChatEventType.SHOUT:
-      return `${e.source ?? '?'} shouts: ${e.message}`;
-    case ChatEventType.CSHOUT:
-      return `${e.source ?? '?'} c-shouts: ${e.message}`;
-    case ChatEventType.KIBITZ:
-      return `${e.source ?? '?'}[${e.gameId ?? '?'}] kibitzes: ${e.message}`;
-    case ChatEventType.WHISPER:
-      return `${e.source ?? '?'}[${e.gameId ?? '?'}] whispers: ${e.message}`;
-    case ChatEventType.PARTNER_TELL:
-      return `partner tells you: ${e.message}`;
-    case ChatEventType.NOTIFICATION_ARRIVAL:
-      return `+ ${e.source ?? '?'} has arrived.`;
-    case ChatEventType.NOTIFICATION_DEPARTURE:
-      return `- ${e.source ?? '?'} has departed.`;
-    case ChatEventType.UNKNOWN:
-      return e.raw;
-    default:
-      return `[${e.type}] ${e.message || e.raw}`;
-  }
-}
 
 const shell = {
   display: 'grid',

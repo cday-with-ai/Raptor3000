@@ -56,6 +56,16 @@ export interface AppPreferences {
   clockLowText: ClockColor;
   clockIdleBg: ClockColor;
   clockIdleText: ClockColor;
+  /** Console (chat window) look: base font, and per-event-type styling. */
+  chatFontFamily: string;
+  chatFontSize: number;
+  /** Per-event-type colors, 'auto' = the stock color for that type. */
+  chatColorChannel: ClockColor;
+  chatColorTell: ClockColor;
+  chatColorShout: ClockColor;
+  chatColorGame: ClockColor;
+  chatColorInternal: ClockColor;
+  chatColorOutbound: ClockColor;
   soundMode: SoundMode;
   showEngineAnalysis: boolean;
   autoJoinChannels: string;
@@ -80,6 +90,14 @@ export const DEFAULT_PREFERENCES: AppPreferences = {
   clockLowText: 'auto',
   clockIdleBg: 'auto',
   clockIdleText: 'auto',
+  chatFontFamily: '"SF Mono", Consolas, monospace',
+  chatFontSize: 13,
+  chatColorChannel: 'auto',
+  chatColorTell: 'auto',
+  chatColorShout: 'auto',
+  chatColorGame: 'auto',
+  chatColorInternal: 'auto',
+  chatColorOutbound: 'auto',
   soundMode: 'on',
   showEngineAnalysis: true,
   autoJoinChannels: '1,4,53',
@@ -149,6 +167,12 @@ function readColor(k: string, fallback: string): string {
   return v != null && /^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/.test(v) ? v : fallback;
 }
 
+/** Chat font size: an integer 8–24, else the default. */
+function readFontSize(k: string, fallback: number): number {
+  const v = parseInt(getRaw(k) ?? '', 10);
+  return Number.isInteger(v) && v >= 8 && v <= 24 ? v : fallback;
+}
+
 /** A clock color is 'auto' or a hex; anything else falls back to 'auto'. */
 function readClockColor(k: string): ClockColor {
   const v = getRaw(k);
@@ -214,6 +238,14 @@ export function loadPreferences(): AppPreferences {
     clockLowText: readClockColor('clockLowText'),
     clockIdleBg: readClockColor('clockIdleBg'),
     clockIdleText: readClockColor('clockIdleText'),
+    chatFontFamily: getRaw('chatFontFamily') ?? DEFAULT_PREFERENCES.chatFontFamily,
+    chatFontSize: readFontSize('chatFontSize', DEFAULT_PREFERENCES.chatFontSize),
+    chatColorChannel: readClockColor('chatColorChannel'),
+    chatColorTell: readClockColor('chatColorTell'),
+    chatColorShout: readClockColor('chatColorShout'),
+    chatColorGame: readClockColor('chatColorGame'),
+    chatColorInternal: readClockColor('chatColorInternal'),
+    chatColorOutbound: readClockColor('chatColorOutbound'),
     soundMode: readString('soundMode', DEFAULT_PREFERENCES.soundMode, ['on', 'off']),
     showEngineAnalysis: readBool(
       'showEngineAnalysis',
@@ -249,6 +281,14 @@ export function savePreferences(prefs: AppPreferences): void {
   setRaw('clockLowText', prefs.clockLowText);
   setRaw('clockIdleBg', prefs.clockIdleBg);
   setRaw('clockIdleText', prefs.clockIdleText);
+  setRaw('chatFontFamily', prefs.chatFontFamily);
+  setRaw('chatFontSize', String(prefs.chatFontSize));
+  setRaw('chatColorChannel', prefs.chatColorChannel);
+  setRaw('chatColorTell', prefs.chatColorTell);
+  setRaw('chatColorShout', prefs.chatColorShout);
+  setRaw('chatColorGame', prefs.chatColorGame);
+  setRaw('chatColorInternal', prefs.chatColorInternal);
+  setRaw('chatColorOutbound', prefs.chatColorOutbound);
   setRaw('soundMode', prefs.soundMode);
   setRaw('showEngineAnalysis', String(prefs.showEngineAnalysis));
   setRaw('autoJoinChannels', prefs.autoJoinChannels);

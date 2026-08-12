@@ -259,3 +259,30 @@ describe('prompt filtering (Raptor filterTrailingPrompts)', () => {
     expect(e.raw).not.toContain('fics%');
   });
 });
+
+describe('FICS line-wrap continuations rejoin before parsing (2026-08-12)', () => {
+  const p = new FicsParser({ chatParsers: defaultChatParsers() });
+
+  it('a wrapped channel tell parses as one CHANNEL_TELL with the full text', () => {
+    const events = p.parse(
+      '\natlasNTST(39): strangely i thought we had 3-repeat in game. but \n\\   draw was not given\n',
+    );
+    expect(events).toHaveLength(1);
+    expect(events[0].type).toBe(ChatEventType.CHANNEL_TELL);
+    expect(events[0].message).toBe(
+      'strangely i thought we had 3-repeat in game. but draw was not given',
+    );
+  });
+
+  it('a URL split mid-token by the wrap reassembles without a seam', () => {
+    const events = p.parse(
+      '\nblore(39): see https://example.com/very/long/pa\n\\   th?q=1 for details\n',
+    );
+    expect(events[0].message).toContain('https://example.com/very/long/path?q=1');
+  });
+
+  it('a lone backslash line without the three-space marker is untouched', () => {
+    const events = p.parse('\nsomething with a \\ backslash\n');
+    expect(events[0].raw).toContain('\\ backslash');
+  });
+});

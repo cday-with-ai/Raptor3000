@@ -78,16 +78,20 @@ export function filterOutbound(msg: string): string {
 }
 
 /**
- * Decode Maciejg-encoded incoming text back to unicode.
- * Symmetric to filterOutbound.
+ * Decode Maciejg-encoded incoming text back to unicode. Symmetric to
+ * filterOutbound for the hex form; ALSO accepts decimal `&#8230;`-style
+ * entities, which other clients emit over FICS (seen live 2026-08-12 —
+ * an ellipsis arrived as `&#8230;` in channel 39).
  */
 export function decodeMaciej(msg: string): string {
-  return msg.replace(/&#x([0-9A-Fa-f]+);/g, (_, hex) => {
-    const cp = parseInt(hex, 16);
+  return msg.replace(/&#(x[0-9A-Fa-f]+|\d+);/g, (whole, body: string) => {
+    const cp =
+      body[0] === 'x' ? parseInt(body.slice(1), 16) : parseInt(body, 10);
+    if (!Number.isFinite(cp) || cp <= 0 || cp > 0x10ffff) return whole;
     try {
       return String.fromCodePoint(cp);
     } catch {
-      return '';
+      return whole;
     }
   });
 }

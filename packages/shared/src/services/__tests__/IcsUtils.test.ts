@@ -98,3 +98,15 @@ describe('breakUpMessage', () => {
     expect(warning).toBeDefined();
   });
 });
+
+describe('decodeMaciej decimal entities (2026-08-12)', () => {
+  it('decodes decimal &#NNNN; alongside the hex form', () => {
+    expect(decodeMaciej('now $12&#8230; wow')).toBe('now $12… wow');
+    expect(decodeMaciej('&#x263A; and &#9731;')).toBe('☺ and ☃');
+  });
+
+  it('leaves malformed or out-of-range entities untouched', () => {
+    expect(decodeMaciej('&#0; &#1114112; &#xZZ;')).toBe('&#0; &#1114112; &#xZZ;');
+    expect(decodeMaciej('AT&T &# 39;')).toBe('AT&T &# 39;');
+  });
+});

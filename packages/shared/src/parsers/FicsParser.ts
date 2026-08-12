@@ -159,18 +159,26 @@ export class FicsParser {
     if (!isNotBlank(afterGameEvents)) return events;
     if (afterGameEvents.trim() === this.prompt.trim()) return events;
 
+    // 2b. Rejoin FICS line wraps. The server hard-wraps long output and
+    // marks continuations with `\n\   ` (backslash + three spaces); the
+    // wrap can fall mid-word — mid-URL, notoriously — so the marker is
+    // removed without inserting anything. Without this, a wrapped tell
+    // fails every chat parser (their `$` can't cross the newline) and
+    // lands in chat as colorless UNKNOWN text, in pieces.
+    const joined = afterGameEvents.replace(/\n\\ {3}/g, '');
+
     // 3-5. Whole-chunk detectors in priority order.
-    const bugwho = this.processBugWho(afterGameEvents);
+    const bugwho = this.processBugWho(joined);
     if (bugwho) {
       events.push(bugwho);
       return events;
     }
-    const sought = this.processSought(afterGameEvents);
+    const sought = this.processSought(joined);
     if (sought) {
       events.push(sought);
       return events;
     }
-    const gameInfo = this.processGameInfo(afterGameEvents);
+    const gameInfo = this.processGameInfo(joined);
     if (gameInfo) {
       events.push(gameInfo);
       return events;
@@ -178,7 +186,7 @@ export class FicsParser {
 
     // 6. Chat parser chain over the whole remaining chunk. Break on first match.
     for (const parser of this.chatParsers) {
-      const e = parser.parse(afterGameEvents);
+      const e = parser.parse(joined);
       if (e) {
         events.push(e);
         break;
@@ -188,8 +196,8 @@ export class FicsParser {
     // 7. UNKNOWN fallback for the whole chunk.
     if (events.length === 0) {
       events.push(
-        makeChatEvent(ChatEventType.UNKNOWN, afterGameEvents, {
-          message: afterGameEvents,
+        makeChatEvent(ChatEventType.UNKNOWN, joined, {
+          message: joined,
         }),
       );
     }
