@@ -154,3 +154,27 @@ export function formatEvalWhitePov(
 export function whiteToMoveFromFen(fen: string): boolean {
   return fen.split(' ')[1] !== 'b';
 }
+
+/**
+ * SAN for a queued premove. The move isn't legal yet (it's not our
+ * turn), so the position's turn is flipped before rendering — good
+ * enough for a label; falls back to null when even that can't parse
+ * (impossible interim positions), and the caller shows from→to.
+ */
+export function premoveSan(fen: string, from: string, to: string): string | null {
+  const setup = parseFen(fen);
+  if (setup.isErr) return null;
+  const flipped = setup.unwrap();
+  flipped.turn = flipped.turn === 'white' ? 'black' : 'white';
+  flipped.epSquare = undefined;
+  const posR = Chess.fromSetup(flipped);
+  if (posR.isErr) return null;
+  const pos = posR.unwrap();
+  const move = parseUci(from + to);
+  if (!move || !pos.isLegal(move)) return null;
+  try {
+    return makeSanAndPlay(pos, move);
+  } catch {
+    return null;
+  }
+}

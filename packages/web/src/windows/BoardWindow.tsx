@@ -18,6 +18,7 @@ import {
 import {
   formatEvalWhitePov,
   formatSanLine,
+  premoveSan,
   pvToSan,
   replaySans,
   whiteToMoveFromFen,
@@ -80,6 +81,9 @@ export const BoardWindow = observer(function BoardWindow({
   const [sans, setSans] = useState<ReadonlyMap<number, string>>(new Map());
   // Which ply the board is showing: null = live.
   const [viewPly, setViewPly] = useState<number | null>(null);
+  // Queued premove — lifted here so its indicator can live UNDER the
+  // board (Carson: overlays distract) while the Board queues/fires it.
+  const [premove, setPremove] = useState<{ from: string; to: string } | null>(null);
   // Set when FICS ends the game — to the mode the window held at that
   // moment (rematch only makes sense if we were PLAYING). The parser
   // forgets the game's cached state on end, so this window's s12 is the
@@ -322,8 +326,22 @@ export const BoardWindow = observer(function BoardWindow({
   const topBar = (
     <InfoBar side="opponent" name={topName} rating={topRating} clockMs={topClock} ticking={topTicking} prefs={prefs} />
   );
+  const premoveLabel = premove
+    ? (s12 ? premoveSan(style12ToFen(s12), premove.from, premove.to) : null) ??
+      `${premove.from}→${premove.to}`
+    : null;
   const bottomBar = (
-    <InfoBar side="me" name={bottomName} rating={bottomRating} clockMs={bottomClock} ticking={bottomTicking} prefs={prefs} />
+    <>
+      {premove && (
+        <div style={premoveStrip}>
+          premove: <strong>{premoveLabel}</strong>
+          <button onClick={() => setPremove(null)} style={premoveClear} title="clear (or right-click the board)">
+            ×
+          </button>
+        </div>
+      )}
+      <InfoBar side="me" name={bottomName} rating={bottomRating} clockMs={bottomClock} ticking={bottomTicking} prefs={prefs} />
+    </>
   );
 
   return (
@@ -338,6 +356,8 @@ export const BoardWindow = observer(function BoardWindow({
           mode={mode}
           viewGrid={viewGrid}
           flipped={flipped}
+          premove={premove}
+          setPremove={setPremove}
         />
       }
       side={
@@ -628,6 +648,8 @@ function Board({
   mode,
   viewGrid,
   flipped,
+  premove,
+  setPremove,
 }: {
   context: RaptorContext;
   s12: Style12Message | undefined;
@@ -638,6 +660,8 @@ function Board({
   viewGrid: number[][] | null;
   /** Orientation, including the Flip button's manual override. */
   flipped: boolean;
+  premove: { from: string; to: string } | null;
+  setPremove: (p: { from: string; to: string } | null) => void;
 }) {
   // Viewing history is read-only — moves belong to the live position.
   const viewing = viewGrid !== null;
@@ -646,7 +670,6 @@ function Board({
   const canPremove = !viewing && mode === BoardMode.PLAYING;
 
   const [selected, setSelected] = useState<string | null>(null);
-  const [premove, setPremove] = useState<{ from: string; to: string } | null>(null);
   const [promotion, setPromotion] = useState<{ from: string; to: string } | null>(null);
 
   // Board look — Chess Ascent's themes/pieces, live-updated from the
@@ -1015,6 +1038,14 @@ function Board({
       onPointerMove={onPointerMove}
       onPointerUp={onPointerUp}
       onPointerCancel={onPointerCancel}
+      onContextMenu={e => {
+        // Right-click clears a queued premove (Carson); otherwise the
+        // browser menu behaves normally.
+        if (premove) {
+          e.preventDefault();
+          setPremove(null);
+        }
+      }}
       style={{
         width: '100%',
         height: '100%',
@@ -1076,34 +1107,6 @@ function Board({
           </div>
         </div>
       )}
-      {premove && (
-        <div
-          style={{
-            position: 'absolute',
-            bottom: 4,
-            left: 4,
-            background: 'rgba(139, 91, 165, 0.85)',
-            color: 'white',
-            padding: '2px 8px',
-            borderRadius: 3,
-            fontSize: 11,
-            pointerEvents: 'none',
-          }}
-        >
-          premove: {premove.from}→{premove.to}
-          <button
-            onClick={() => setPremove(null)}
-            style={{
-              marginLeft: 6,
-              pointerEvents: 'auto',
-              background: 'none',
-              border: 'none',
-              color: 'white',
-              cursor: 'pointer',
-            }}
-          >×</button>
-        </div>
-      )}
       {promotion && (
         <PromotionPicker
           onPick={onPromotionPick}
@@ -1115,6 +1118,24 @@ function Board({
     </div>
   );
 }
+
+const premoveStrip = {
+  fontSize: 11,
+  padding: '2px 10px',
+  color: 'var(--fg-muted)',
+  display: 'flex',
+  alignItems: 'center',
+  gap: 6,
+} as const;
+
+const premoveClear = {
+  background: 'none',
+  border: 'none',
+  color: 'var(--fg-muted)',
+  cursor: 'pointer',
+  fontSize: 12,
+  padding: 0,
+} as const;
 
 const coordLabelStyle = {
   position: 'absolute',

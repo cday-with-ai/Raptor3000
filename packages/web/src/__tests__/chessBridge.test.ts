@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   evalWhitePov,
+  premoveSan,
   formatEvalWhitePov,
   formatSanLine,
   pvToSan,
@@ -91,5 +92,16 @@ describe('white-perspective eval', () => {
 
   it('renders the empty state', () => {
     expect(formatEvalWhitePov(null, null, true)).toBe('…');
+  });
+});
+
+describe('premoveSan (2026-08-12)', () => {
+  const AFTER_E4 = 'rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1';
+  it('renders a queued white premove in SAN by flipping the turn', () => {
+    expect(premoveSan(AFTER_E4, 'g1', 'f3')).toBe('Nf3');
+    expect(premoveSan(AFTER_E4, 'd2', 'd4')).toBe('d4');
+  });
+  it('returns null for a premove that is not even flip-legal', () => {
+    expect(premoveSan(AFTER_E4, 'a1', 'h8')).toBeNull();
   });
 });
