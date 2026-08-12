@@ -339,3 +339,29 @@ describe('MovesParser', () => {
     expect(parser.parse('some other output')).toBeNull();
   });
 });
+
+describe('MovesParser ratings (2026-08-12)', () => {
+  const parser = new MovesParser();
+  const block = (vsLine: string) => [
+    '',
+    'Movelist for game 69:',
+    vsLine,
+    'Rated blitz match, initial time: 3 minutes, increment: 0 seconds.',
+    'Move  laikun             zabakov',
+    '----  ----------------   ----------------',
+    '  1.  g3       (0:00.000)   e5       (0:00.000)',
+    '       {Still in progress} *',
+  ].join('\n');
+
+  it('reads both ratings off the vs line', () => {
+    const m = parser.parse(block('laikun (2106) vs. zabakov (2021) --- Fri Nov  6, 03:23 PST 2009'))!;
+    expect(m.whiteRating).toBe('2106');
+    expect(m.blackRating).toBe('2021');
+  });
+
+  it('leaves guests and UNR empty', () => {
+    const m = parser.parse(block('GuestABCD (++++) vs. cday (UNR) --- Tue Aug 12, 2026'))!;
+    expect(m.whiteRating).toBe('');
+    expect(m.blackRating).toBe('');
+  });
+});

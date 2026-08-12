@@ -910,7 +910,7 @@ function ChatColorRow({
     const resolved = getComputedStyle(document.documentElement)
       .getPropertyValue(raw.startsWith('var(') ? raw.slice(4, -1) : '--fg')
       .trim();
-    return /^#/.test(resolved) ? resolved : '#888888';
+    return /^#/.test(resolved) ? resolved : '#808080';
   };
   return (
     <Row label={label}>
@@ -948,7 +948,7 @@ function stockHex(state: ClockState, channel: 'bg' | 'text'): string {
       ? cs.getPropertyValue('--fg')
       : cs.getPropertyValue(raw.slice('var('.length, -1));
   const hex = resolved.trim();
-  return /^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/.test(hex) ? hex : '#888888';
+  return /^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/.test(hex) ? hex : '#808080';
 }
 
 function hydrateAutoLogin(): LoginSubmission | null {

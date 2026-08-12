@@ -15,4 +15,8 @@ export interface MovesMessage {
    */
   readonly style12: Style12Message | null;
   readonly gameType: string;
+  /** From the header line `laikun (2106) vs. zabakov (2021) --- …`.
+   *  Empty string when the header shows no digits (guests, UNR). */
+  readonly whiteRating: string;
+  readonly blackRating: string;
 }

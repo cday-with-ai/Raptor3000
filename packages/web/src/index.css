@@ -36,6 +36,12 @@ html[data-theme="dark"] {
   --scroll-thumb-hover:#3a4150;
   /* Chess Ascent shows no board shadow in dark mode. */
   --board-shadow: none;
+  /* Per-type chat colors, dark-tuned. */
+  --chat-channel: #c9b070;
+  --chat-tell:    #8fe08f;
+  --chat-shout:   #b8a3e0;
+  --chat-game:    #9fc4e0;
+  --chat-internal:#888888;
   color-scheme: dark;
 }
 
@@ -57,6 +63,13 @@ html[data-theme="light"] {
   --scroll-thumb-hover:#a6adb8;
   /* Chess Ascent's light-mode board shadow, verbatim. */
   --board-shadow: 4px 4px 12px rgba(0, 0, 0, 0.4);
+  /* Per-type chat colors, darkened to survive a white page — the
+     2026-08-09 sixth-run note finally answered. */
+  --chat-channel: #8a6d1f;
+  --chat-tell:    #2e7d32;
+  --chat-shout:   #6a4fa3;
+  --chat-game:    #2f6b96;
+  --chat-internal:#6b7280;
   color-scheme: light;
 }
 

@@ -224,12 +224,17 @@ export const BoardWindow = observer(function BoardWindow({
 
   const whiteName = s12?.whiteName ?? 'white';
   const blackName = s12?.blackName ?? 'black';
-  // Ratings ride the <g1> gameinfo, cached per game. Guests show ++++
-  // there, which reads better hidden.
+  // Ratings: <g1> gameinfo when the ivariable delivered one, else the
+  // `moves` header every board requests on open — which covers playing
+  // and examined stored games too. Guests/UNR show nothing.
   const g1 = gameId ? context.gameService.getLatestG1(gameId) : undefined;
-  const rating = (r: string | undefined) => (r && /\d/.test(r) ? r : '');
-  const whiteRating = rating(g1?.whiteRating);
-  const blackRating = rating(g1?.blackRating);
+  const mm = gameId ? context.gameService.getLatestMoves(gameId) : undefined;
+  const rating = (...cands: Array<string | undefined>) => {
+    for (const r of cands) if (r && /^\d+$/.test(r)) return r;
+    return '';
+  };
+  const whiteRating = rating(g1?.whiteRating, mm?.whiteRating);
+  const blackRating = rating(g1?.blackRating, mm?.blackRating);
   const baseWhiteMs = s12?.whiteRemainingTimeMillis ?? 5 * 60 * 1000;
   const baseBlackMs = s12?.blackRemainingTimeMillis ?? 5 * 60 * 1000;
   const whiteTicking = !ended && !!(s12?.isClockTicking && s12.isWhitesMoveAfterMoveIsMade);
@@ -343,6 +348,7 @@ export const BoardWindow = observer(function BoardWindow({
           showEngine={prefs.showEngineAnalysis}
           opening={opening}
           analysisFen={analysisFen}
+          startMovesExpanded={prefs.moveListVisible}
         />
       }
       toolbar={<Toolbar mode={mode} handlers={toolbarHandlers} />}
@@ -1205,6 +1211,7 @@ function SidePanel({
   showEngine,
   opening,
   analysisFen,
+  startMovesExpanded,
 }: {
   context: RaptorContext;
   s12: Style12Message | undefined;
@@ -1218,6 +1225,7 @@ function SidePanel({
   showEngine: boolean;
   opening: Opening | null;
   analysisFen: string | null;
+  startMovesExpanded: boolean;
 }) {
   // Order per Carson (2026-08-12): status first, engine next, moves at
   // the bottom. Captured is gone — it never earned its pixels.
@@ -1233,6 +1241,7 @@ function SidePanel({
       <MovesSection
         s12={s12}
         opening={opening}
+        startExpanded={startMovesExpanded}
         sans={sans}
         viewablePlies={viewablePlies}
         viewPly={viewPly}
@@ -1268,6 +1277,7 @@ function plyLabel(ply: number, san: string | null): string {
 function MovesSection({
   s12,
   opening,
+  startExpanded,
   sans,
   viewablePlies,
   viewPly,
@@ -1275,12 +1285,14 @@ function MovesSection({
 }: {
   s12: Style12Message | undefined;
   opening: Opening | null;
+  /** The moveListVisible preference — open the list without a click. */
+  startExpanded: boolean;
   sans: ReadonlyMap<number, string>;
   viewablePlies: number;
   viewPly: number | null;
   onViewPly: (ply: number | null) => void;
 }) {
-  const [expanded, setExpanded] = useState(false);
+  const [expanded, setExpanded] = useState(startExpanded);
 
   // History is seeded when the window opens (the opening-detection
   // seed), so expanding is pure UI.

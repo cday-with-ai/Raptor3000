@@ -22,11 +22,11 @@ export type ChatColorKey =
 
 /** Stock per-type colors — what 'auto' resolves to. */
 export const CHAT_COLOR_AUTO: Record<ChatColorKey, string> = {
-  channel: '#c9b070',
-  tell: '#8fe08f',
-  shout: '#b8a3e0',
-  game: '#9fc4e0',
-  internal: '#888888',
+  channel: 'var(--chat-channel)',
+  tell: 'var(--chat-tell)',
+  shout: 'var(--chat-shout)',
+  game: 'var(--chat-game)',
+  internal: 'var(--chat-internal)',
   outbound: 'var(--accent)',
 };
 

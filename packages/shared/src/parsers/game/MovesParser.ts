@@ -54,10 +54,20 @@ export class MovesParser implements ChunkParser<MovesMessage> {
     // Assigned in the try below; the catch returns, so it is always set by the
     // time it is read. No useless '' initialiser (no-useless-assignment).
     let gameType: string;
+    let whiteRating = '';
+    let blackRating = '';
     try {
       const headerTok = new RaptorTokenizer(input.substring(firstColon), '\n');
       headerTok.nextToken();                     // ":"
-      headerTok.nextToken();                     // "white (E) vs. black (E) --- <date>"
+      const vsLine = headerTok.nextToken();      // "white (E) vs. black (E) --- <date>"
+      // Ratings ride the vs line (2026-08-12): the one source that covers
+      // observing, playing AND examined stored games — every board window
+      // requests `moves` on open. Digits only; (++++)/(UNR) stay ''.
+      const vs = /\((\d+)\)[^(]*vs\.?[^(]*\((\d+)\)/.exec(vsLine);
+      if (vs) {
+        whiteRating = vs[1];
+        blackRating = vs[2];
+      }
       const descLine = headerTok.nextToken();    // "Rated <variant> match, initial..."
       const descTok = new RaptorTokenizer(descLine, ' ');
       descTok.nextToken();                       // Rated | Unrated
@@ -114,6 +124,6 @@ export class MovesParser implements ChunkParser<MovesMessage> {
       }
     }
 
-    return { gameId, moves, timePerMove, style12, gameType };
+    return { gameId, moves, timePerMove, style12, gameType, whiteRating, blackRating };
   }
 }

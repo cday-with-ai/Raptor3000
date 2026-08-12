@@ -232,7 +232,7 @@ export function clockChipColors(
   const bg = bgPref === 'auto' ? auto.bg : bgPref;
   const text = textPref === 'auto' ? auto.text : textPref;
   const border =
-    bgPref === 'auto' ? auto.border : `color-mix(in srgb, ${bg} 65%, #888888)`;
+    bgPref === 'auto' ? auto.border : `color-mix(in srgb, ${bg} 65%, #808080)`;
   return { bg, text, border };
 }
 
