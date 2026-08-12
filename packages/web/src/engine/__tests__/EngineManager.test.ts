@@ -133,6 +133,10 @@ describe('EngineManager — anti-cheat & lifecycle gating', () => {
     const worker = FakeWorker.instances[0];
     const initialFenCount = worker.posted.filter(p => p.startsWith('position fen ')).length;
 
+    // Finish the running search — analyze() is serialized (2026-08-12):
+    // an interrupting request waits for the old search's bestmove.
+    worker.onmessage?.({ data: 'bestmove e2e4' } as MessageEvent);
+
     // Simulate next move.
     game.recordStyle12(makeStyle12('1', 0));
     game.fireGameStateChanged('1', true);
@@ -249,8 +253,11 @@ describe('focusFen — ended games and history browsing (2026-08-12)', () => {
     gs.recordStyle12(makeStyle12('9', 0));
     em.focus('9');
     await new Promise(r => setTimeout(r, 0));
+    const worker = (globalThis as unknown as { Worker: { instances: Array<{ posted: string[]; onmessage: ((ev: MessageEvent) => void) | null }> } }).Worker.instances.at(-1)!;
+    worker.onmessage?.({ data: 'bestmove e2e4' } as MessageEvent); // finish focus() search
     const FEN = '8/8/8/8/8/5k2/6q1/7K w - - 0 1';
     em.focusFen('9', FEN);
+    worker.onmessage?.({ data: 'bestmove g2g1' } as MessageEvent); // finish pinned search
     const before = FakeWorker.instances.flatMap(w => w.posted).filter(c => c.startsWith('position')).length;
     gs.fireGameStateChanged('9', true); // live move arrives
     const after = FakeWorker.instances.flatMap(w => w.posted).filter(c => c.startsWith('position')).length;

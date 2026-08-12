@@ -81,7 +81,7 @@ export class EngineManager {
   }
 
   /** Subscribe to live engine analysis updates. */
-  onAnalysis(cb: (info: EngineAnalysis) => void): () => void {
+  onAnalysis(cb: (info: EngineAnalysis | null) => void): () => void {
     return this.engine.onAnalysis(cb);
   }
 

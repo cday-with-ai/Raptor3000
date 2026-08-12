@@ -95,3 +95,31 @@ describe('setMultiPv mid-search (2026-08-12)', () => {
     svc.stop();
   });
 });
+
+describe('search serialization (2026-08-12 stale-PV fix)', () => {
+  it('holds the next search until the old bestmove, ignoring dying info', async () => {
+    const { EngineService } = await import('../EngineService.js');
+    const svc = new EngineService();
+    svc.start();
+    await new Promise(r => setTimeout(r, 0));
+    const worker = (globalThis as unknown as { Worker: { instances: Array<{ posted: string[]; onmessage: ((ev: MessageEvent) => void) | null }> } }).Worker.instances.at(-1)!;
+    const FEN_A = '8/8/8/8/8/5k2/6q1/7K w - - 0 1';
+    const FEN_B = '7k/8/8/8/8/8/6Q1/7K w - - 0 1';
+    svc.analyze(FEN_A);
+    worker.onmessage?.({ data: 'info depth 5 score cp 10 pv g2g1' } as MessageEvent);
+    svc.analyze(FEN_B); // interrupts A
+    // no position for B yet — only the stop
+    expect(worker.posted.filter(c => c.startsWith('position')).length).toBe(1);
+    expect(worker.posted.at(-1)).toBe('stop');
+    // A's dying info must NOT resurrect a stale analysis
+    worker.onmessage?.({ data: 'info depth 6 score cp 12 pv g2g1' } as MessageEvent);
+    expect(svc.getCurrentAnalysis()).toBeNull();
+    // A's bestmove releases B
+    worker.onmessage?.({ data: 'bestmove g2g1' } as MessageEvent);
+    expect(worker.posted).toContain(`position fen ${FEN_B}`);
+    // B's info flows normally
+    worker.onmessage?.({ data: 'info depth 3 score cp 900 pv g2g7' } as MessageEvent);
+    expect(svc.getCurrentAnalysis()?.pv[0]).toBe('g2g7');
+    svc.stop();
+  });
+});

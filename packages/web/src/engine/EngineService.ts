@@ -50,7 +50,7 @@ export interface EngineAnalysis {
 
 export type EngineState = 'idle' | 'starting' | 'ready' | 'analyzing' | 'stopped';
 
-export type AnalysisListener = (info: EngineAnalysis) => void;
+export type AnalysisListener = (info: EngineAnalysis | null) => void;
 export type StateListener = (state: EngineState) => void;
 
 const ENGINE_URL = '/stockfish/stockfish.js';
@@ -64,6 +64,8 @@ export class EngineService {
   private multiPv = 1;
   private pendingMultiPv: number | null = null;
   private lastRequest: { fen: string; opts: { depth?: number; movetime?: number } } | null = null;
+  /** A search waiting for the previous one's bestmove — see analyze(). */
+  private pendingSearch: { fen: string; opts: { depth?: number; movetime?: number } } | null = null;
 
   /** Start the Stockfish worker and run UCI handshake. Idempotent. */
   start(): void {
@@ -119,7 +121,16 @@ export class EngineService {
     return this.multiPv;
   }
 
-  /** Replace the position and start a new analysis. Cancels any prior search. */
+  /**
+   * Replace the position and start a new analysis. Cancels any prior
+   * search — but SERIALIZED: a search interrupted mid-flight keeps
+   * emitting info lines until its bestmove, and merging those into the
+   * new request's analysis is how a stale PV ends up displayed against
+   * a newer fen (Carson's "engine shows long algebraic", 2026-08-12 —
+   * the SAN conversion was failing on moves from the wrong position).
+   * So: stop, ignore everything until the old bestmove confirms the
+   * search died, then start the new one.
+   */
   analyze(fen: string, opts: { depth?: number; movetime?: number } = {}): void {
     if (!this.worker || this.state === 'starting') {
       // Buffer until ready: queue a single pending request.
@@ -128,7 +139,17 @@ export class EngineService {
     }
     this.pending = null;
     this.lastRequest = { fen, opts };
-    this.send('stop');
+    if (this.state === 'analyzing') {
+      this.pendingSearch = { fen, opts };
+      this.currentAnalysis = null;
+      for (const l of this.analysisListeners) l(null);
+      this.send('stop');
+      return;
+    }
+    this.startSearch(fen, opts);
+  }
+
+  private startSearch(fen: string, opts: { depth?: number; movetime?: number }): void {
     this.send(`position fen ${fen}`);
     this.currentAnalysis = null;
     if (opts.movetime) {
@@ -195,6 +216,9 @@ export class EngineService {
       return;
     }
     if (line.startsWith('info ')) {
+      // Info from a search we've already asked to stop belongs to the
+      // OLD position — merging it would resurrect the stale-PV bug.
+      if (this.pendingSearch) return;
       const parsed = parseUciInfo(line);
       if (parsed) {
         this.currentAnalysis = mergeAnalysis(this.currentAnalysis, parsed);
@@ -206,7 +230,7 @@ export class EngineService {
       // Final answer from the search. Update the current analysis with the
       // bestmove and notify; engine is now back to ready.
       const m = /^bestmove\s+(\S+)/.exec(line);
-      if (m && this.currentAnalysis) {
+      if (m && this.currentAnalysis && !this.pendingSearch) {
         this.currentAnalysis = { ...this.currentAnalysis, bestMove: m[1] };
         for (const l of this.analysisListeners) l(this.currentAnalysis);
       }
@@ -217,6 +241,12 @@ export class EngineService {
         const n = this.pendingMultiPv;
         this.pendingMultiPv = null;
         this.applyMultiPv(n);
+      }
+      // The serialized next search starts now that the old one is dead.
+      if (this.pendingSearch) {
+        const next = this.pendingSearch;
+        this.pendingSearch = null;
+        this.startSearch(next.fen, next.opts);
       }
     }
   }
