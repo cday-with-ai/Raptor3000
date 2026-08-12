@@ -1022,9 +1022,10 @@ function SidePanel({
   // the bottom. Captured is gone — it never earned its pixels.
   return (
     <>
-      <Section title="Status">
-        <div style={{ opacity: 0.8, fontSize: 12 }}>{modeLabel(mode)}</div>
-      </Section>
+      <div style={{ borderBottom: '1px solid var(--border-soft)', paddingBottom: 6, fontSize: 12 }}>
+        <span style={{ fontWeight: 700, opacity: 0.75 }}>Status:</span>{' '}
+        <span style={{ opacity: 0.85 }}>{modeLabel(mode)}</span>
+      </div>
       {engineAnalysisAllowed(mode) && (
         <EnginePanel context={context} gameId={gameId} s12={s12} />
       )}
@@ -1474,7 +1475,7 @@ function modeLabel(m: BoardModeCode): string {
     case BoardMode.OBSERVING: return 'Observing';
     case BoardMode.EXAMINING: return 'Examining';
     case BoardMode.SETUP: return 'Setup';
-    case BoardMode.INACTIVE: return 'Game over';
+    case BoardMode.INACTIVE: return 'Inactive';
     case BoardMode.BUGHOUSE_SUGGEST: return 'Bughouse (partner)';
     default: return m;
   }
