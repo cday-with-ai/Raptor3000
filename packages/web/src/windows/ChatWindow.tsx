@@ -211,7 +211,7 @@ export const ChatWindow = function ChatWindow({
           style={inputBox}
           value={input}
           onChange={e => setInput(e.target.value)}
-          placeholder="FICS command — tell 39 hi, observe 22, finger …"
+          
           autoFocus
         />
         <button style={btn} type="submit">
