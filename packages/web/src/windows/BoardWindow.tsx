@@ -353,7 +353,11 @@ export const BoardWindow = observer(function BoardWindow({
           showEngine={prefs.showEngineAnalysis}
           opening={opening}
           analysisFen={analysisFen}
-          startMovesExpanded={prefs.moveListVisible}
+          startMovesExpanded={
+            // PLAYING starts collapsed regardless of the pref (Carson):
+            // just "1) … e5" until you ask for the list.
+            mode !== BoardMode.PLAYING && prefs.moveListVisible
+          }
         />
       }
       toolbar={<Toolbar mode={mode} endedFrom={endedFrom} handlers={toolbarHandlers} />}
