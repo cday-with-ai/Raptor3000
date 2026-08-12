@@ -310,6 +310,7 @@ export const BoardWindow = observer(function BoardWindow({
     abort: () => context.connector.sendMessageHidden('abort'),
     adjourn: () => context.connector.sendMessageHidden('adjourn'),
     resign: () => context.connector.sendMessageHidden('resign'),
+    rematch: () => context.connector.sendMessageHidden('rematch'),
     'save-pgn': () => savePgn(s12, sans),
   };
 

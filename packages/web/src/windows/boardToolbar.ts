@@ -86,7 +86,7 @@ function modeItems(
       // offered when the ended game was OURS — an observed or examined
       // game has nobody to rematch (Carson, 2026-08-12).
       return endedFrom === BoardMode.PLAYING
-        ? [dead('rematch', 'Rematch'), live('save-pgn', 'Save PGN')]
+        ? [live('rematch', 'Rematch'), live('save-pgn', 'Save PGN')]
         : [live('save-pgn', 'Save PGN')];
     case BoardMode.BUGHOUSE_SUGGEST:
       return [dead('update', 'Update')];
