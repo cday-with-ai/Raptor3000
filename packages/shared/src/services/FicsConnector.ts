@@ -186,12 +186,7 @@ export class FicsConnector extends BaseConnector implements Connector {
    */
   protected sendRawString(line: string): void {
     if (!this.ws) return;
-    const plain = line.endsWith('\n') ? line.slice(0, -1) : line;
-    // Maciejg-encode unicode + strip control chars for EVERYTHING that
-    // goes out. The overridden sendMessage bypassed BaseConnector's
-    // doSend, so `tell x ㄒ乇丂ㄒ` reached FICS raw and bounced with
-    // "unprintable characters" (Carson, 2026-08-12). One choke point.
-    this.ws.send(encodeTimeseal(filterOutbound(plain)));
+    this.ws.send(encodeTimeseal(prepareOutbound(line)));
   }
 
   override sendMessage(msg: string): boolean {
@@ -453,6 +448,19 @@ export function splitSettingRejections(
     rejections,
     remainder: rejections.length > 0 ? kept.join('\n') : chunk,
   };
+}
+
+/**
+ * What actually goes on the wire, pre-timeseal: trailing newline
+ * stripped (timeseal adds its own terminator) and Maciejg-encoded.
+ * The overridden sendMessage bypassed BaseConnector's doSend, so
+ * `tell x ㄒ乇丂ㄒ` reached FICS raw and bounced with "unprintable
+ * characters" (Carson, 2026-08-12) — every outbound path now flows
+ * through this one choke point.
+ */
+export function prepareOutbound(line: string): string {
+  const plain = line.endsWith('\n') ? line.slice(0, -1) : line;
+  return filterOutbound(plain);
 }
 
 // ---------- Timeseal2 bits (port of SFI/Raptor implementation) ----------

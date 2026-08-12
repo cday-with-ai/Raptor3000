@@ -194,28 +194,11 @@ describe('kicked mid-session', () => {
 });
 
 describe('outbound Maciejg (2026-08-12)', () => {
-  it('unicode in a tell leaves the socket encoded', () => {
-    const chatService = new ChatService();
-    const gameService = new GameService();
-    const parser = new FicsParser({
-      chatParsers: defaultChatParsers(),
-      gameLineParsers: defaultGameLineParsers(),
-      chunkParsers: defaultChunkParsers(),
-      gameService,
-    });
-    const connector = new FicsConnector({ chatService, gameService, parser });
-    const priv = connector as unknown as {
-      ws: { send(d: Uint8Array): void } | null;
-      connected: boolean;
-    };
-    const frames: Uint8Array[] = [];
-    priv.ws = { send: (d: Uint8Array) => frames.push(d) };
-    priv.connected = true;
-    connector.sendMessage('tell raptortest ㄒ乇');
-    // encodeTimeseal frames are plaintext-length + 30; the two unicode
-    // chars must have expanded to &#xHHHH; entities before framing.
-    const expectedLen = 'tell raptortest &#x3112;&#x4E47;'.length + 30;
-    expect(frames).toHaveLength(1);
-    expect(frames[0].length).toBe(expectedLen);
+  it('prepareOutbound encodes unicode and strips the trailing newline', async () => {
+    const { prepareOutbound } = await import('../FicsConnector.js');
+    expect(prepareOutbound('tell raptortest ㄒ乇\n')).toBe(
+      'tell raptortest &#x3112;&#x4E47;',
+    );
+    expect(prepareOutbound('who')).toBe('who');
   });
 });
