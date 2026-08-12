@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   evalWhitePov,
+  figurine,
   premoveSan,
   formatEvalWhitePov,
   formatSanLine,
@@ -103,5 +104,21 @@ describe('premoveSan (2026-08-12)', () => {
   });
   it('returns null for a premove that is not even flip-legal', () => {
     expect(premoveSan(AFTER_E4, 'a1', 'h8')).toBeNull();
+  });
+});
+
+describe('figurines (2026-08-12)', () => {
+  it('replaces piece letters per mover, including promotions', () => {
+    expect(figurine('Nf3', true)).toBe('♘f3');
+    expect(figurine('Nf6', false)).toBe('♞f6');
+    expect(figurine('e8=Q+', true)).toBe('e8=♕+');
+    expect(figurine('O-O', true)).toBe('O-O');
+    expect(figurine('exd5', false)).toBe('exd5');
+  });
+
+  it('formatSanLine figurines by default, plain on request', () => {
+    const line = { sans: ['Nf3', 'Nc6'], moveNumber: 2, startsWithBlack: false };
+    expect(formatSanLine(line)).toBe('2. ♘f3 ♞c6');
+    expect(formatSanLine(line, { figurines: false })).toBe('2. Nf3 Nc6');
   });
 });

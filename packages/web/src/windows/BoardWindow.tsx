@@ -20,6 +20,7 @@ import {
 import {
   formatEvalWhitePov,
   formatSanLine,
+  figurine,
   premoveSan,
   pvToSan,
   replaySans,
@@ -336,8 +337,10 @@ export const BoardWindow = observer(function BoardWindow({
     <InfoBar side="opponent" name={topName} rating={topRating} clockMs={topClock} ticking={topTicking} prefs={prefs} />
   );
   const premoveLabel = premove
-    ? (s12 ? premoveSan(style12ToFen(s12), premove.from, premove.to) : null) ??
-      `${premove.from}→${premove.to}`
+    ? (() => {
+        const san = s12 ? premoveSan(style12ToFen(s12), premove.from, premove.to) : null;
+        return san ? figurine(san, !s12?.isWhiteOnTop) : `${premove.from}→${premove.to}`;
+      })()
     : null;
   const bottomBar = (
     <>
@@ -1471,14 +1474,14 @@ function lastMoveLabel(s12: Style12Message | undefined): string {
   if (!s12 || s12.san === 'none') return '(none)';
   const blackJustMoved = s12.isWhitesMoveAfterMoveIsMade;
   const num = blackJustMoved ? s12.fullMoveNumber - 1 : s12.fullMoveNumber;
-  return `${num}) ${blackJustMoved ? '… ' : ''}${s12.san}`;
+  return `${num}) ${blackJustMoved ? '… ' : ''}${figurine(s12.san, !blackJustMoved)}`;
 }
 
 /** `26) … Rg8` for an arbitrary ply in the history list / view banner. */
 function plyLabel(ply: number, san: string | null): string {
   const moveNo = Math.ceil(ply / 2);
   const black = ply % 2 === 0;
-  return `${moveNo})${black ? ' …' : ''} ${san ?? ''}`.trimEnd();
+  return `${moveNo})${black ? ' …' : ''} ${san ? figurine(san, !black) : ''}`.trimEnd();
 }
 
 /**
@@ -1691,6 +1694,7 @@ function PlyButton({
   onViewPly: (ply: number | null) => void;
 }) {
   if (!san) return <span style={{ minWidth: 52 }} />;
+  const shownSan = figurine(san, ply % 2 === 1);
   const clickable = ply <= viewablePlies;
   const active = viewPly === ply;
   // The final ply IS the live position — selecting it means live
@@ -1713,7 +1717,7 @@ function PlyButton({
         fontSize: 'inherit',
       }}
     >
-      {san}
+      {shownSan}
     </button>
   );
 }

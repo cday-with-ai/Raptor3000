@@ -102,17 +102,20 @@ export function pvToSan(fen: string, uciMoves: readonly string[], maxPlies = 12)
   return { sans, moveNumber, startsWithBlack };
 }
 
-/** Render a SanLine with move numbers: `26... Rg8 27. Rxg8 Qxg8`. */
-export function formatSanLine(line: SanLine): string {
+/** Render a SanLine with move numbers: `26... ♜g8 27. ♖xg8 ♛xg8`.
+ *  Figurines by default (Carson) — pass figurines:false for plain SAN. */
+export function formatSanLine(line: SanLine, opts: { figurines?: boolean } = {}): string {
+  const fig = opts.figurines ?? true;
   const parts: string[] = [];
   let n = line.moveNumber;
   let blacksTurn = line.startsWithBlack;
   for (let i = 0; i < line.sans.length; i++) {
+    const san = fig ? figurine(line.sans[i], !blacksTurn) : line.sans[i];
     if (blacksTurn) {
-      parts.push(i === 0 ? `${n}... ${line.sans[i]}` : line.sans[i]);
+      parts.push(i === 0 ? `${n}... ${san}` : san);
       n++;
     } else {
-      parts.push(`${n}. ${line.sans[i]}`);
+      parts.push(`${n}. ${san}`);
     }
     blacksTurn = !blacksTurn;
   }
@@ -177,4 +180,17 @@ export function premoveSan(fen: string, from: string, to: string): string | null
   } catch {
     return null;
   }
+}
+
+/** Unicode figurines, per mover — ♘f3 for white, ♞f6 for black
+ *  (Carson, Chess Ascent habit). Castling and pawn moves untouched
+ *  except promotion pieces. */
+const FIG_WHITE: Record<string, string> = { K: '♔', Q: '♕', R: '♖', B: '♗', N: '♘' };
+const FIG_BLACK: Record<string, string> = { K: '♚', Q: '♛', R: '♜', B: '♝', N: '♞' };
+
+export function figurine(san: string, whiteMover: boolean): string {
+  const table = whiteMover ? FIG_WHITE : FIG_BLACK;
+  return san
+    .replace(/^([KQRBN])/, (_, p: string) => table[p])
+    .replace(/=([QRBN])/, (_, p: string) => '=' + table[p]);
 }
