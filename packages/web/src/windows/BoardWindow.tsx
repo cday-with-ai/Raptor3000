@@ -199,7 +199,8 @@ export const BoardWindow = observer(function BoardWindow({
     if (mode === BoardMode.PLAYING) return;
     if (viewPly !== null) {
       const fen = replay.fens[viewPly];
-      if (fen) em.focusFen(gameId, fen);
+      // Only steer an engine that is already on (Carson: off stays off).
+      if (fen && em.getFocusedGameId() === gameId) em.focusFen(gameId, fen);
     } else if (em.getFocusedGameId() === gameId) {
       if (context.gameService.getLatestStyle12(gameId)) {
         em.unpin();
@@ -1668,7 +1669,7 @@ function EnginePanel({
             <button
               style={inlineLink}
               onClick={() => {
-                engine.unfocus();
+                engine.userDisable();
                 setFocusedGameId(engine.getFocusedGameId());
               }}
             >
