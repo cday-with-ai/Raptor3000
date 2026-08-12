@@ -166,7 +166,7 @@ export function BoardLayout(props: BoardLayoutProps) {
       {panelOpen && <div style={sidePanelStyle}>{side}</div>}
 
       {toolbar && toolbarOpen && (
-        <div style={{ gridRow: '2', gridColumn: '1 / span 3', position: 'relative' }}>
+        <div style={{ gridRow: '2', gridColumn: '1', position: 'relative' }}>
           <button
             style={toolbarCollapse}
             title="hide the toolbar"
@@ -215,7 +215,7 @@ const bottomReopen = {
 } as const;
 
 const dividerStyle = {
-  gridRow: '1',
+  gridRow: '1 / span 2',
   gridColumn: '2',
   cursor: 'col-resize',
   background: 'var(--border-soft)',
@@ -269,7 +269,7 @@ const boardCellStyle = {
 } as const;
 
 const sidePanelStyle = {
-  gridRow: '1',
+  gridRow: '1 / span 2',
   gridColumn: '3',
   padding: 8,
   overflow: 'auto',
