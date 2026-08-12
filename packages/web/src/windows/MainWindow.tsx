@@ -21,10 +21,12 @@ import {
 } from '../theme.js';
 import {
   boardColors,
+  CLOCK_AUTO,
   loadPreferences,
   savePreferences,
   type AppPreferences,
   type BoardTheme,
+  type ClockState,
   type PieceSet,
   type SoundMode,
 } from '../preferences.js';
@@ -339,6 +341,16 @@ function OptionsPage({
           </Row>
         </Section>
 
+        <Section title="Clock colors">
+          <ClockColorRow label="Active" state="active" prefs={prefs} update={update} />
+          <ClockColorRow label="Low on time" state="low" prefs={prefs} update={update} />
+          <ClockColorRow label="Idle" state="idle" prefs={prefs} update={update} />
+          <Note>
+            Auto follows the app theme (idle) and the stock green/red chips
+            (active, low). Pick colors to override — background, then text.
+          </Note>
+        </Section>
+
         <Section title="Engine">
           <Row label="Stockfish analysis available">
             <Toggle
@@ -641,6 +653,89 @@ const colorInput = {
   background: 'var(--bg-input)',
   cursor: 'pointer',
 } as const;
+
+/**
+ * One clock state's color controls: an Auto checkbox and, when custom,
+ * background + text pickers. Turning Auto off seeds the pickers with what
+ * auto currently resolves to — for the idle chip that means reading the
+ * live theme variables, so the starting point is what's on screen.
+ */
+function ClockColorRow({
+  label,
+  state,
+  prefs,
+  update,
+}: {
+  label: string;
+  state: ClockState;
+  prefs: AppPreferences;
+  update: <K extends keyof AppPreferences>(k: K, v: AppPreferences[K]) => void;
+}) {
+  const bgKey = `clock${capState(state)}Bg` as const;
+  const textKey = `clock${capState(state)}Text` as const;
+  const bg = prefs[bgKey];
+  const text = prefs[textKey];
+  const isAuto = bg === 'auto' && text === 'auto';
+
+  const toggleAuto = (auto: boolean) => {
+    if (auto) {
+      update(bgKey, 'auto');
+      update(textKey, 'auto');
+    } else {
+      update(bgKey, stockHex(state, 'bg'));
+      update(textKey, stockHex(state, 'text'));
+    }
+  };
+
+  return (
+    <Row label={label}>
+      <label style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 13, cursor: 'pointer' }}>
+        <input
+          type="checkbox"
+          checked={isAuto}
+          onChange={e => toggleAuto(e.target.checked)}
+        />
+        Auto
+      </label>
+      {!isAuto && (
+        <>
+          <input
+            type="color"
+            title="Background"
+            value={bg === 'auto' ? stockHex(state, 'bg') : bg}
+            onChange={e => update(bgKey, e.target.value)}
+            style={{ ...colorInput, marginLeft: 10 }}
+          />
+          <input
+            type="color"
+            title="Text"
+            value={text === 'auto' ? stockHex(state, 'text') : text}
+            onChange={e => update(textKey, e.target.value)}
+            style={{ ...colorInput, marginLeft: 6 }}
+          />
+        </>
+      )}
+    </Row>
+  );
+}
+
+function capState(s: ClockState): 'Active' | 'Low' | 'Idle' {
+  return (s[0].toUpperCase() + s.slice(1)) as 'Active' | 'Low' | 'Idle';
+}
+
+/** What 'auto' resolves to, as a hex a color input can hold. The idle
+ *  chip's auto look is CSS variables — read them from the live theme. */
+function stockHex(state: ClockState, channel: 'bg' | 'text'): string {
+  const raw = CLOCK_AUTO[state][channel];
+  if (raw.startsWith('#')) return raw;
+  const cs = getComputedStyle(document.documentElement);
+  const resolved =
+    raw === 'inherit'
+      ? cs.getPropertyValue('--fg')
+      : cs.getPropertyValue(raw.slice('var('.length, -1));
+  const hex = resolved.trim();
+  return /^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/.test(hex) ? hex : '#888888';
+}
 
 function hydrateAutoLogin(): LoginSubmission | null {
   const sel = loadSelection();

@@ -1,9 +1,11 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import {
   BOARD_THEMES,
+  CLOCK_AUTO,
   DEFAULT_PREFERENCES,
   PIECE_SETS,
   boardColors,
+  clockChipColors,
   loadPreferences,
   savePreferences,
 } from '../preferences.js';
@@ -136,6 +138,48 @@ describe('the color table is Chess Ascent, to the hex', () => {
         ).toBe(true);
       }
     }
+  });
+});
+
+describe('clock chip colors', () => {
+  it('auto resolves per state: idle themed, active/low stock chips', () => {
+    const p = DEFAULT_PREFERENCES;
+    expect(clockChipColors(p, false, false)).toEqual(CLOCK_AUTO.idle);
+    expect(clockChipColors(p, false, true)).toEqual(CLOCK_AUTO.idle); // low but not ticking = idle chip
+    expect(clockChipColors(p, true, false)).toEqual(CLOCK_AUTO.active);
+    expect(clockChipColors(p, true, true)).toEqual(CLOCK_AUTO.low);
+  });
+
+  it('the active auto text is light — the 2026-08-12 contrast rule', () => {
+    expect(CLOCK_AUTO.active.text).toBe('#ffffff');
+    expect(CLOCK_AUTO.low.text).toBe('#ffd9d9');
+  });
+
+  it('custom values override per channel, border derives from custom bg', () => {
+    const p = {
+      ...DEFAULT_PREFERENCES,
+      clockActiveBg: '#123456',
+      clockActiveText: 'auto' as const,
+    };
+    const chip = clockChipColors(p, true, false);
+    expect(chip.bg).toBe('#123456');
+    expect(chip.text).toBe('#ffffff'); // auto channel keeps stock
+    expect(chip.border).toContain('#123456'); // derived, not the stock green
+  });
+
+  it('round-trips through save/load, invalid values fall back to auto', () => {
+    savePreferences({
+      ...DEFAULT_PREFERENCES,
+      clockLowBg: '#ff0000',
+      clockLowText: '#ffffff',
+      clockIdleBg: '#0e1116',
+    });
+    localStorage.setItem('pref.clockActiveBg', 'url(evil)');
+    const p = loadPreferences();
+    expect(p.clockLowBg).toBe('#ff0000');
+    expect(p.clockLowText).toBe('#ffffff');
+    expect(p.clockIdleBg).toBe('#0e1116');
+    expect(p.clockActiveBg).toBe('auto');
   });
 });
 

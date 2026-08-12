@@ -37,12 +37,25 @@ export const PIECE_SETS: readonly PieceSet[] = [
   'mpchess',
 ];
 
+/**
+ * A clock-chip color: `'auto'` follows the stock look (theme variables
+ * for the idle chip, the green/red chips for active/low), a hex value
+ * overrides it. Stored per state × per channel (background, text).
+ */
+export type ClockColor = 'auto' | string;
+
 export interface AppPreferences {
   boardTheme: BoardTheme;
   /** Only consulted when boardTheme === 'custom'. */
   customLightSquareColor: string;
   customDarkSquareColor: string;
   pieceSet: PieceSet;
+  clockActiveBg: ClockColor;
+  clockActiveText: ClockColor;
+  clockLowBg: ClockColor;
+  clockLowText: ClockColor;
+  clockIdleBg: ClockColor;
+  clockIdleText: ClockColor;
   soundMode: SoundMode;
   showEngineAnalysis: boolean;
   autoJoinChannels: string;
@@ -56,6 +69,12 @@ export const DEFAULT_PREFERENCES: AppPreferences = {
   customLightSquareColor: '#f0d9b5',
   customDarkSquareColor: '#b58863',
   pieceSet: 'cburnett',
+  clockActiveBg: 'auto',
+  clockActiveText: 'auto',
+  clockLowBg: 'auto',
+  clockLowText: 'auto',
+  clockIdleBg: 'auto',
+  clockIdleText: 'auto',
   soundMode: 'on',
   showEngineAnalysis: true,
   autoJoinChannels: '1,4,53',
@@ -123,6 +142,50 @@ function readColor(k: string, fallback: string): string {
   return v != null && /^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/.test(v) ? v : fallback;
 }
 
+/** A clock color is 'auto' or a hex; anything else falls back to 'auto'. */
+function readClockColor(k: string): ClockColor {
+  const v = getRaw(k);
+  if (v === 'auto') return 'auto';
+  return v != null && /^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/.test(v) ? v : 'auto';
+}
+
+/** Clock chip states, in the order the UI lists them. */
+export type ClockState = 'active' | 'low' | 'idle';
+
+/** The stock chip looks — what 'auto' resolves to. The idle chip follows
+ *  the theme via CSS variables; active/low are dark in both themes (which
+ *  is why their auto text is light — see 2026-08-12 clock-contrast fix). */
+export const CLOCK_AUTO: Record<ClockState, { bg: string; text: string; border: string }> = {
+  active: { bg: '#2a4a2a', text: '#ffffff', border: '#3a6a3a' },
+  low: { bg: '#5a2a2a', text: '#ffd9d9', border: '#a04040' },
+  idle: { bg: 'var(--bg-sunken)', text: 'inherit', border: 'var(--border-soft)' },
+};
+
+/**
+ * Resolve the chip colors for a clock in the given state. Custom values
+ * override per channel; the border follows the background it sits on
+ * (stock border for stock background, a derived tint for a custom one).
+ */
+export function clockChipColors(
+  prefs: AppPreferences,
+  ticking: boolean,
+  lowTime: boolean,
+): { bg: string; text: string; border: string } {
+  const state: ClockState = ticking ? (lowTime ? 'low' : 'active') : 'idle';
+  const auto = CLOCK_AUTO[state];
+  const bgPref = prefs[`clock${cap(state)}Bg` as const];
+  const textPref = prefs[`clock${cap(state)}Text` as const];
+  const bg = bgPref === 'auto' ? auto.bg : bgPref;
+  const text = textPref === 'auto' ? auto.text : textPref;
+  const border =
+    bgPref === 'auto' ? auto.border : `color-mix(in srgb, ${bg} 65%, #888888)`;
+  return { bg, text, border };
+}
+
+function cap(s: ClockState): 'Active' | 'Low' | 'Idle' {
+  return (s[0].toUpperCase() + s.slice(1)) as 'Active' | 'Low' | 'Idle';
+}
+
 export function loadPreferences(): AppPreferences {
   return {
     // Stored values from the pre-port themes ('slate', 'wood') and piece
@@ -138,6 +201,12 @@ export function loadPreferences(): AppPreferences {
       DEFAULT_PREFERENCES.customDarkSquareColor,
     ),
     pieceSet: readString('pieceSet', DEFAULT_PREFERENCES.pieceSet, PIECE_SETS),
+    clockActiveBg: readClockColor('clockActiveBg'),
+    clockActiveText: readClockColor('clockActiveText'),
+    clockLowBg: readClockColor('clockLowBg'),
+    clockLowText: readClockColor('clockLowText'),
+    clockIdleBg: readClockColor('clockIdleBg'),
+    clockIdleText: readClockColor('clockIdleText'),
     soundMode: readString('soundMode', DEFAULT_PREFERENCES.soundMode, ['on', 'off']),
     showEngineAnalysis: readBool(
       'showEngineAnalysis',
@@ -165,6 +234,12 @@ export function savePreferences(prefs: AppPreferences): void {
   setRaw('customLightSquareColor', prefs.customLightSquareColor);
   setRaw('customDarkSquareColor', prefs.customDarkSquareColor);
   setRaw('pieceSet', prefs.pieceSet);
+  setRaw('clockActiveBg', prefs.clockActiveBg);
+  setRaw('clockActiveText', prefs.clockActiveText);
+  setRaw('clockLowBg', prefs.clockLowBg);
+  setRaw('clockLowText', prefs.clockLowText);
+  setRaw('clockIdleBg', prefs.clockIdleBg);
+  setRaw('clockIdleText', prefs.clockIdleText);
   setRaw('soundMode', prefs.soundMode);
   setRaw('showEngineAnalysis', String(prefs.showEngineAnalysis));
   setRaw('autoJoinChannels', prefs.autoJoinChannels);

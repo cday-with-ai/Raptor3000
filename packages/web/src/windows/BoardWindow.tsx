@@ -25,6 +25,7 @@ import { installPositionTracker, windowStorageKey } from './windowPosition.js';
 import type { EngineAnalysis } from '../engine/EngineService.js';
 import {
   boardColors,
+  clockChipColors,
   loadPreferences,
   type AppPreferences,
 } from '../preferences.js';
@@ -114,11 +115,13 @@ export const BoardWindow = observer(function BoardWindow({
   const topTicking = flipped ? whiteTicking : blackTicking;
   const bottomTicking = flipped ? blackTicking : whiteTicking;
 
+  const prefs = useLivePreferences();
+
   const topBar = (
-    <InfoBar side="opponent" name={topName} rating="" clockMs={topClock} ticking={topTicking} />
+    <InfoBar side="opponent" name={topName} rating="" clockMs={topClock} ticking={topTicking} prefs={prefs} />
   );
   const bottomBar = (
-    <InfoBar side="me" name={bottomName} rating="" clockMs={bottomClock} ticking={bottomTicking} />
+    <InfoBar side="me" name={bottomName} rating="" clockMs={bottomClock} ticking={bottomTicking} prefs={prefs} />
   );
 
   return (
@@ -177,6 +180,7 @@ function InfoBar(props: {
   rating: string;
   clockMs: number;
   ticking: boolean;
+  prefs: AppPreferences;
 }) {
   return (
     <div
@@ -198,30 +202,39 @@ function InfoBar(props: {
         </strong>
         {props.rating && <span style={{ opacity: 0.7 }}>({props.rating})</span>}
       </span>
-      <Clock ms={props.clockMs} ticking={props.ticking} />
+      <Clock ms={props.clockMs} ticking={props.ticking} prefs={props.prefs} />
     </div>
   );
 }
 
-function Clock({ ms, ticking }: { ms: number; ticking: boolean }) {
+function Clock({
+  ms,
+  ticking,
+  prefs,
+}: {
+  ms: number;
+  ticking: boolean;
+  prefs: AppPreferences;
+}) {
   const total = Math.max(0, ms);
   const totalSeconds = Math.floor(total / 1000);
   const m = Math.floor(totalSeconds / 60);
   const s = totalSeconds % 60;
   const lowTime = total < 10_000;
   const tenths = lowTime ? Math.floor((total % 1000) / 100) : null;
+  // Per-state colors are preferences (Options → Board → Clock colors);
+  // 'auto' resolves to the stock look, including the 2026-08-12 rule
+  // that a dark ticking chip gets light text in both themes.
+  const chip = clockChipColors(prefs, ticking, lowTime);
   return (
     <span
       style={{
         fontFamily: '"SF Mono", Consolas, monospace',
         fontSize: lowTime ? 20 : 18,
         padding: '2px 10px',
-        background: ticking ? (lowTime ? '#5a2a2a' : '#2a4a2a') : 'var(--bg-sunken)',
-        border: `1px solid ${ticking ? (lowTime ? '#a04040' : '#3a6a3a') : 'var(--border-soft)'}`,
-        // The ticking backgrounds are dark regardless of theme, so the text
-        // must be light regardless of theme — `inherit` is near-black in
-        // light mode and vanished against the green.
-        color: ticking ? (lowTime ? '#ffd9d9' : '#ffffff') : 'inherit',
+        background: chip.bg,
+        border: `1px solid ${chip.border}`,
+        color: chip.text,
         borderRadius: 4,
         minWidth: 72,
         textAlign: 'center',
