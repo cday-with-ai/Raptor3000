@@ -1,14 +1,5 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import { TabPrefix, applyTabPrefix } from '../TabPrefix.js';
-import {
-  ChannelTabStore,
-  MainConsoleTabStore,
-  PartnerTabStore,
-  PersonTabStore,
-} from '../ChatTabStore.js';
-import { ChatEventType } from '../../events/ChatEventType.js';
-import type { ChatEvent } from '../../events/ChatEvent.js';
-import type { Connector } from '../../services/Connector.js';
 
 /**
  * Reported by Carson 2026-08-05: typing `tell 39 hi` while the channel-39 tab
@@ -103,76 +94,5 @@ describe('applyTabPrefix', () => {
     expect(applyTabPrefix(game, 'xwhisper 42 nice game')).toBe(
       'xwhisper 42 nice game',
     );
-  });
-});
-
-/** Minimal connector: records what was sent, ignores everything else. */
-class RecordingConnector {
-  readonly sent: string[] = [];
-  sendMessage(msg: string): boolean {
-    this.sent.push(msg);
-    return true;
-  }
-}
-
-describe('ChatTabStore.sendInput', () => {
-  let connector: RecordingConnector;
-  const asConnector = (): Connector => connector as unknown as Connector;
-
-  beforeEach(() => {
-    connector = new RecordingConnector();
-  });
-
-  it('sends a channel message with the tab prefix', () => {
-    new ChannelTabStore('39', asConnector()).sendInput('hi');
-    expect(connector.sent).toEqual(['tell 39 hi']);
-  });
-
-  it('does not double the prefix the user typed', () => {
-    new ChannelTabStore('39', asConnector()).sendInput('tell 39 hi');
-    expect(connector.sent).toEqual(['tell 39 hi']);
-  });
-
-  it('strips the trailing newline before prefixing', () => {
-    new ChannelTabStore('39', asConnector()).sendInput('tell 39 hi\r\n');
-    expect(connector.sent).toEqual(['tell 39 hi']);
-  });
-
-  it('sends nothing for empty input', () => {
-    new ChannelTabStore('39', asConnector()).sendInput('\n');
-    expect(connector.sent).toEqual([]);
-  });
-
-  it('passes main-console input through untouched', () => {
-    new MainConsoleTabStore(asConnector()).sendInput('tell 39 hi');
-    expect(connector.sent).toEqual(['tell 39 hi']);
-  });
-
-  it('does not double ptell in the partner tab', () => {
-    new PartnerTabStore(asConnector()).sendInput('ptell mate in 2');
-    expect(connector.sent).toEqual(['ptell mate in 2']);
-  });
-
-  it('does not double a person tell', () => {
-    new PersonTabStore('alice', asConnector()).sendInput('tell alice hello');
-    expect(connector.sent).toEqual(['tell alice hello']);
-  });
-
-  it('produces an outbound line the same tab still accepts', () => {
-    // The tabs filter their own echo by prefix (ChannelTabStore.accepts), so
-    // a de-duplicated send must not fall out of its own transcript.
-    const tab = new ChannelTabStore('39', asConnector());
-    tab.sendInput('tell 39 hi');
-    const echo: ChatEvent = {
-      type: ChatEventType.OUTBOUND,
-      raw: connector.sent[0],
-      time: 0,
-      source: null,
-      channel: null,
-      gameId: null,
-      message: connector.sent[0],
-      pingMs: null,
-    };
-    expect(tab.accepts(echo)).toBe(true);
   });
 });

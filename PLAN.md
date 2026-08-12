@@ -608,6 +608,27 @@ than code:
   and have not run since April.
 - Dependencies are three months old; a cold `yarn dev` may want `yarn install`.
 
+## The architecture, stated once (2026-08-12)
+
+**Pub/sub, not event-service.** Parse the FICS byte stream once (the
+parser taxonomy is the valuable part — a decade of protocol archaeology
+in one place). Publish typed events on the two buses (ChatService,
+GameService). Subscribers self-select — `accepts()` — and **keep their
+own state**: the chat window folds its own log, the #39 tab means "I
+accept channel-39 tells", each board window accumulates its own game.
+No stores between the bus and the window. The `TabStoreRegistry` /
+`ChatTabStore` layer was deleted this day with zero consumers — it was
+Raptor-JVM parity, portability insurance for a second platform that
+does not exist, and it sat on the wrong side of the popup reactivity
+boundary besides.
+
+**Code custom to the platform.** This is a web app; write it like one.
+If a second platform ever matters, write a second small app against the
+same protocol layer — `packages/shared` now has zero runtime
+dependencies, which is what makes that cheap. App-local events (a
+preference change, say) may ride the same buses as FICS events when a
+second consumer needs them; until then, don't mint types.
+
 ## Next thing that would make sense
 
 **The popup hypothesis is dead, killed with a browser (2026-08-12).** Board

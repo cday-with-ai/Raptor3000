@@ -29,8 +29,6 @@ export * from './services/FicsConnector.js';
 
 // Stores
 export * from './stores/TabPrefix.js';
-export * from './stores/ChatTabStore.js';
-export * from './stores/TabStoreRegistry.js';
 
 // Display
 export * from './display/richText.js';

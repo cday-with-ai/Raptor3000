@@ -55,11 +55,10 @@ export class ChatService {
   }
 
   publish(event: ChatEvent): void {
-    // Snapshot the listener sets — a handler (e.g. TabStoreRegistry's
-    // router) might add a new listener during dispatch, and the newly
-    // added tab shouldn't receive the current event twice via the live
-    // iterator. If the router wants the new tab to see the event, it
-    // feeds it directly.
+    // Snapshot the listener sets — a handler might add a new listener
+    // during dispatch, and the newly added listener shouldn't receive
+    // the current event twice via the live iterator. A handler that
+    // wants its new listener to see the current event feeds it directly.
     const listeners = [...this.listeners.values()];
     const fallbacks = [...this.mainFallback.values()];
 

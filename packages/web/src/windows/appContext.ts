@@ -3,7 +3,6 @@ import {
   FicsConnector,
   FicsParser,
   GameService,
-  TabStoreRegistry,
   defaultChatParsers,
   defaultChunkParsers,
   defaultGameLineParsers,
@@ -42,8 +41,6 @@ export interface RaptorContext {
    *  observed/examined/finished games, never an in-progress play. Main
    *  window only. */
   engineManager: EngineManager | null;
-  /** Chat tabs — main console + lazily-created channel/person/partner tabs. */
-  tabs: TabStoreRegistry;
   /** Monotonically-incremented "session" id — bumped when main reloads. */
   sessionId: number;
 }
@@ -79,7 +76,6 @@ export function createContext(): RaptorContext {
   // say so in the console tab rather than only in devtools.
   if (gameManager) announceBlockedBoardWindows(gameManager, chatService);
   const engineManager = main ? new EngineManager(gameService) : null;
-  const tabs = new TabStoreRegistry(chatService, connector);
   return {
     chatService,
     gameService,
@@ -87,7 +83,6 @@ export function createContext(): RaptorContext {
     connector,
     gameManager,
     engineManager,
-    tabs,
     sessionId: Date.now(),
   };
 }
