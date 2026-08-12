@@ -372,6 +372,7 @@ export const BoardWindow = observer(function BoardWindow({
           onViewPly={setViewPly}
           showEngine={prefs.showEngineAnalysis}
           opening={opening}
+          openingFen={opening ? replay.fens[opening.plies] ?? null : null}
           analysisFen={analysisFen}
           startMovesExpanded={
             // PLAYING starts collapsed regardless of the pref (Carson):
@@ -1271,6 +1272,7 @@ function SidePanel({
   onViewPly,
   showEngine,
   opening,
+  openingFen,
   analysisFen,
   startMovesExpanded,
 }: {
@@ -1285,6 +1287,7 @@ function SidePanel({
   /** Options → Engine → "Stockfish analysis available" — finally wired. */
   showEngine: boolean;
   opening: Opening | null;
+  openingFen: string | null;
   analysisFen: string | null;
   startMovesExpanded: boolean;
 }) {
@@ -1299,6 +1302,7 @@ function SidePanel({
       <MovesSection
         s12={s12}
         opening={opening}
+        openingFen={openingFen}
         startExpanded={startMovesExpanded}
         sans={sans}
         viewablePlies={viewablePlies}
@@ -1338,6 +1342,7 @@ function plyLabel(ply: number, san: string | null): string {
 function MovesSection({
   s12,
   opening,
+  openingFen,
   startExpanded,
   sans,
   viewablePlies,
@@ -1346,6 +1351,8 @@ function MovesSection({
 }: {
   s12: Style12Message | undefined;
   opening: Opening | null;
+  /** Position at the end of the named book line — the study link. */
+  openingFen: string | null;
   /** The moveListVisible preference — open the list without a click. */
   startExpanded: boolean;
   sans: ReadonlyMap<number, string>;
@@ -1435,11 +1442,20 @@ function MovesSection({
           }}
         >
           {opening && (
-            <div
-              style={{ opacity: 0.75, fontStyle: 'italic', marginBottom: 2 }}
-              title={`ECO ${opening.eco}, book through ply ${opening.plies}`}
-            >
-              {opening.eco} {opening.name}
+            <div style={{ opacity: 0.85, marginBottom: 2 }}>
+              <a
+                href={
+                  openingFen
+                    ? `https://lichess.org/analysis/${openingFen.replace(/ /g, '_')}`
+                    : `https://lichess.org/analysis`
+                }
+                target="_blank"
+                rel="noopener noreferrer"
+                title={`study on lichess (book through ply ${opening.plies})`}
+                style={{ color: 'inherit', textDecoration: 'none' }}
+              >
+                <strong>{opening.eco}</strong> {opening.name}
+              </a>
             </div>
           )}
           {rows.length === 0 ? (
