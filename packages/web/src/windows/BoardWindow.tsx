@@ -1018,8 +1018,16 @@ function SidePanel({
   viewPly: number | null;
   onViewPly: (ply: number | null) => void;
 }) {
+  // Order per Carson (2026-08-12): status first, engine next, moves at
+  // the bottom. Captured is gone — it never earned its pixels.
   return (
     <>
+      <Section title="Status">
+        <div style={{ opacity: 0.8, fontSize: 12 }}>{modeLabel(mode)}</div>
+      </Section>
+      {engineAnalysisAllowed(mode) && (
+        <EnginePanel context={context} gameId={gameId} s12={s12} />
+      )}
       <MovesSection
         context={context}
         s12={s12}
@@ -1029,15 +1037,6 @@ function SidePanel({
         viewPly={viewPly}
         onViewPly={onViewPly}
       />
-      <Section title={mode === BoardMode.BUGHOUSE_SUGGEST ? 'Holdings' : 'Captured'}>
-        <div style={{ opacity: 0.6, fontSize: 12 }}>—</div>
-      </Section>
-      {engineAnalysisAllowed(mode) && (
-        <EnginePanel context={context} gameId={gameId} s12={s12} />
-      )}
-      <Section title="Status">
-        <div style={{ opacity: 0.8, fontSize: 12 }}>{modeLabel(mode)}</div>
-      </Section>
     </>
   );
 }
