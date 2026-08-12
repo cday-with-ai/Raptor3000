@@ -104,3 +104,9 @@ body,
 ::-webkit-scrollbar-thumb:hover {
   background: var(--scroll-thumb-hover);
 }
+
+/* Last-move tint fade (board windows). */
+@keyframes raptor-fade-out {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}

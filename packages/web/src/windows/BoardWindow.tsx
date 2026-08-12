@@ -975,9 +975,13 @@ function Board({
           ? isLight ? '#d5b3e5' : '#8b5ba5'
           : isSelected
             ? '#829769'
-            : isLastFrom || isLastTo
-              ? isLight ? '#ffb347' : '#ff8c00'
-              : null;
+            : null;
+      // Last move renders as a fading tint layer instead of a painted
+      // background (Carson: it should fade away).
+      const lastMoveTint =
+        !highlight && (isLastFrom || isLastTo)
+          ? isLight ? '#ffb347' : '#ff8c00'
+          : null;
 
       // In-square coordinates: rank in the top-right of the rendered
       // rightmost column, file letter in the bottom-left of the rendered
@@ -1001,6 +1005,18 @@ function Board({
             position: 'relative',
           }}
         >
+          {lastMoveTint && (
+            <span
+              key={`lm-${s12 ? plyOf(s12) : 0}`}
+              style={{
+                position: 'absolute',
+                inset: 0,
+                background: lastMoveTint,
+                animation: 'raptor-fade-out 2.5s ease-out forwards',
+                pointerEvents: 'none',
+              }}
+            />
+          )}
           {(() => {
             // While a move animates, its destination shows what was
             // captured (or nothing) until the flight lands; while OUR
