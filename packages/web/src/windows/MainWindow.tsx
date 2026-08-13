@@ -698,8 +698,8 @@ function HelpPage() {
 
       <Section title="About &amp; licenses">
         <p style={helpP}>
-          Raptor3000 is <strong>MIT-licensed</strong>, by Carson Day —
-          the third of a line after <strong>Raptor</strong> (SWT) and{' '}
+          Raptor3000 is <strong>MIT-licensed</strong> — the third of a
+          line after <strong>Raptor</strong> (SWT) and{' '}
           <strong>Decaf</strong> (Java). It stands on generously licensed
           shoulders:
         </p>

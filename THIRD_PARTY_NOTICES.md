@@ -60,8 +60,8 @@ sets require. If that ever changes, drop `cardinal` and `alpha` first.
 
 ## Lineage
 
-Raptor3000 is the third of a line: **Raptor** (Carson Day's SWT FICS
-client, BSD) and **Decaf** (Java) came first.
+Raptor3000 is the third of a line: **Raptor** (SWT, BSD) and
+**Decaf** (Java) came first, from the same author.
 The window layout, the console conventions, and half the feature ideas
 are theirs. FICS itself — [freechess.org](https://www.freechess.org/) —
 is the server this whole app exists to talk to.

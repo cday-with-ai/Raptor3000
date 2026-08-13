@@ -53,6 +53,28 @@ export function runPopupTest(
   return 'allowed';
 }
 
+/**
+ * The automatic variant (Carson, 2026-08-12: "auto test board windows,
+ * show it only when they are not available"). Runs on load, where there
+ * is no click to burn, so a SINGLE open already has the activation-less
+ * conditions the double-open test manufactures. Allowed sites open it;
+ * everyone else gets 'blocked' and the browser lights its popup icon —
+ * which is the prompt the directions point at.
+ */
+export function runPopupAutoTest(
+  open: (url: string, name: string, features: string) => Window | null =
+    (u, n, f) => window.open(u, n, f),
+): PopupTestResult {
+  const w = open('about:blank', 'raptor-popup-test', 'popup,width=240,height=100,left=60,top=60');
+  if (!w) return 'blocked';
+  try {
+    w.close();
+  } catch {
+    // it opened; that's what we were measuring
+  }
+  return 'allowed';
+}
+
 export interface BrowserDirection {
   key: string;
   name: string;
@@ -109,80 +131,86 @@ export function orderedDirections(currentKey: string): readonly BrowserDirection
   );
 }
 
+// One auto-test per page load: StrictMode double-mounts effects in dev,
+// and a revisit to the login screen within a load needn't flash again.
+let autoResultThisLoad: PopupTestResult | null = null;
+
+function persist(result: PopupTestResult): void {
+  try {
+    if (result === 'allowed') localStorage.setItem(VERIFIED_KEY, 'true');
+    else localStorage.removeItem(VERIFIED_KEY);
+  } catch {
+    // storage unavailable: the gate just re-tests next launch
+  }
+}
+
 /**
- * Rendered above the login card until the test has passed once on this
- * browser. Three states: untested (the pitch + the button), blocked
- * (directions, current browser first), allowed (green tick, remembered
- * — the gate never renders again after a reload).
+ * Auto-tested on mount, visible only on failure (Carson, 2026-08-12:
+ * "auto test board windows and show that at the top only when they are
+ * not available"). Allowed renders nothing — the working state needs no
+ * furniture. Blocked renders the banner with per-browser directions and
+ * a manual re-test button (that click has activation to burn, so the
+ * button uses the honest double-open test).
  */
 export function PopupGate() {
-  const [state, setState] = useState<'untested' | PopupTestResult>(() =>
-    popupsVerified() ? 'allowed' : 'untested',
+  const [state, setState] = useState<'pending' | PopupTestResult>(() =>
+    autoResultThisLoad ?? (popupsVerified() ? 'allowed' : 'pending'),
   );
 
-  const test = () => {
-    const result = runPopupTest();
+  useEffect(() => {
+    if (autoResultThisLoad !== null) return;
+    // Runs even when a past visit verified: an allowlist entry can be
+    // revoked, and re-proving costs one invisible open-and-close.
+    const result = runPopupAutoTest();
+    autoResultThisLoad = result;
+    persist(result);
     setState(result);
-    try {
-      if (result === 'allowed') localStorage.setItem(VERIFIED_KEY, 'true');
-      else localStorage.removeItem(VERIFIED_KEY);
-    } catch {
-      // storage unavailable: the gate just re-tests next launch
-    }
-  };
+  }, []);
 
-  if (state === 'allowed') {
-    return (
-      <div style={{ ...gate, borderColor: '#2f8f5b' }}>
-        <span style={{ color: '#69d2a2', fontWeight: 700 }}>✓</span>{' '}
-        Board windows allowed — you're set.
-      </div>
-    );
-  }
+  if (state !== 'blocked') return null;
+
+  const retest = () => {
+    const result = runPopupTest();
+    autoResultThisLoad = result;
+    persist(result);
+    setState(result);
+  };
 
   const current = detectBrowserKey();
   return (
     <div style={gate}>
-      <div style={gateTitle}>Almost there…</div>
+      <div style={gateTitle}>Board windows are blocked</div>
       <p style={gateP}>
         Raptor3000 opens boards and chat as <strong>real browser
         windows</strong>, and they arrive from the server — not from your
-        clicks — so your browser must allow popups for this site.
+        clicks — so your browser must allow popups for this site. Right
+        now it doesn&apos;t:
       </p>
-      {state === 'blocked' && (
-        <>
-          <p style={{ ...gateP, color: '#ffb84d', fontWeight: 600 }}>
-            Still blocked. Allow popups, then test again:
-          </p>
-          <ul style={gateList}>
-            {orderedDirections(current).map(d => (
-              <li key={d.key} style={{ marginBottom: 6 }}>
-                <strong>
-                  {d.name}
-                  {d.key === current ? ' (your browser)' : ''}
-                </strong>{' '}
-                — {d.steps}
-              </li>
-            ))}
-          </ul>
-        </>
-      )}
-      <button type="button" style={gateButton} onClick={test}>
-        {state === 'blocked' ? 'Test again' : 'Test board windows'}
+      <ul style={gateList}>
+        {orderedDirections(current).map(d => (
+          <li key={d.key} style={{ marginBottom: 6 }}>
+            <strong>
+              {d.name}
+              {d.key === current ? ' (your browser)' : ''}
+            </strong>{' '}
+            — {d.steps}
+          </li>
+        ))}
+      </ul>
+      <button type="button" style={gateButton} onClick={retest}>
+        Test again
       </button>
-      {state === 'blocked' && (
-        <span style={{ marginLeft: 12, fontSize: 12, opacity: 0.8 }}>
-          Still stuck?{' '}
-          <a
-            href="https://github.com/cday-with-ai/Raptor3000/issues/new?labels=bug&title=Popup%20gate%3A%20"
-            target="_blank"
-            rel="noreferrer"
-            style={{ color: '#8fb8f0' }}
-          >
-            report it
-          </a>
-        </span>
-      )}
+      <span style={{ marginLeft: 12, fontSize: 12, opacity: 0.8 }}>
+        Still stuck?{' '}
+        <a
+          href="https://github.com/cday-with-ai/Raptor3000/issues/new?labels=bug&title=Popup%20gate%3A%20"
+          target="_blank"
+          rel="noreferrer"
+          style={{ color: '#8fb8f0' }}
+        >
+          report it
+        </a>
+      </span>
     </div>
   );
 }
