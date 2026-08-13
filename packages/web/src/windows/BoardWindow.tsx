@@ -48,7 +48,7 @@ import {
   type LayoutBucket,
 } from '../useLivePreferences.js';
 import { gameEndSound, playSound, soundForSan } from '../sounds.js';
-import { endShowFor, kingShowAnimation } from '../game/endShows.js';
+import { endShowFor, kingShowAnimation, teamShowAnimation } from '../game/endShows.js';
 
 /**
  * Board window — per-game popup. Subscribes to GameService for its
@@ -1202,7 +1202,14 @@ function Board({
               sq === lastMoveSquares(s12)?.to
                 ? show.materAnim
                 : null;
-            const pieceAnim = kingAnim ?? materAnim;
+            // Team shows: the whole winning side celebrates, the losing
+            // side droops — staggered per square so it ripples.
+            const teamAnim =
+              show && gameEnd && !isKing(shown)
+                ? teamShowAnimation(show, gameEnd, isWhitePiece(shown))
+                : null;
+            const pieceAnim = kingAnim ?? materAnim ?? teamAnim;
+            const pieceDelay = teamAnim && pieceAnim === teamAnim ? `${((rank * 8 + file) % 7) * 90}ms` : undefined;
             // position+zIndex lifts the piece above the tint layer —
             // positioned siblings otherwise paint over static content
             // regardless of DOM order (the pieces-fade-too bug).
@@ -1214,6 +1221,7 @@ function Board({
                   position: 'relative',
                   zIndex: 1,
                   ...(pieceAnim ? { animation: pieceAnim } : {}),
+                  ...(pieceDelay ? { animationDelay: pieceDelay } : {}),
                 }}
               >
                 <PieceImg code={shown} set={prefs.pieceSet} />

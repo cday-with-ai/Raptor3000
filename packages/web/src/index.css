@@ -130,6 +130,14 @@ body,
   0%, 100% { transform: translateY(0); }
   50%      { transform: translateY(-22%); }
 }
+@keyframes raptor-team-cheer {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  30%      { transform: translateY(-14%) rotate(-5deg); }
+  60%      { transform: translateY(0) rotate(5deg); }
+}
+@keyframes raptor-team-droop {
+  to { transform: translateY(7%) rotate(11deg); opacity: 0.65; filter: grayscale(0.6); }
+}
 @keyframes raptor-mater-spin {
   0%   { transform: rotate(0deg) scale(1); }
   50%  { transform: rotate(180deg) scale(1.25); }

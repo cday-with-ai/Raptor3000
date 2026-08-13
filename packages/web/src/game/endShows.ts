@@ -26,6 +26,9 @@ export interface EndShow {
   readonly extraSound?: SoundName;
   /** For mate endings: the piece that delivered it gets this. */
   readonly materAnim?: string;
+  /** Whole-team shows: every non-king piece performs too. */
+  readonly teamWinnerAnim?: string;
+  readonly teamLoserAnim?: string;
   /** Show only makes sense when a mate was actually delivered. */
   readonly requiresMate?: boolean;
 }
@@ -56,6 +59,17 @@ export const END_SHOWS: readonly EndShow[] = [
   },
   // Gentlemen's finish.
   { key: 'bows', winner: BOW, loser: TOPPLE, draw: 'raptor-mater-spin 1.3s ease-in-out 1' },
+  // The whole team celebrates; the other team can't watch (Carson:
+  // "all the pieces celebrate on the winning team the other pieces
+  // look sad"). Staggered per square by the renderer.
+  {
+    key: 'team',
+    winner: DANCE,
+    loser: TOPPLE,
+    draw: BOW,
+    teamWinnerAnim: 'raptor-team-cheer 0.9s ease-in-out 3',
+    teamLoserAnim: 'raptor-team-droop 1.6s ease-in forwards',
+  },
 ];
 
 function isDecisiveOrDraw(type: GameEndMessage['type']): boolean {
@@ -80,6 +94,18 @@ export function endShowFor(
   let hash = 7;
   for (const ch of ge.gameId) hash = (hash * 31 + ch.charCodeAt(0)) >>> 0;
   return pool[hash % pool.length];
+}
+
+/** What a non-king team member does, or null when this show (or a
+ *  draw — no team won) keeps the spotlight on the kings. */
+export function teamShowAnimation(
+  show: EndShow,
+  ge: GameEndMessage,
+  whitePiece: boolean,
+): string | null {
+  if (ge.type === GameEndType.DRAW) return null;
+  const winnerIsWhite = ge.type === GameEndType.WHITE_WON;
+  return (whitePiece === winnerIsWhite ? show.teamWinnerAnim : show.teamLoserAnim) ?? null;
 }
 
 /** What this king does in this show, given who won. */

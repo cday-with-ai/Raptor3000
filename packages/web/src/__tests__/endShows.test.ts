@@ -1,6 +1,11 @@
 import { describe, it, expect } from 'vitest';
 import { GameEndType, type GameEndMessage } from '@raptor3000/shared';
-import { END_SHOWS, endShowFor, kingShowAnimation } from '../game/endShows.js';
+import {
+  END_SHOWS,
+  endShowFor,
+  kingShowAnimation,
+  teamShowAnimation,
+} from '../game/endShows.js';
 import { gameEndSound } from '../sounds.js';
 
 /**
@@ -53,6 +58,20 @@ describe('kingShowAnimation', () => {
   it('draws share the draw animation', () => {
     expect(kingShowAnimation(show, end(GameEndType.DRAW), true)).toBe(show.draw);
     expect(kingShowAnimation(show, end(GameEndType.DRAW), false)).toBe(show.draw);
+  });
+});
+
+describe('teamShowAnimation', () => {
+  const team = END_SHOWS.find(s => s.key === 'team')!;
+  const solo = END_SHOWS.find(s => s.key === 'classic')!;
+  it('cheers the winning side, droops the losing side', () => {
+    expect(teamShowAnimation(team, end(GameEndType.WHITE_WON), true)).toContain('cheer');
+    expect(teamShowAnimation(team, end(GameEndType.WHITE_WON), false)).toContain('droop');
+    expect(teamShowAnimation(team, end(GameEndType.BLACK_WON), false)).toContain('cheer');
+  });
+  it('king-only shows and draws animate no team', () => {
+    expect(teamShowAnimation(solo, end(GameEndType.WHITE_WON), true)).toBeNull();
+    expect(teamShowAnimation(team, end(GameEndType.DRAW), true)).toBeNull();
   });
 });
 
