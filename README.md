@@ -139,7 +139,7 @@ packages/
 yarn install
 yarn workspace @raptor3000/shared test       # parser unit tests
 yarn dev                                      # web dev server on :5173
-yarn workspace @raptor3000/web deploy        # build + Cloudflare Pages deploy
+yarn deploy                                   # build + Cloudflare Pages deploy
 ```
 
 ## License
