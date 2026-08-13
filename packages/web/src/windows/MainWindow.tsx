@@ -14,6 +14,7 @@ import {
 } from './shellStyles.js';
 import { loadProfile, loadSelection, saveSelection } from '../loginProfiles.js';
 import { playSound } from '../sounds.js';
+import { useLivePreferences } from '../useLivePreferences.js';
 import { CHAT_COLOR_AUTO, type ChatColorKey } from '../chatFormat.js';
 import {
   applyTheme,
@@ -120,6 +121,17 @@ function PostLoginShell({
   // On a fresh production origin every first observe lands here, so the
   // fix has to be one click away, not buried in a console line.
   const [popupBlocked, setPopupBlocked] = useState(false);
+  // Keep-alive (Carson: "date every 59 min or something"): FICS drops
+  // idle sessions; a hidden periodic command holds this one. The
+  // command is a preference; sendMessageHidden no-ops when offline.
+  const shellPrefs = useLivePreferences();
+  useEffect(() => {
+    if (shellPrefs.keepAlive !== 'on') return undefined;
+    const t = setInterval(() => {
+      context.connector.sendMessageHidden(shellPrefs.keepAliveCommand.trim() || 'date');
+    }, 59 * 60 * 1000);
+    return () => clearInterval(t);
+  }, [shellPrefs.keepAlive, shellPrefs.keepAliveCommand, context]);
   useEffect(() => {
     const onBlocked = () => setPopupBlocked(true);
     window.addEventListener('raptor:popup-blocked', onBlocked);
@@ -501,6 +513,19 @@ function OptionsPage({
               ]}
             />
           </Row>
+          <Row label="Keep alive">
+            <Toggle
+              checked={prefs.keepAlive === 'on'}
+              onChange={v => update('keepAlive', v ? 'on' : 'off')}
+            />
+            <input
+              style={{ ...textInput, width: 120, marginLeft: 8 }}
+              value={prefs.keepAliveCommand}
+              onChange={e => update('keepAliveCommand', e.target.value)}
+              spellCheck={false}
+              title="sent (hidden) every 59 minutes while connected"
+            />
+          </Row>
           <Row label="Move sounds">
             <select
               style={textInput}
@@ -528,6 +553,22 @@ function OptionsPage({
             Moves, captures and checks use the selected set; game-end
             sounds stay on Piano. All sets are lichess's freely licensed
             ones — the famous "standard" set is not freely licensed.
+          </Note>
+        </Section>
+
+        <Section title="Login script">
+          <textarea
+            style={{ ...textInput, width: '100%', minHeight: 210, fontFamily: 'monospace', resize: 'vertical', boxSizing: 'border-box' }}
+            value={prefs.loginScript}
+            onChange={e => update('loginScript', e.target.value)}
+            spellCheck={false}
+          />
+          <Note>
+            Sent (hidden) after each login, one command per line; blank
+            lines are skipped; applies to the next connect. Keep{' '}
+            <code style={code}>iset lock 1</code> LAST if you keep it —
+            it seals interface settings, and anything after it is
+            refused.
           </Note>
         </Section>
 

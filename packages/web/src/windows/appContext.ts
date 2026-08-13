@@ -14,6 +14,7 @@ import {
 } from '../game/GameManager.js';
 import { EngineManager } from '../engine/EngineManager.js';
 import { getWindowManager } from './WindowManager.js';
+import { loadPreferences } from '../preferences.js';
 
 /**
  * The app-wide context that every window reads. On the main window we
@@ -61,6 +62,8 @@ export function createContext(): RaptorContext {
     gameService,
   });
   const connector = new FicsConnector({
+    // Read fresh each login: an Options edit applies to the next connect.
+    loginScript: () => loadPreferences().loginScript.split('\n'),
     chatService,
     gameService,
     parser,

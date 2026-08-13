@@ -1,3 +1,4 @@
+import { DEFAULT_LOGIN_SCRIPT } from '@raptor3000/shared';
 /**
  * App-wide preferences — non-credential settings the user can change
  * from the post-login options page on `/`. Kept separate from
@@ -94,6 +95,9 @@ export interface AppPreferences {
   chatColorOutbound: ClockColor;
   soundMode: SoundMode;
   moveSoundSet: 'sfx' | 'piano' | 'futuristic' | 'nes';
+  keepAlive: SoundMode; // 'on' | 'off' — reuse the two-state type
+  keepAliveCommand: string;
+  loginScript: string; // one command per line
   showEngineAnalysis: boolean;
   autoJoinChannels: string;
   /**
@@ -137,6 +141,9 @@ export const DEFAULT_PREFERENCES: AppPreferences = {
   chatColorOutbound: 'auto',
   soundMode: 'on',
   moveSoundSet: 'sfx',
+  keepAlive: 'off',
+  keepAliveCommand: 'date',
+  loginScript: DEFAULT_LOGIN_SCRIPT.join('\n'),
   showEngineAnalysis: true,
   autoJoinChannels: '1,4,53',
   channelHistoryUrl:
@@ -314,6 +321,9 @@ export function loadPreferences(): AppPreferences {
     chatColorOutbound: readClockColor('chatColorOutbound'),
     soundMode: readString('soundMode', DEFAULT_PREFERENCES.soundMode, ['on', 'off']),
     moveSoundSet: readString('moveSoundSet', DEFAULT_PREFERENCES.moveSoundSet, ['sfx', 'piano', 'futuristic', 'nes']),
+    keepAlive: readString('keepAlive', DEFAULT_PREFERENCES.keepAlive, ['on', 'off']),
+    keepAliveCommand: getRaw('keepAliveCommand') ?? DEFAULT_PREFERENCES.keepAliveCommand,
+    loginScript: getRaw('loginScript') ?? DEFAULT_PREFERENCES.loginScript,
     showEngineAnalysis: readBool(
       'showEngineAnalysis',
       DEFAULT_PREFERENCES.showEngineAnalysis,
@@ -368,6 +378,9 @@ export function savePreferences(prefs: AppPreferences): void {
   setRaw('chatColorOutbound', prefs.chatColorOutbound);
   setRaw('soundMode', prefs.soundMode);
   setRaw('moveSoundSet', prefs.moveSoundSet);
+  setRaw('keepAlive', prefs.keepAlive);
+  setRaw('keepAliveCommand', prefs.keepAliveCommand);
+  setRaw('loginScript', prefs.loginScript);
   setRaw('showEngineAnalysis', String(prefs.showEngineAnalysis));
   setRaw('autoJoinChannels', prefs.autoJoinChannels);
   setRaw('channelHistoryUrl', prefs.channelHistoryUrl);

@@ -49,6 +49,10 @@ export interface FicsConnectorOptions {
   secure?: boolean;
   /** Short identifier sent in the timeseal connect line. */
   clientIdentifier?: string;
+  /** Commands sent (hidden) after login confirms — read fresh per login
+   *  so a preferences edit applies to the next connect. Defaults to
+   *  DEFAULT_LOGIN_SCRIPT; blank lines are skipped. */
+  loginScript?: () => readonly string[];
 }
 
 export interface LoginCredentials {
@@ -94,6 +98,7 @@ export class FicsConnector extends BaseConnector implements Connector {
       host: options.host ?? 'www.freechess.org',
       port: options.port ?? 5001,
       secure: options.secure ?? true,
+      loginScript: options.loginScript ?? (() => DEFAULT_LOGIN_SCRIPT),
       clientIdentifier: options.clientIdentifier ?? 'raptor3000',
     };
   }
@@ -386,29 +391,11 @@ export class FicsConnector extends BaseConnector implements Connector {
     // game starts, `startpos` the initial position for non-standard games.
     // A board that renders but is missing its game information looks like a
     // board bug and is a login-ordering bug.
-    const bootstrap = [
-      'iset defprompt 1',
-      'iset ms 1',
-      'iset startpos 1',
-      'iset pendinfo 1',
-      'iset gameinfo 1',
-      'iset nohighlight 1',
-      'iset seekinfo 1',
-      'set interface raptor3000',
-      'set style 12',
-      'set bell 0',
-      'set echo 0',
-      'set ptime 0',
-      'set width 240',
-      // FICS rejected `set height 1000` outright ("Bad value given for variable
-      // height"). Matching width is known-good in at least one direction; if the
-      // log shows this rejected too, the range is tighter than 240.
-      'set height 240',
-      // Last, deliberately. Everything above is already applied by the time the
-      // interface is sealed against further change.
-      'iset lock 1',
-    ];
-    for (const cmd of bootstrap) this.sendMessageHidden(cmd);
+    const script = this.options.loginScript();
+    for (const cmd of script) {
+      const line = cmd.trim();
+      if (line) this.sendMessageHidden(line);
+    }
   }
 
   private publishInternal(message: string): void {
@@ -418,6 +405,34 @@ export class FicsConnector extends BaseConnector implements Connector {
     this.options.chatService.publish(e);
   }
 }
+
+/**
+ * The stock login script (Carson, 2026-08-12: editable in Options, one
+ * per line, "what we have now … is default"). ORDER MATTERS: `iset
+ * lock 1` freezes interface variables, so it must stay LAST — it used
+ * to sit third and four isets after it were silently refused (the
+ * missing-gameinfo board bug of 2026-07-26).
+ *
+ * `set height 1000` is known-rejected ("Bad value given for variable
+ * height"); 240 matches width and is known-good.
+ */
+export const DEFAULT_LOGIN_SCRIPT: readonly string[] = [
+  'iset defprompt 1',
+  'iset ms 1',
+  'iset startpos 1',
+  'iset pendinfo 1',
+  'iset gameinfo 1',
+  'iset nohighlight 1',
+  'iset seekinfo 1',
+  'set interface raptor3000',
+  'set style 12',
+  'set bell 0',
+  'set echo 0',
+  'set ptime 0',
+  'set width 240',
+  'set height 240',
+  'iset lock 1',
+];
 
 /** FICS responses that mean a `set`/`iset` command was refused. Matched at
  *  line start, after any buffered `fics% ` prompt is stripped. */

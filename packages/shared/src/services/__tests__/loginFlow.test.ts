@@ -193,6 +193,39 @@ describe('kicked mid-session', () => {
   });
 });
 
+describe('configurable login script (2026-08-12)', () => {
+  it('a custom script replaces the bootstrap, blank lines skipped', () => {
+    const chatService = new ChatService();
+    const gameService = new GameService();
+    const parser = new FicsParser({
+      chatParsers: defaultChatParsers(),
+      gameLineParsers: defaultGameLineParsers(),
+      chunkParsers: defaultChunkParsers(),
+      gameService,
+    });
+    const connector = new FicsConnector({
+      chatService,
+      gameService,
+      parser,
+      loginScript: () => ['set style 12', '', '  ', '+channel 39'],
+    });
+    const priv = connector as unknown as {
+      pendingCreds: LoginCredentials | null;
+      connected: boolean;
+      sendRawString(line: string): void;
+      handleRaw(raw: string): void;
+    };
+    const sent: string[] = [];
+    priv.sendRawString = line => sent.push(line);
+    priv.connected = true;
+    priv.pendingCreds = { handle: 'cday', password: 'x', isGuest: false };
+    priv.handleRaw('\n\rlogin: ');
+    priv.handleRaw('\n\rpassword: ');
+    priv.handleRaw('\n\r**** Starting FICS session as cday ****\n\r');
+    expect(sent.slice(2)).toEqual(['set style 12', '+channel 39']);
+  });
+});
+
 describe('outbound Maciejg (2026-08-12)', () => {
   it('prepareOutbound encodes unicode and strips the trailing newline', async () => {
     const { prepareOutbound } = await import('../FicsConnector.js');
