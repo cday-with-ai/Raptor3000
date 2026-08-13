@@ -48,6 +48,7 @@ import {
   type LayoutBucket,
 } from '../useLivePreferences.js';
 import { gameEndSound, playSound, soundForSan } from '../sounds.js';
+import { endShowFor, kingShowAnimation } from '../game/endShows.js';
 
 /**
  * Board window — per-game popup. Subscribes to GameService for its
@@ -118,7 +119,6 @@ export const BoardWindow = observer(function BoardWindow({
   // and examining windows all open at their session's start.
   useEffect(() => {
     playSound('notify');
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   const soundPlyRef = useRef<number | null>(null);
   useEffect(() => {
@@ -135,6 +135,11 @@ export const BoardWindow = observer(function BoardWindow({
   useEffect(() => {
     if (!gameEnd) return;
     playSound(gameEndSound(gameEnd, context.connector.getLoggedInAs()));
+    // The show's paired extra (Carson: "randomize them with the
+    // animation") — the boom show booms for everyone watching.
+    const show = endShowFor(gameEnd, s12?.san.includes('#') ?? false);
+    if (show?.extraSound) playSound(show.extraSound);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [gameEnd, context]);
 
   // Subscribe to GameService for THIS game's updates.
@@ -544,28 +549,6 @@ function formatResultLine(ge: GameEndMessage): string {
   return ge.description ? `${r} (${ge.description})` : r;
 }
 
-/**
- * Which animation this king gets. Winner: dance or bow, picked
- * deterministically per game (no Math.random — same game, same show).
- * Loser: topples and stays down. Draw: everyone bows.
- */
-function kingTheaterAnimation(ge: GameEndMessage, whiteKing: boolean): string | null {
-  const celebrate = () => {
-    const pick = parseInt(ge.gameId, 10) % 2 === 0 ? 'raptor-king-dance' : 'raptor-king-bow';
-    return `${pick} 1.4s ease-in-out 2`;
-  };
-  switch (ge.type) {
-    case GameEndType.WHITE_WON:
-      return whiteKing ? celebrate() : 'raptor-king-topple 1.2s ease-in forwards';
-    case GameEndType.BLACK_WON:
-      return whiteKing ? 'raptor-king-topple 1.2s ease-in forwards' : celebrate();
-    case GameEndType.DRAW:
-      return 'raptor-king-bow 1.4s ease-in-out 2';
-    default:
-      return null;
-  }
-}
-
 const resultOverlay = {
   position: 'absolute',
   inset: 0,
@@ -947,7 +930,7 @@ function Board({
     lastDragRef.current = { from: premove.from, to: premove.to, t: Date.now() };
     sendMove(context, premove.from, premove.to);
     setPremove(null);
-  }, [isMyTurn, premove, context]);
+  }, [isMyTurn, premove, context, setPremove]);
 
   // Reset selection if the position changes from under us.
   useEffect(() => {
@@ -1200,12 +1183,26 @@ function Board({
               else if (sq === pending.from) shown = 0;
             }
             if (shown === 0 || dragFrom === sq) return null;
-            // Game-end theater: the winning king celebrates, the losing
-            // king topples (Carson). Draws take a bow together.
-            const kingAnim =
-              theater && !viewing && gameEnd && isKing(shown)
-                ? kingTheaterAnimation(gameEnd, isWhitePiece(shown))
+            // Game-end theater: one SHOW per game (deterministic from
+            // gameId — every window sees the same performance). Kings
+            // act their roles; on mate endings some shows give the
+            // mating piece the spotlight too.
+            const show =
+              theater && !viewing && gameEnd
+                ? endShowFor(gameEnd, s12?.san.includes('#') ?? false)
                 : null;
+            const kingAnim =
+              show && gameEnd && isKing(shown)
+                ? kingShowAnimation(show, gameEnd, isWhitePiece(shown))
+                : null;
+            const materAnim =
+              show?.materAnim &&
+              !isKing(shown) &&
+              s12?.san.includes('#') &&
+              sq === lastMoveSquares(s12)?.to
+                ? show.materAnim
+                : null;
+            const pieceAnim = kingAnim ?? materAnim;
             // position+zIndex lifts the piece above the tint layer —
             // positioned siblings otherwise paint over static content
             // regardless of DOM order (the pieces-fade-too bug).
@@ -1216,7 +1213,7 @@ function Board({
                   height: '100%',
                   position: 'relative',
                   zIndex: 1,
-                  ...(kingAnim ? { animation: kingAnim } : {}),
+                  ...(pieceAnim ? { animation: pieceAnim } : {}),
                 }}
               >
                 <PieceImg code={shown} set={prefs.pieceSet} />

@@ -23,7 +23,8 @@ export type SoundName =
   | 'notify'   // session begins: your game, an observe, an examine
   | 'victory'
   | 'defeat'
-  | 'draw';
+  | 'draw'
+  | 'explosion'; // the boom end-show's extra
 
 const FILES: Record<SoundName, string> = {
   move: 'Move',
@@ -33,6 +34,7 @@ const FILES: Record<SoundName, string> = {
   victory: 'Victory',
   defeat: 'Defeat',
   draw: 'Draw',
+  explosion: 'Explosion',
 };
 
 // Subtle: moves whisper, verdicts speak.
@@ -44,6 +46,7 @@ const VOLUME: Record<SoundName, number> = {
   victory: 0.6,
   defeat: 0.6,
   draw: 0.6,
+  explosion: 0.55,
 };
 
 /** Which sound a just-played SAN deserves; null for "none played". */
@@ -62,6 +65,15 @@ export function gameEndSound(
   end: GameEndMessage,
   loggedInAs: string | null,
 ): SoundName {
+  // Aborted/adjourned/unknown endings are nobody's victory — the old
+  // fallthrough handed black a Victory chord for an aborted game.
+  if (
+    end.type !== GameEndType.WHITE_WON &&
+    end.type !== GameEndType.BLACK_WON &&
+    end.type !== GameEndType.DRAW
+  ) {
+    return 'notify';
+  }
   const me = loggedInAs?.toLowerCase();
   const isWhite = me === end.whiteName.toLowerCase();
   const isBlack = me === end.blackName.toLowerCase();
