@@ -360,8 +360,33 @@ describe('MovesParser ratings (2026-08-12)', () => {
   });
 
   it('leaves guests and UNR empty', () => {
-    const m = parser.parse(block('GuestABCD (++++) vs. cday (UNR) --- Tue Aug 12, 2026'))!;
+    const m = parser.parse(block('GuestABCD (++++) vs. WoodPusher (UNR) --- Tue Aug 12, 2026'))!;
     expect(m.whiteRating).toBe('');
     expect(m.blackRating).toBe('');
+  });
+});
+
+describe('MovesParser flavor fields (2026-08-12)', () => {
+  const parser = new MovesParser();
+  const block = (descLine: string) => [
+    '',
+    'Movelist for game 8:',
+    'GuestA (++++) vs. GuestB (++++) --- Tue Aug 12, 2026',
+    descLine,
+    'Move  GuestA             GuestB',
+    '----  ----------------   ----------------',
+    '  1.  e4       (0:00.000)   e5       (0:00.000)',
+    '       {Still in progress} *',
+  ].join('\n');
+
+  it("reads ratedness and clocks — the status line's 'Lightning 1 0 u'", () => {
+    const m = parser.parse(block('Unrated lightning match, initial time: 1 minutes, increment: 0 seconds.'))!;
+    expect(m.isRated).toBe(false);
+    expect(m.initialMinutes).toBe(1);
+    expect(m.incrementSeconds).toBe(0);
+    const r = parser.parse(block('Rated blitz match, initial time: 3 minutes, increment: 12 seconds.'))!;
+    expect(r.isRated).toBe(true);
+    expect(r.initialMinutes).toBe(3);
+    expect(r.incrementSeconds).toBe(12);
   });
 });

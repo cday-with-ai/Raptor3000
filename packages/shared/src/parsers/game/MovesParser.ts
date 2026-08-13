@@ -56,6 +56,9 @@ export class MovesParser implements ChunkParser<MovesMessage> {
     let gameType: string;
     let whiteRating = '';
     let blackRating = '';
+    let isRated: boolean | null = null;
+    let initialMinutes: number | null = null;
+    let incrementSeconds: number | null = null;
     try {
       const headerTok = new RaptorTokenizer(input.substring(firstColon), '\n');
       headerTok.nextToken();                     // ":"
@@ -70,8 +73,17 @@ export class MovesParser implements ChunkParser<MovesMessage> {
       }
       const descLine = headerTok.nextToken();    // "Rated <variant> match, initial..."
       const descTok = new RaptorTokenizer(descLine, ' ');
-      descTok.nextToken();                       // Rated | Unrated
+      const ratedness = descTok.nextToken();     // Rated | Unrated
       gameType = descTok.nextToken();            // variant
+      // Ratedness + clocks ride the same line — kept for the status
+      // flavor, which must survive the G1 wipe at game end.
+      if (/^rated$/i.test(ratedness)) isRated = true;
+      else if (/^unrated$/i.test(ratedness)) isRated = false;
+      const clocks = /initial time:\s*(\d+)\s*minutes?,\s*increment:\s*(\d+)/i.exec(descLine);
+      if (clocks) {
+        initialMinutes = parseInt(clocks[1], 10);
+        incrementSeconds = parseInt(clocks[2], 10);
+      }
     } catch {
       return null;
     }
@@ -124,6 +136,17 @@ export class MovesParser implements ChunkParser<MovesMessage> {
       }
     }
 
-    return { gameId, moves, timePerMove, style12, gameType, whiteRating, blackRating };
+    return {
+      gameId,
+      moves,
+      timePerMove,
+      style12,
+      gameType,
+      isRated,
+      initialMinutes,
+      incrementSeconds,
+      whiteRating,
+      blackRating,
+    };
   }
 }

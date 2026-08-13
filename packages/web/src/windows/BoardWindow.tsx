@@ -501,12 +501,29 @@ function gameFlavor(context: RaptorContext, gameId: string | null): string | nul
   if (!gameId) return null;
   const g1 = context.gameService.getLatestG1(gameId);
   if (g1) {
-    const mins = Math.round(g1.initialWhiteTimeMillis / 60000);
-    const inc = Math.round(g1.initialWhiteIncMillis / 1000);
-    return `${g1.gameTypeDescription} ${mins} ${inc}`.trim();
+    return flavorText(
+      g1.gameTypeDescription,
+      Math.round(g1.initialWhiteTimeMillis / 60000),
+      Math.round(g1.initialWhiteIncMillis / 1000),
+      g1.isRated,
+    );
   }
   const mm = context.gameService.getLatestMoves(gameId);
-  return mm?.gameType ?? null;
+  if (!mm?.gameType) return null;
+  return flavorText(mm.gameType, mm.initialMinutes, mm.incrementSeconds, mm.isRated);
+}
+
+/** `Lightning 1 0 u` — FICS terminology, title-cased (Carson's spec). */
+function flavorText(
+  type: string,
+  mins: number | null,
+  inc: number | null,
+  rated: boolean | null,
+): string {
+  const parts = [type.charAt(0).toUpperCase() + type.slice(1)];
+  if (mins !== null && inc !== null) parts.push(String(mins), String(inc));
+  if (rated !== null) parts.push(rated ? 'r' : 'u');
+  return parts.join(' ');
 }
 
 /** `1-0`, `0-1`, `½-½`, `Adjourned`, `Aborted` — the big overlay text. */

@@ -15,6 +15,13 @@ export interface MovesMessage {
    */
   readonly style12: Style12Message | null;
   readonly gameType: string;
+  /** From the header's "Rated/Unrated <variant> match" line; null when
+   *  the header didn't parse. These survive game end (G1 does not), so
+   *  the status flavor — "Lightning 1 0 u" — stays complete on
+   *  inactive boards. */
+  readonly isRated: boolean | null;
+  readonly initialMinutes: number | null;
+  readonly incrementSeconds: number | null;
   /** From the header line `laikun (2106) vs. zabakov (2021) --- …`.
    *  Empty string when the header shows no digits (guests, UNR). */
   readonly whiteRating: string;
