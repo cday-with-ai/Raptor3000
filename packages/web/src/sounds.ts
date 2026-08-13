@@ -76,9 +76,8 @@ export function gameEndSound(
 // browser caches the fetch, currentTime rewinds for rapid replays.
 const cache = new Map<SoundName, HTMLAudioElement>();
 
-export function playSound(name: SoundName): void {
-  if (loadPreferences().soundMode !== 'on') return;
-  if (typeof Audio === 'undefined') return; // node tests
+/** Play in THIS window's document; rejects under autoplay policy. */
+function playHere(name: SoundName): Promise<void> {
   let a = cache.get(name);
   if (!a) {
     a = new Audio(`/sound/piano/${FILES[name]}.mp3`);
@@ -86,7 +85,34 @@ export function playSound(name: SoundName): void {
   }
   a.volume = VOLUME[name];
   a.currentTime = 0;
-  void a.play().catch(() => {
-    // Autoplay policy: no gesture in this window yet. Stay silent.
+  return a.play();
+}
+
+declare global {
+  interface Window {
+    /** Cross-window sound relay; every window running the bundle registers its own. */
+    raptorPlaySound?: (name: SoundName) => Promise<void>;
+  }
+}
+if (typeof window !== 'undefined') window.raptorPlaySound = playHere;
+
+export function playSound(name: SoundName): void {
+  if (loadPreferences().soundMode !== 'on') return;
+  if (typeof Audio === 'undefined') return; // node tests
+  void playHere(name).catch(() => {
+    // Autoplay policy: no gesture in THIS window yet — which is every
+    // observed board, watched but never clicked. The main window holds
+    // the user's gestures (login, commands), so relay the note to the
+    // opener and let it speak for the popup.
+    try {
+      const opener = window.opener as Window | null;
+      if (opener && !opener.closed) {
+        void opener.raptorPlaySound?.(name).catch(() => {
+          // The opener has no gesture either. Stay silent, as before.
+        });
+      }
+    } catch {
+      // Cross-origin or half-dead opener: stay silent, as before.
+    }
   });
 }
