@@ -938,7 +938,15 @@ function Board({
   }, [s12]);
 
   // Live-position decorations don't apply to a viewed historical one.
-  const lastMove = !viewing && s12 ? lastMoveSquares(s12) : null;
+  // While PLAYING, only the OPPONENT's move gets the tint (Carson): you
+  // know where your own piece just went, and tinting it on every echo
+  // read as the board shaking.
+  const lastMoverWasMe =
+    mode === BoardMode.PLAYING &&
+    s12 !== undefined &&
+    !s12.isWhitesMoveAfterMoveIsMade === !s12.isWhiteOnTop;
+  const lastMove =
+    !viewing && !lastMoverWasMe && s12 ? lastMoveSquares(s12) : null;
 
   const kingInCheckSq =
     !viewing && s12 && s12.san.includes('+') ? findKingSquareInCheck(s12) : null;
@@ -1158,8 +1166,9 @@ function Board({
                 position: 'absolute',
                 inset: 0,
                 background: lastMoveTint,
-                animation: 'raptor-fade-out 2.5s ease-out forwards',
+                animation: 'raptor-tint-fade 2.5s ease-out forwards',
                 pointerEvents: 'none',
+                zIndex: 0,
               }}
             />
           )}
@@ -1180,12 +1189,21 @@ function Board({
               theater && !viewing && gameEnd && isKing(shown)
                 ? kingTheaterAnimation(gameEnd, isWhitePiece(shown))
                 : null;
-            return kingAnim ? (
-              <div style={{ width: '100%', height: '100%', animation: kingAnim }}>
+            // position+zIndex lifts the piece above the tint layer —
+            // positioned siblings otherwise paint over static content
+            // regardless of DOM order (the pieces-fade-too bug).
+            return (
+              <div
+                style={{
+                  width: '100%',
+                  height: '100%',
+                  position: 'relative',
+                  zIndex: 1,
+                  ...(kingAnim ? { animation: kingAnim } : {}),
+                }}
+              >
                 <PieceImg code={shown} set={prefs.pieceSet} />
               </div>
-            ) : (
-              <PieceImg code={shown} set={prefs.pieceSet} />
             );
           })()}
           {showRankLabel && (

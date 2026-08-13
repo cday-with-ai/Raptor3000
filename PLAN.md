@@ -661,6 +661,12 @@ the client plays. What remains, in rough order of value:
 5. **Ratings in the board info bands.** The bands show name + clock;
    FICS sends ratings in `<g1>` (`rt=1586E,2100`) and G1Message already
    parses. Chess Ascent shows a rating badge there; parity says we should.
+5aa. **The shake, but on purpose.** Carson, 2026-08-12, about the old
+   full-opacity tint fade: "a cool effect maybe we can save for later
+   when we make awesome moves or something take note of it." The
+   accidental piece-emergence shimmer could become a deliberate
+   celebration for brilliant moves (engine says eval jumped, or mate
+   delivered) — parked, not scheduled.
 5a. **Mobile, if it ever matters.** 2026-08-12: shipped the honest
    version — `mobile.ts` detection + a login-screen note that this is a
    windowed desktop app (Carson pre-approved the note path if a switcher

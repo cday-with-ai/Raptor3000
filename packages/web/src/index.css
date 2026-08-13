@@ -105,9 +105,15 @@ body,
   background: var(--scroll-thumb-hover);
 }
 
-/* Last-move tint fade (board windows). */
+/* Last-move tint fade (board windows). Starts translucent: the tint is
+   a color wash on the square, not a curtain over it — full opacity was
+   what made pieces "fade in" on every move (Carson's shake report). */
 @keyframes raptor-fade-out {
   from { opacity: 1; }
+  to { opacity: 0; }
+}
+@keyframes raptor-tint-fade {
+  from { opacity: 0.55; }
   to { opacity: 0; }
 }
 
