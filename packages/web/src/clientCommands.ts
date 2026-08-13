@@ -32,28 +32,26 @@ const ADD_TAB_RE = /^\+tab\s+(\S+)$/i;
 const LIST_HEADER = /--\s+(censor|noplay) list:\s*(\d+) names?\s*--/i;
 
 /**
- * The harvester for one `clear <list>` run. Feed it every incoming
- * console message; it returns true when finished (its caller should
- * then uninstall it).
+ * The list-reply state machine both harvesters share. Feed it every
+ * incoming SERVER message (UNKNOWN events only — the 2026-08-12 flood
+ * proved what happens when a harvester eats its own OUTBOUND echoes);
+ * `onName` fires per harvested name, `onDone(count | null)` fires once
+ * — null means it gave up without ever seeing the header. Returns true
+ * when finished so the caller can uninstall it.
  */
-export function makeListClearer(
+function makeListHarvester(
   kind: 'censor' | 'noplay',
-  host: Pick<ClientCommandHost, 'send' | 'announce'>,
+  onName: (name: string) => void,
+  onDone: (count: number | null) => void,
 ): (message: string) => boolean {
   let expected: number | null = null; // null = header not seen yet
-  let removed = 0;
+  let seen = 0;
   let fed = 0;
   return message => {
-    // Give-up valve: if the header never arrives (or the list never
-    // completes), die quietly instead of watching the console forever.
-    // The 2026-08-12 live test also proved the flood failure mode: fed
-    // its own OUTBOUND echoes, a harvester can self-oscillate — the
-    // caller must only feed server text (UNKNOWN events), and this cap
-    // bounds the blast radius if that contract is ever broken again.
+    // Give-up valve: bounds the blast radius even if the feed contract
+    // is ever broken again.
     if (++fed > 50) {
-      if (expected !== null) {
-        host.announce(`Gave up clearing your ${kind} list after ${removed} removals.`);
-      }
+      onDone(expected === null ? null : seen);
       return true;
     }
     if (expected === null) {
@@ -61,7 +59,7 @@ export function makeListClearer(
       if (!header || header[1].toLowerCase() !== kind) return false;
       expected = parseInt(header[2], 10);
       if (expected === 0) {
-        host.announce(`Your ${kind} list is already empty.`);
+        onDone(0);
         return true;
       }
       // Names may share the header's message (our parser sometimes
@@ -72,15 +70,70 @@ export function makeListClearer(
       // FICS handles are 3–17 letters; anything else on these lines
       // (prompts, timestamps, stray punctuation) is not a name.
       if (!/^[a-zA-Z]{3,17}$/.test(token)) continue;
-      host.send(`-${kind} ${token}`);
-      removed++;
-      if (removed >= expected) {
-        host.announce(`Removed ${removed} ${removed === 1 ? 'name' : 'names'} from your ${kind} list.`);
+      onName(token);
+      seen++;
+      if (seen >= expected) {
+        onDone(seen);
         return true;
       }
     }
     return false;
   };
+}
+
+/** The `clear censor` / `clear noplay` harvester: removes each name. */
+export function makeListClearer(
+  kind: 'censor' | 'noplay',
+  host: Pick<ClientCommandHost, 'send' | 'announce'>,
+): (message: string) => boolean {
+  return makeListHarvester(
+    kind,
+    name => host.send(`-${kind} ${name}`),
+    count => {
+      if (count === null) return; // never saw the header; die quietly
+      host.announce(
+        count === 0
+          ? `Your ${kind} list is already empty.`
+          : `Removed ${count} ${count === 1 ? 'name' : 'names'} from your ${kind} list.`,
+      );
+    },
+  );
+}
+
+/**
+ * The silent collector (censor-aware backfill, Carson 2026-08-13):
+ * reads the list into a Set and hands it over, announcing nothing.
+ */
+export function makeListCollector(
+  kind: 'censor' | 'noplay',
+  onCollected: (names: ReadonlySet<string>) => void,
+): (message: string) => boolean {
+  const names = new Set<string>();
+  return makeListHarvester(
+    kind,
+    name => names.add(name.toLowerCase()),
+    () => onCollected(names),
+  );
+}
+
+/**
+ * Live censor-list sync: watch what the user (or FICS) says about the
+ * list and update a local Set. `+censor bob` / `-censor bob` outbound,
+ * and FICS's own confirmations, both count.
+ */
+const CENSOR_EDIT_OUT = /^([+-])censor\s+([a-zA-Z]{3,17})$/i;
+const CENSOR_EDIT_CONFIRM = /\[([a-zA-Z]{3,17})\] (added to|removed from) your censor list/i;
+
+export function censorEditIn(
+  message: string,
+  isOutbound: boolean,
+): { name: string; add: boolean } | null {
+  if (isOutbound) {
+    const m = CENSOR_EDIT_OUT.exec(message.trim());
+    return m ? { name: m[2].toLowerCase(), add: m[1] === '+' } : null;
+  }
+  const m = CENSOR_EDIT_CONFIRM.exec(message);
+  return m ? { name: m[1].toLowerCase(), add: m[2] === 'added to' } : null;
 }
 
 /**

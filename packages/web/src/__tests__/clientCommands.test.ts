@@ -1,6 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import {
+  censorEditIn,
   makeListClearer,
+  makeListCollector,
   runClientCommand,
   type ClientCommandHost,
 } from '../clientCommands.js';
@@ -119,5 +121,42 @@ describe('everything else passes through', () => {
       expect(runClientCommand(line, h.host), line).toBe(false);
     }
     expect(h.sent).toEqual([]);
+  });
+});
+
+describe('makeListCollector (censor-aware backfill, 2026-08-13)', () => {
+  it('collects the list silently, lowercased, across split lines', () => {
+    let got: ReadonlySet<string> | null = null;
+    const feed = makeListCollector('censor', names => (got = names));
+    expect(feed('-- censor list: 3 names --')).toBe(false);
+    expect(feed('BadSport annoyer')).toBe(false);
+    expect(feed('ThirdGuy')).toBe(true);
+    expect([...got!].sort()).toEqual(['annoyer', 'badsport', 'thirdguy']);
+  });
+
+  it('an empty list hands over an empty set', () => {
+    let got: ReadonlySet<string> | null = null;
+    makeListCollector('censor', names => (got = names))('-- censor list: 0 names --');
+    expect(got!.size).toBe(0);
+  });
+});
+
+describe('censorEditIn', () => {
+  it('reads your own +censor/-censor sends', () => {
+    expect(censorEditIn('+censor BadSport', true)).toEqual({ name: 'badsport', add: true });
+    expect(censorEditIn('-censor BadSport', true)).toEqual({ name: 'badsport', add: false });
+    expect(censorEditIn('tell 39 +censor jokes', true)).toBeNull();
+  });
+
+  it("reads FICS's confirmations", () => {
+    expect(censorEditIn('[GriffyJr] added to your censor list.', false)).toEqual({
+      name: 'griffyjr',
+      add: true,
+    });
+    expect(censorEditIn('[GriffyJr] removed from your censor list.', false)).toEqual({
+      name: 'griffyjr',
+      add: false,
+    });
+    expect(censorEditIn('GuestX tells you: censor me', false)).toBeNull();
   });
 });

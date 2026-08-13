@@ -7,7 +7,7 @@ import {
   mergeHistory,
   parseChannels,
 } from '../channelHistory.js';
-import { runClientCommand } from '../clientCommands.js';
+import { censorEditIn, makeListCollector, runClientCommand } from '../clientCommands.js';
 import {
   loadPreferences,
   type AppPreferences,
@@ -72,6 +72,19 @@ export const ChatWindow = function ChatWindow({
         ) {
           harvestRef.current = null;
         }
+        // Censor-list sync: your own +censor/-censor sends and FICS's
+        // confirmations both move the local set.
+        if (e.message && (e.type === ChatEventType.OUTBOUND || e.type === ChatEventType.UNKNOWN)) {
+          const edit = censorEditIn(e.message, e.type === ChatEventType.OUTBOUND);
+          if (edit) {
+            setCensored(prev => {
+              const next = new Set(prev);
+              if (edit.add) next.add(edit.name);
+              else next.delete(edit.name);
+              return next;
+            });
+          }
+        }
         setEvents(prev => {
           const next = prev.concat(e);
           if (next.length > MAX_EVENTS) next.splice(0, next.length - MAX_EVENTS);
@@ -88,6 +101,15 @@ export const ChatWindow = function ChatWindow({
   // scrolling up shows the conversation from before login. Its channel
   // tabs also appear immediately instead of waiting for the first live
   // tell. Failures are silent — backfill must never break the console.
+  // Seed the censor set once per window, invisibly.
+  const censorSeeded = useRef(false);
+  useEffect(() => {
+    if (censorSeeded.current) return;
+    censorSeeded.current = true;
+    harvestRef.current = makeListCollector('censor', names => setCensored(names));
+    context.connector.sendMessageHidden('=censor');
+  }, [context]);
+
   const backfilled = useRef(false);
   useEffect(() => {
     if (backfilled.current) return;
@@ -108,6 +130,12 @@ export const ChatWindow = function ChatWindow({
 
   // Tabs opened by `+tab` (window-local, like everything else here).
   const [manualTabs, setManualTabs] = useState<readonly string[]>([]);
+  // The user's censor list, kept live (Carson, 2026-08-13): seeded from
+  // a hidden `=censor` at open, then synced as they type +censor /
+  // -censor (or FICS confirms one). Backfilled history is filtered
+  // against it — the chessascent logger doesn't know who anyone
+  // censors, so the client must.
+  const [censored, setCensored] = useState<ReadonlySet<string>>(new Set());
   // The pending `clear censor`/`clear noplay` harvester, fed by every
   // incoming console message until it reports done.
   const harvestRef = useRef<((message: string) => boolean) | null>(null);
@@ -118,8 +146,16 @@ export const ChatWindow = function ChatWindow({
 
   const activeTab = tabs.find(t => t.id === activeTabId) ?? tabs[0];
   const tabEvents = useMemo(
-    () => events.filter(e => tabAccepts(activeTab, e)),
-    [events, activeTab],
+    () =>
+      events.filter(
+        e =>
+          tabAccepts(activeTab, e) &&
+          // Censored people don't come through — matters for backfill
+          // (the logger doesn't know your list); live traffic FICS
+          // already filters server-side.
+          (!e.source || !censored.has(e.source.toLowerCase())),
+      ),
+    [events, activeTab, censored],
   );
 
   const prefs = useLivePreferences();
