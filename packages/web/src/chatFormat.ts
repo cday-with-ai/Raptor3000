@@ -98,8 +98,19 @@ export function gameLineKind(message: string): 'gameStart' | 'gameEnd' | null {
   return null;
 }
 
-/** An outbound channel tell, if this outbound line is one. */
-const OUTBOUND_CHANNEL_RE = /^tell\s+(\d+)\s+([\s\S]+)$/i;
+/**
+ * An outbound tell in ANY form FICS accepts — Carson's 2026-08-13 bug:
+ * he typed a shorthand tell to 39 and it rendered in main as a raw
+ * `>` echo, because only the literal `tell ` prefix was recognized.
+ * FICS resolves t/te/tel as tell, and xtell is tell-without-retarget.
+ */
+const OUTBOUND_TELL_RE = /^(?:t|te|tel|tell|xtell)\s+(\S+)\s+([\s\S]+)$/i;
+
+/** {target, body} for any outbound tell form, else null. */
+export function outboundTell(message: string): { target: string; body: string } | null {
+  const m = OUTBOUND_TELL_RE.exec(message);
+  return m ? { target: m[1], body: m[2] } : null;
+}
 
 /**
  * The display text for an event (no timestamp prefix). `ownHandle` makes
@@ -110,8 +121,10 @@ export function lineBody(e: ChatEvent, ownHandle: string | null): string {
     case ChatEventType.INTERNAL:
       return `· ${e.message}`;
     case ChatEventType.OUTBOUND: {
-      const m = OUTBOUND_CHANNEL_RE.exec(e.message);
-      if (m && ownHandle) return `${ownHandle}(${m[1]}): ${decode(m[2])}`;
+      const t = outboundTell(e.message);
+      if (t && ownHandle && /^\d+$/.test(t.target)) {
+        return `${ownHandle}(${t.target}): ${decode(t.body)}`;
+      }
       return `> ${decode(e.message)}`;
     }
     case ChatEventType.TELL:

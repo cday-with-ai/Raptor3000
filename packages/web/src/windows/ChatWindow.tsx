@@ -18,6 +18,7 @@ import {
   chatColorFor,
   lineBody,
   listOwnerFrom,
+  outboundTell,
   rowAction,
 } from '../chatFormat.js';
 
@@ -499,9 +500,9 @@ function deriveTabs(
         }
         break;
       case ChatEventType.OUTBOUND: {
-        const m = /^tell\s+(\S+)\s+/i.exec(e.message);
-        if (m) {
-          const target = m[1];
+        const t = outboundTell(e.message);
+        if (t) {
+          const target = t.target;
           if (/^\d+$/.test(target)) {
             if (!channels.has(target)) {
               channels.set(target, {
@@ -593,7 +594,7 @@ function tabAcceptsBy(tab: Tab, e: ChatEvent): boolean {
       // Channel-scoped internal notes (the history separator).
       if (e.type === ChatEventType.INTERNAL && e.channel === tab.channel) return true;
       if (e.type === ChatEventType.OUTBOUND) {
-        return e.message.startsWith(`tell ${tab.channel} `);
+        return outboundTell(e.message)?.target === tab.channel;
       }
       return false;
     }
@@ -602,7 +603,7 @@ function tabAcceptsBy(tab: Tab, e: ChatEvent): boolean {
       if (e.type === ChatEventType.TELL && e.source?.toLowerCase() === target) return true;
       if (e.type === ChatEventType.TOLD && e.source?.toLowerCase() === target) return true;
       if (e.type === ChatEventType.OUTBOUND) {
-        return e.message.toLowerCase().startsWith(`tell ${target} `);
+        return outboundTell(e.message)?.target.toLowerCase() === target;
       }
       return false;
     }

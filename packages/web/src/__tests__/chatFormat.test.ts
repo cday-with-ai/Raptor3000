@@ -25,6 +25,13 @@ describe('lineBody', () => {
     expect(lineBody(e, 'cday')).toBe('cday(39): chessascent.app is back');
   });
 
+  it("shorthand tells route like full ones — Carson's t-39-went-to-main bug", () => {
+    const e = ev(ChatEventType.OUTBOUND, { message: 't 39 short form works' });
+    expect(lineBody(e, 'cday')).toBe('cday(39): short form works');
+    const x = ev(ChatEventType.OUTBOUND, { message: 'xtell 39 also works' });
+    expect(lineBody(x, 'cday')).toBe('cday(39): also works');
+  });
+
   it('falls back to the > echo without a handle or for non-channel sends', () => {
     const e = ev(ChatEventType.OUTBOUND, { message: 'tell 39 hi' });
     expect(lineBody(e, null)).toBe('> tell 39 hi');
