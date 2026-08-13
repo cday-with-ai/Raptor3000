@@ -754,7 +754,15 @@ function renderRich(line: string): React.ReactNode[] {
           </a>
         );
       case 'quote':
-        return <em key={i}>{t.value}</em>;
+        // Keep the quote characters visible — styling may set text off,
+        // but the console must not eat what the server sent.
+        return (
+          <em key={i}>
+            {t.quoteChar}
+            {t.value}
+            {t.quoteChar}
+          </em>
+        );
       default:
         return <span key={i}>{t.value}</span>;
     }

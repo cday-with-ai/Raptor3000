@@ -72,3 +72,30 @@ describe('richText tokenize', () => {
     });
   });
 });
+
+describe("contractions are not quotes (2026-08-13, sircmpwn's tell)", () => {
+  it('leaves apostrophes inside words alone', () => {
+    const line = "I'm getting the impression blore doesn't care for the USA";
+    const tokens = tokenize(line);
+    expect(tokens).toEqual([{ kind: 'text', value: line }]);
+  });
+
+  it('still recognizes a genuinely quoted span', () => {
+    const tokens = tokenize("he said 'good game' afterwards");
+    expect(tokens).toContainEqual({ kind: 'quote', value: 'good game', quoteChar: "'" });
+  });
+
+  it('a possessive before a real quote does not derail it', () => {
+    const tokens = tokenize("the players' favorite was 'the fried liver'");
+    const quotes = tokens.filter(t => t.kind === 'quote');
+    expect(quotes).toEqual([{ kind: 'quote', value: 'the fried liver', quoteChar: "'" }]);
+  });
+
+  it('double quotes are unaffected', () => {
+    expect(tokenize('say "hello world" now')).toContainEqual({
+      kind: 'quote',
+      value: 'hello world',
+      quoteChar: '"',
+    });
+  });
+});

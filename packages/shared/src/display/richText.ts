@@ -17,10 +17,13 @@ export type RichToken =
 // quote char, non-greedy, no nesting. We tokenize the input once, left to
 // right, to preserve ordering.
 //
-// The combined regex matches any of: URL, "..." quote, '...' quote, #N
-// channel mention. Each alternative is a named capture group.
+// Single quotes only count at WORD BOUNDARIES (2026-08-13): the naive
+// '[^']+' turned "I'm … doesn't" into an italic span from the apostrophe
+// in I'm to the one in doesn't — and ate both apostrophes (Carson's
+// screenshot). An apostrophe hugged by word characters is a contraction,
+// not a quote.
 const COMBINED_RE =
-  /\b(?:https?|ftp):\/\/[^\s<>"']+[^\s<>"',.)]|"[^"]+"|'[^']+'|#\d{1,3}\b/g;
+  /\b(?:https?|ftp):\/\/[^\s<>"']+[^\s<>"',.)]|"[^"]+"|(?<!\w)'[^']+'(?!\w)|#\d{1,3}\b/g;
 
 /**
  * Hint set for username-looking tokens. We tokenize names only when the
