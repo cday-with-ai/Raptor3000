@@ -8,6 +8,29 @@ Modern web FICS chess client. Spiritual successor to Raptor (2005–2016), rebui
 with an event-driven architecture that cleanly separates FICS-protocol parsing
 from UI concerns.
 
+## Screenshots
+
+Playing (10+5 unrated between two guests):
+
+![gameplay](docs/screenshots/gameplay.gif)
+
+Observing a rated standard game — opening detection, figurine move list,
+Stockfish with SAN lines:
+
+![observing](docs/screenshots/observing.jpg)
+
+| Playing | Chat (Decaf split) |
+|---|---|
+| ![playing](docs/screenshots/playing.jpg) | ![chat](docs/screenshots/chat-split.jpg) |
+
+| Seek graph (live, click to play) | Options |
+|---|---|
+| ![seek graph](docs/screenshots/seek-graph.jpg) | ![options](docs/screenshots/options.jpg) |
+
+The landing:
+
+![landing](docs/screenshots/landing.jpg)
+
 ## Credit
 
 **The chat event system — taxonomy, parser contract, priority-ordered parser

@@ -239,6 +239,14 @@ export function LoginScreen({
           Login
         </button>
         </form>
+        {/* What's inside — shots refresh via scripts/screenshots.mjs. */}
+        <div style={galleryRow}>
+          {GALLERY.map(([file, alt]) => (
+            <a key={file} href={`/screenshots/${file}`} target="_blank" rel="noreferrer">
+              <img src={`/screenshots/${file}`} alt={alt} style={galleryThumb} loading="lazy" />
+            </a>
+          ))}
+        </div>
       </div>
     </div>
   );
@@ -289,6 +297,30 @@ function StarField() {
     </>
   );
 }
+
+const GALLERY: ReadonlyArray<[string, string]> = [
+  ['observing.jpg', 'observing a game with engine analysis'],
+  ['playing.jpg', 'playing a blitz game'],
+  ['chat-split.jpg', 'the chat console in split view'],
+  ['seek-graph.jpg', 'the live seek graph'],
+];
+
+const galleryRow = {
+  display: 'flex',
+  gap: 10,
+  margin: '18px 0 24px',
+  flexWrap: 'wrap',
+  justifyContent: 'center',
+  maxWidth: 640,
+} as const;
+
+const galleryThumb = {
+  width: 148,
+  borderRadius: 6,
+  border: '1px solid #3d4c6e',
+  display: 'block',
+  opacity: 0.92,
+} as const;
 
 const loginIcon = {
   width: 72,
