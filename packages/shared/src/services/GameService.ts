@@ -1,4 +1,5 @@
 import type { Offer } from '../models/Offer.js';
+import type { Seek } from '../models/Seek.js';
 import type { GameInfo } from '../models/GameInfo.js';
 import type { Style12Message } from '../models/messages/Style12Message.js';
 import type { G1Message } from '../models/messages/G1Message.js';
@@ -34,6 +35,9 @@ export interface GameServiceListener {
 
   /** Called when the public games list changes. */
   gameInfoChanged?(gameInfos: readonly GameInfo[]): void;
+
+  /** Called whenever the outstanding-seeks set changes (seekinfo). */
+  seeksChanged?(seeks: readonly Seek[]): void;
 
   /** Called when a game's move history was populated (e.g. `moves` response). */
   gameMovesAdded?(gameId: string): void;
@@ -141,6 +145,36 @@ export class GameService {
 
   /** The end-of-game message, kept PAST forgetGame — the result overlay
    *  and the move-list result line read it after the game is gone. */
+  // ---- seekinfo (the seek graph's feed, 2026-08-13) ----
+
+  private seeks = new Map<string, Seek>();
+
+  getSeeks(): readonly Seek[] {
+    return [...this.seeks.values()];
+  }
+
+  recordSeekAdd(seek: Seek): void {
+    this.seeks.set(seek.ad, seek);
+    this.fireSeeksChanged();
+  }
+
+  recordSeekRemovals(ads: readonly string[]): void {
+    let changed = false;
+    for (const ad of ads) changed = this.seeks.delete(ad) || changed;
+    if (changed) this.fireSeeksChanged();
+  }
+
+  clearSeeks(): void {
+    if (this.seeks.size === 0) return;
+    this.seeks.clear();
+    this.fireSeeksChanged();
+  }
+
+  private fireSeeksChanged(): void {
+    const snapshot = this.getSeeks();
+    for (const l of this.listeners) l.seeksChanged?.(snapshot);
+  }
+
   recordGameEnd(msg: GameEndMessage): void {
     this.latestGameEnd.set(msg.gameId, msg);
   }

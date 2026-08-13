@@ -10,3 +10,4 @@ export { SoughtParser } from './SoughtParser.js';
 export { GameInfoParser } from './GameInfoParser.js';
 export { MovesParser } from './MovesParser.js';
 export { RaptorTokenizer, timeToLong } from './tokenizer.js';
+export * from './SeekInfoParser.js';

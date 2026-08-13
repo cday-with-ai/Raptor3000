@@ -1,4 +1,5 @@
 import { ChatEventType } from '../events/ChatEventType.js';
+import { SeekInfoParser } from './game/SeekInfoParser.js';
 import { makeChatEvent, type ChatEvent } from '../events/ChatEvent.js';
 import type { ChatEventParser } from './ChatEventParser.js';
 import type { GameService } from '../services/GameService.js';
@@ -123,6 +124,9 @@ export class FicsParser {
    * parseStream() uses this; parse() is chunk-complete and doesn't touch it.
    */
   private lineBuffer = '';
+
+  /** Typed seekinfo parsing — always on; the lines were eaten anyway. */
+  private readonly seekInfo = new SeekInfoParser();
 
   constructor(config: FicsParserConfig) {
     this.chatParsers = config.chatParsers;
@@ -375,6 +379,19 @@ export class FicsParser {
         }
       } catch {
         if (line.startsWith('<b1>')) { trimAtEnd = true; continue; }
+      }
+
+      // seekinfo — eat. <s> adds an ad, <sr> removes some, <sc> clears.
+      if (line.startsWith('<s> ') || line.startsWith('<sr>') || line.startsWith('<sc>')) {
+        const seek = this.seekInfo.parseAdd(line);
+        if (seek) this.gameService?.recordSeekAdd(seek);
+        else if (this.seekInfo.isClear(line)) this.gameService?.clearSeeks();
+        else {
+          const removed = this.seekInfo.parseRemove(line);
+          if (removed) this.gameService?.recordSeekRemovals(removed);
+        }
+        trimAtEnd = true;
+        continue;
       }
 
       // If we reach here and the line is still a game-control prefix, eat
