@@ -158,6 +158,7 @@ export const ChatWindow = function ChatWindow({
     [events, activeTab, censored],
   );
 
+
   const prefs = useLivePreferences();
   const ownHandle = context.connector.getLoggedInAs?.() ?? null;
 
@@ -165,6 +166,22 @@ export const ChatWindow = function ChatWindow({
   // to the window itself): plain stream / one-line tabs / Decaf split.
   const layout = prefs.chatLayout;
   const setLayout = (l: ChatLayout) => saveLivePreference('chatLayout', l);
+  // The main console's stream. When tabs are visible (tabs/split
+  // layouts), content CLAIMED by an open tab leaves main — Decaf's
+  // rule, Carson's ask ("remove tabbed content from the console and
+  // move it into tabs if a tab is open"). Plain mode renders no tabs,
+  // so the one stream keeps everything. Closing a tab returns its
+  // traffic to main, because the claim check runs against LIVE tabs.
+  const mainEvents = useMemo(() => {
+    const claimants = tabs.filter(t => t.kind !== 'main');
+    const dedup = layout !== 'plain';
+    return events.filter(e => {
+      if (!tabAccepts(MAIN_TAB, e)) return false;
+      if (e.source && censored.has(e.source.toLowerCase())) return false;
+      if (dedup && claimants.some(t => tabAccepts(t, e))) return false;
+      return true;
+    });
+  }, [events, tabs, layout, censored]);
 
   // Split mode wants a tab above the pinned main console; sitting on
   // "main" there means an empty top pane. Adopt the first real tab as
@@ -257,7 +274,9 @@ export const ChatWindow = function ChatWindow({
       {layout !== 'split' || activeTab.kind === 'main' ? (
         <TabLog
           tab={layout === 'plain' ? MAIN_TAB : activeTab}
-          events={layout === 'plain' ? events.filter(e => tabAccepts(MAIN_TAB, e)) : tabEvents}
+          events={
+            layout === 'plain' || activeTab.kind === 'main' ? mainEvents : tabEvents
+          }
           prefs={prefs}
           ownHandle={ownHandle}
           onCommand={cmd => context.connector.sendMessage(cmd)}
@@ -282,7 +301,7 @@ export const ChatWindow = function ChatWindow({
           bottom={
             <TabLog
               tab={MAIN_TAB}
-              events={events.filter(e => tabAccepts(MAIN_TAB, e))}
+              events={mainEvents}
               prefs={prefs}
               ownHandle={ownHandle}
               onCommand={cmd => context.connector.sendMessage(cmd)}
@@ -397,12 +416,14 @@ function LayoutSwitcher({
 
 interface Tab {
   id: string;
-  kind: 'main' | 'channel' | 'person' | 'partner';
+  kind: 'main' | 'channel' | 'person' | 'partner' | 'game';
   label: string;
   /** For channel tabs. */
   channel?: string;
   /** For person tabs. */
   person?: string;
+  /** For game tabs (kibitz/whisper traffic). */
+  gameId?: string;
 }
 
 const MAIN_TAB: Tab = {
@@ -417,6 +438,7 @@ function deriveTabs(
 ): Tab[] {
   const channels = new Map<string, Tab>();
   const persons = new Map<string, Tab>();
+  const games = new Map<string, Tab>();
   let hasPartner = false;
   for (const target of manual) {
     if (/^\d+$/.test(target)) {
@@ -465,6 +487,17 @@ function deriveTabs(
       case ChatEventType.PARTNER_TELL:
         hasPartner = true;
         break;
+      case ChatEventType.KIBITZ:
+      case ChatEventType.WHISPER:
+        if (e.gameId && !games.has(e.gameId)) {
+          games.set(e.gameId, {
+            id: 'game:' + e.gameId,
+            kind: 'game',
+            label: 'game ' + e.gameId,
+            gameId: e.gameId,
+          });
+        }
+        break;
       case ChatEventType.OUTBOUND: {
         const m = /^tell\s+(\S+)\s+/i.exec(e.message);
         if (m) {
@@ -496,7 +529,7 @@ function deriveTabs(
       }
     }
   }
-  const list: Tab[] = [MAIN_TAB, ...channels.values(), ...persons.values()];
+  const list: Tab[] = [MAIN_TAB, ...channels.values(), ...persons.values(), ...games.values()];
   if (hasPartner) {
     list.push({
       id: 'partner',
@@ -533,6 +566,10 @@ function tabAcceptsById(tabId: string, e: ChatEvent): boolean {
       { id: 'partner', kind: 'partner', label: '' },
       e,
     );
+  }
+  if (tabId.startsWith('game:')) {
+    const gameId = tabId.slice(5);
+    return tabAcceptsBy({ id: tabId, kind: 'game', label: '', gameId }, e);
   }
   return false;
 }
@@ -572,6 +609,20 @@ function tabAcceptsBy(tab: Tab, e: ChatEvent): boolean {
     case 'partner': {
       if (e.type === ChatEventType.PARTNER_TELL) return true;
       if (e.type === ChatEventType.OUTBOUND) return e.message.startsWith('ptell ');
+      return false;
+    }
+    case 'game': {
+      // Kibitzes/whispers for THIS game (Carson: they belong with the
+      // game, not scrolling the console), plus your own outbound ones.
+      if (
+        (e.type === ChatEventType.KIBITZ || e.type === ChatEventType.WHISPER) &&
+        e.gameId === tab.gameId
+      ) {
+        return true;
+      }
+      if (e.type === ChatEventType.OUTBOUND) {
+        return /^(?:kibitz|whisper|xkibitz|xwhisper)\s/i.test(e.message);
+      }
       return false;
     }
   }
