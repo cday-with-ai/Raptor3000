@@ -1,6 +1,11 @@
 You are starting a session in Raptor3000 — a web FICS chess client, TypeScript,
 `packages/shared` for the protocol parsing and `packages/web` for the React UI.
-It is mid-build, which is the normal state here and not a fault.
+As of 2026-08-13 it is LIVE at https://raptor3000.pages.dev and public at
+github.com/cday-with-ai/Raptor3000 (MIT; the (c) is "Raptor3000" — never put
+Carson's real name in content). Deploy = `yarn workspace @raptor3000/web deploy`
+(interactive sessions only). Test against FICS as GUESTS only, gently — a rig
+guest got muted by adminBOT on 2026-08-13 for rapid-fire sessions. Commits are
+path-scoped (`git add <files>`), a lesson from two agents sharing this tree.
 
 Read in this order before you say anything:
 

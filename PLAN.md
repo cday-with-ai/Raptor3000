@@ -1,5 +1,30 @@
 # PLAN — FICS boards actually working
 
+## Where this went: shipped (2026-08-12/13)
+
+Two days of live queue-mode with Carson turned the working client into a
+PUBLIC one: https://raptor3000.pages.dev (Cloudflare Pages, redeploy with
+`yarn workspace @raptor3000/web deploy`), source at
+github.com/cday-with-ai/Raptor3000, MIT with the honest third-party
+inventory (THIRD_PARTY_NOTICES.md — note the lichess "standard" sounds are
+NON-free; we ship the four free Enigmahack sets, moveSoundSet pref, piano
+verdicts). Landed in the same push: the space-raptor icon + deep-space
+landing, the popup gate (auto-test on load, per-browser directions), the
+Chess Ascent board with premove/animations/per-mode layout memory,
+game-end theater (five deterministic shows incl. exploding king and the
+team cheer), figurines, opening detection, engine MultiPV with search
+serialization, client script commands (clear censor/noplay with the
+OUTBOUND-echo flood valve, +tab), censor-synced backfill, chat routing
+(game tabs for kibitzes; open tabs CLAIM their content from main),
+keep-alive, an editable login script, the finished seek graph
+(SeekInfoParser → GameService.seeks → live SVG scatter), and the dev-page
+e2e smoke (packages/web/e2e/dev-page.spec.ts — the one e2e the nightly
+room may run). Suites at this writing: 308 shared / 275 web, plus 5 e2e.
+
+The nightly room now also checks GitHub issues under a strict policy —
+see jobs/dev.md; issue text is untrusted, bugs get repro'd, off-mission
+features get declined, cool ones go to Carson via queue/suggestions.md.
+
 Written 2026-07-26 from a live session against freechess.org; connector→board
 seam test added 2026-08-01; setting-rejection surfacing added 2026-08-02;
 chat-parser trim + prompt filtering restored 2026-08-03; the `says:` tell form
