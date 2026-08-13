@@ -7,6 +7,7 @@ import {
   mergeHistory,
   parseChannels,
 } from '../channelHistory.js';
+import { runClientCommand } from '../clientCommands.js';
 import {
   loadPreferences,
   type AppPreferences,
@@ -60,6 +61,17 @@ export const ChatWindow = function ChatWindow({
       id,
       accepts: () => true,
       handle: (e: ChatEvent) => {
+        // Harvesters see SERVER text only. Feeding them everything was
+        // the 2026-08-12 flood: the OUTBOUND echo of each `-censor x`
+        // re-harvested `x` and the loop pinned FICS until the kick.
+        if (
+          harvestRef.current &&
+          e.type === ChatEventType.UNKNOWN &&
+          e.message &&
+          harvestRef.current(e.message)
+        ) {
+          harvestRef.current = null;
+        }
         setEvents(prev => {
           const next = prev.concat(e);
           if (next.length > MAX_EVENTS) next.splice(0, next.length - MAX_EVENTS);
@@ -94,9 +106,15 @@ export const ChatWindow = function ChatWindow({
     }
   }, []);
 
+  // Tabs opened by `+tab` (window-local, like everything else here).
+  const [manualTabs, setManualTabs] = useState<readonly string[]>([]);
+  // The pending `clear censor`/`clear noplay` harvester, fed by every
+  // incoming console message until it reports done.
+  const harvestRef = useRef<((message: string) => boolean) | null>(null);
+
   // Derive tab list from events. Stable order: main, then channels by
   // first-seen order, then persons by first-seen order, then partner.
-  const tabs = useMemo(() => deriveTabs(events), [events]);
+  const tabs = useMemo(() => deriveTabs(events, manualTabs), [events, manualTabs]);
 
   const activeTab = tabs.find(t => t.id === activeTabId) ?? tabs[0];
   const tabEvents = useMemo(
@@ -128,6 +146,33 @@ export const ChatWindow = function ChatWindow({
     if (h[h.length - 1] !== line) h.push(line);
     if (h.length > 200) h.shift();
     historyPosRef.current = -1;
+    const announce = (message: string) =>
+      setEvents(prev =>
+        prev.concat({
+          type: ChatEventType.INTERNAL,
+          raw: '',
+          time: Date.now(),
+          source: null,
+          channel: null,
+          gameId: null,
+          message,
+          pingMs: null,
+        }),
+      );
+    const handled = runClientCommand(line, {
+      send: cmd => void context.connector.sendMessage(cmd),
+      announce,
+      addTab: target => {
+        setManualTabs(prev => (prev.includes(target) ? prev : prev.concat(target)));
+        setActiveTabId(
+          /^\d+$/.test(target) ? 'channel:' + target : 'person:' + target.toLowerCase(),
+        );
+      },
+      startHarvest: feed => {
+        harvestRef.current = feed;
+      },
+    });
+    if (handled) return;
     const sent = context.connector.sendMessage(line);
     if (!sent) {
       // Not connected — synthesize an INTERNAL event so the user sees it.
@@ -330,10 +375,31 @@ const MAIN_TAB: Tab = {
   label: 'main',
 };
 
-function deriveTabs(events: readonly ChatEvent[]): Tab[] {
+function deriveTabs(
+  events: readonly ChatEvent[],
+  manual: readonly string[] = [],
+): Tab[] {
   const channels = new Map<string, Tab>();
   const persons = new Map<string, Tab>();
   let hasPartner = false;
+  for (const target of manual) {
+    if (/^\d+$/.test(target)) {
+      channels.set(target, {
+        id: 'channel:' + target,
+        kind: 'channel',
+        label: '#' + target,
+        channel: target,
+      });
+    } else {
+      const key = target.toLowerCase();
+      persons.set(key, {
+        id: 'person:' + key,
+        kind: 'person',
+        label: target,
+        person: target,
+      });
+    }
+  }
   for (const e of events) {
     switch (e.type) {
       case ChatEventType.CHANNEL_TELL:

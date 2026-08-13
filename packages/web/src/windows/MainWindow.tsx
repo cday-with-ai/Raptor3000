@@ -574,6 +574,39 @@ function HelpPage() {
         </p>
       </Section>
 
+      <Section title="Script commands">
+        <p style={helpP}>
+          A few lines the client handles itself (ported from Raptor's
+          aliases) — type them into any chat input:
+        </p>
+        <ul style={helpUl}>
+          <li>
+            <code style={code}>clear censor</code> /{' '}
+            <code style={code}>clear noplay</code> — fetches your list
+            and removes every name on it, one{' '}
+            <code style={code}>-censor</code> /{' '}
+            <code style={code}>-noplay</code> at a time.
+          </li>
+          <li>
+            <code style={code}>+tab 39</code> — opens a channel tab.{' '}
+            <code style={code}>+tab HammerTime</code> — opens a person
+            tab. Both are local: nothing is sent to the server.
+          </li>
+        </ul>
+        <p style={helpP}>
+          Everything else goes to FICS as typed —{' '}
+          <a
+            href="https://www.freechess.org/Help/AllFiles.html"
+            target="_blank"
+            rel="noreferrer"
+            style={helpLink}
+          >
+            the FICS command reference
+          </a>{' '}
+          documents the whole command set.
+        </p>
+      </Section>
+
       <Section title="Hide the browser address bar (app mode)">
         <p style={helpP}>
           Modern browsers require an address bar on regular tabs and popups for

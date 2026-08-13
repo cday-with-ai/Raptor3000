@@ -112,10 +112,13 @@ export function LoginScreen({
   }
 
   return (
-    <div style={{ ...shell, position: 'relative', overflow: 'auto', flexDirection: 'column' }}>
+    <div style={{ ...shell, position: 'relative', overflow: 'auto', flexDirection: 'column', justifyContent: 'flex-start' }}>
       <StarField />
-      {!popupsVerified() && <PopupGate />}
-      <form
+      {/* margin:auto centers when there's room and top-aligns (scrollable)
+          when there isn't — justify-center would clip the top instead. */}
+      <div style={{ margin: 'auto', display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '0 12px' }}>
+        {!popupsVerified() && <PopupGate />}
+        <form
         style={card}
         onSubmit={e => {
           e.preventDefault();
@@ -233,7 +236,8 @@ export function LoginScreen({
         <button type="submit" style={submitBtn}>
           Login
         </button>
-      </form>
+        </form>
+      </div>
     </div>
   );
 }
