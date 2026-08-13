@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { isMobileish } from '../mobile.js';
+import { isMobileish, shouldBlockMobile } from '../mobile.js';
 
 /**
  * The mobile note (2026-08-12): coarse pointer + small screen = the
@@ -27,5 +27,18 @@ describe('isMobileish', () => {
 
   it('node environment (no matchMedia/screen) is not mobile', () => {
     expect(isMobileish()).toBe(false);
+  });
+});
+
+describe('shouldBlockMobile (desktop-only, 2026-08-13)', () => {
+  const phone = { coarsePointer: true, shortSide: 390 };
+  it('blocks phones outright', () => {
+    expect(shouldBlockMobile(phone, false)).toBe(true);
+  });
+  it('the try-anyway override opens the gate', () => {
+    expect(shouldBlockMobile(phone, true)).toBe(false);
+  });
+  it('desktops never see the stop', () => {
+    expect(shouldBlockMobile({ coarsePointer: false, shortSide: 390 }, false)).toBe(false);
   });
 });

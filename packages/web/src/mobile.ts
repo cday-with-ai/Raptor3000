@@ -31,3 +31,34 @@ export function probeEnvironment(): MobileProbe {
 export function isMobileish(probe: MobileProbe = probeEnvironment()): boolean {
   return probe.coarsePointer && probe.shortSide < 900;
 }
+
+const OVERRIDE_KEY = 'raptor.mobileOverride';
+
+/**
+ * Whether to show the desktop-only stop instead of the app (Carson,
+ * 2026-08-13: "it doesnt even function on mobile … possibly desktop
+ * only"). The override is the escape hatch for tablet-with-keyboard
+ * setups — persisted so it's a one-time choice.
+ */
+export function shouldBlockMobile(
+  probe: MobileProbe = probeEnvironment(),
+  override: boolean = readMobileOverride(),
+): boolean {
+  return isMobileish(probe) && !override;
+}
+
+export function readMobileOverride(): boolean {
+  try {
+    return localStorage.getItem(OVERRIDE_KEY) === 'true';
+  } catch {
+    return false;
+  }
+}
+
+export function setMobileOverride(): void {
+  try {
+    localStorage.setItem(OVERRIDE_KEY, 'true');
+  } catch {
+    // storage unavailable: the stop returns next launch, so be it
+  }
+}

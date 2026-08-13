@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { isMobileish } from '../mobile.js';
+import { setMobileOverride, shouldBlockMobile } from '../mobile.js';
 import { PopupGate } from './PopupGate.js';
 import {
   PROFILE_NAMES,
@@ -111,6 +111,38 @@ export function LoginScreen({
     }
   }
 
+  const [blocked, setBlocked] = useState(() => shouldBlockMobile());
+  if (blocked) {
+    return (
+      <div style={{ ...shell, position: 'relative', overflow: 'auto', flexDirection: 'column', justifyContent: 'flex-start' }}>
+        <StarField />
+        <div style={mobileStop}>
+          <img src="/raptor3000.svg" alt="" style={{ width: 88, height: 88, margin: '0 auto 10px', display: 'block' }} />
+          <div style={{ fontSize: 22, fontWeight: 700, letterSpacing: '0.02em' }}>
+            Raptor3000 is a desktop app
+          </div>
+          <p style={{ lineHeight: 1.55, opacity: 0.9 }}>
+            Boards and chat open as <strong>real browser windows</strong>, driven
+            live from the chess server — phones can&apos;t do that, so the app
+            doesn&apos;t work here.
+          </p>
+          <p style={{ lineHeight: 1.55, opacity: 0.9 }}>
+            On a computer, visit <strong>raptor3000.pages.dev</strong>.
+          </p>
+          <button
+            style={mobileTryAnyway}
+            onClick={() => {
+              setMobileOverride();
+              setBlocked(false);
+            }}
+          >
+            I have a keyboard and low expectations — try anyway
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div style={{ ...shell, position: 'relative', overflow: 'auto', flexDirection: 'column', justifyContent: 'flex-start' }}>
       <StarField />
@@ -131,14 +163,6 @@ export function LoginScreen({
         <div style={brand}>Raptor3000</div>
         <div style={tagline}>Sign in to FICS</div>
 
-        {isMobileish() && (
-          <div style={mobileNote}>
-            Heads up: Raptor3000 is a <strong>windowed desktop app</strong> —
-            boards and chat open as real browser windows. Phones and tablets
-            aren&apos;t supported (popup blockers eat the windows). It&apos;ll
-            let you try, but bring a desktop for the real thing.
-          </div>
-        )}
 
         <label style={row}>
           <span style={label}>Profile</span>
@@ -329,15 +353,24 @@ const loginIcon = {
   margin: '0 auto 6px',
 } as const;
 
-const mobileNote = {
-  background: 'var(--banner-bg, rgba(255, 200, 0, 0.12))',
-  border: '1px solid var(--border-soft)',
+const mobileStop = {
+  margin: 'auto',
+  maxWidth: 420,
+  padding: '32px 24px',
+  textAlign: 'center',
+  color: '#dfe8f5',
+  fontSize: 15,
+} as const;
+
+const mobileTryAnyway = {
+  marginTop: 18,
+  background: 'transparent',
+  color: '#8fb8f0',
+  border: '1px solid #3d4c6e',
   borderRadius: 6,
-  padding: '8px 10px',
+  padding: '8px 14px',
   fontSize: 12.5,
-  lineHeight: 1.45,
-  opacity: 0.95,
-  marginBottom: 4,
+  cursor: 'pointer',
 } as const;
 
 const card = {
