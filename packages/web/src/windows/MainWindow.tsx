@@ -446,6 +446,9 @@ function OptionsPage({
           <ChatColorRow label="Tells" prefKey="chatColorTell" autoKey="tell" prefs={prefs} update={update} />
           <ChatColorRow label="Shouts" prefKey="chatColorShout" autoKey="shout" prefs={prefs} update={update} />
           <ChatColorRow label="Kibitz / whisper" prefKey="chatColorGame" autoKey="game" prefs={prefs} update={update} />
+          <ChatColorRow label="Challenges" prefKey="chatColorChallenge" autoKey="challenge" prefs={prefs} update={update} />
+          <ChatColorRow label="Game starts" prefKey="chatColorGameStart" autoKey="gameStart" prefs={prefs} update={update} />
+          <ChatColorRow label="Game ends" prefKey="chatColorGameEnd" autoKey="gameEnd" prefs={prefs} update={update} />
           <ChatColorRow label="Internal" prefKey="chatColorInternal" autoKey="internal" prefs={prefs} update={update} />
           <ChatColorRow label="Your sends" prefKey="chatColorOutbound" autoKey="outbound" prefs={prefs} update={update} />
           <Note>

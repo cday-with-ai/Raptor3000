@@ -84,6 +84,9 @@ export interface AppPreferences {
   chatFontSize: number;
   /** Per-event-type colors, 'auto' = the stock color for that type. */
   chatColorChannel: ClockColor;
+  chatColorChallenge: ClockColor;
+  chatColorGameStart: ClockColor;
+  chatColorGameEnd: ClockColor;
   chatColorTell: ClockColor;
   chatColorShout: ClockColor;
   chatColorGame: ClockColor;
@@ -123,6 +126,9 @@ export const DEFAULT_PREFERENCES: AppPreferences = {
   chatFontFamily: '"SF Mono", Consolas, monospace',
   chatFontSize: 13,
   chatColorChannel: 'auto',
+  chatColorChallenge: 'auto',
+  chatColorGameStart: 'auto',
+  chatColorGameEnd: 'auto',
   chatColorTell: 'auto',
   chatColorShout: 'auto',
   chatColorGame: 'auto',
@@ -296,6 +302,9 @@ export function loadPreferences(): AppPreferences {
     chatFontFamily: getRaw('chatFontFamily') ?? DEFAULT_PREFERENCES.chatFontFamily,
     chatFontSize: readFontSize('chatFontSize', DEFAULT_PREFERENCES.chatFontSize),
     chatColorChannel: readClockColor('chatColorChannel'),
+    chatColorChallenge: readClockColor('chatColorChallenge'),
+    chatColorGameStart: readClockColor('chatColorGameStart'),
+    chatColorGameEnd: readClockColor('chatColorGameEnd'),
     chatColorTell: readClockColor('chatColorTell'),
     chatColorShout: readClockColor('chatColorShout'),
     chatColorGame: readClockColor('chatColorGame'),
@@ -346,6 +355,9 @@ export function savePreferences(prefs: AppPreferences): void {
   setRaw('chatFontFamily', prefs.chatFontFamily);
   setRaw('chatFontSize', String(prefs.chatFontSize));
   setRaw('chatColorChannel', prefs.chatColorChannel);
+  setRaw('chatColorChallenge', prefs.chatColorChallenge);
+  setRaw('chatColorGameStart', prefs.chatColorGameStart);
+  setRaw('chatColorGameEnd', prefs.chatColorGameEnd);
   setRaw('chatColorTell', prefs.chatColorTell);
   setRaw('chatColorShout', prefs.chatColorShout);
   setRaw('chatColorGame', prefs.chatColorGame);

@@ -17,6 +17,9 @@ export type ChatColorKey =
   | 'tell'
   | 'shout'
   | 'game'
+  | 'challenge'
+  | 'gameStart'
+  | 'gameEnd'
   | 'internal'
   | 'outbound';
 
@@ -26,6 +29,9 @@ export const CHAT_COLOR_AUTO: Record<ChatColorKey, string> = {
   tell: 'var(--chat-tell)',
   shout: 'var(--chat-shout)',
   game: 'var(--chat-game)',
+  challenge: 'var(--chat-challenge)',
+  gameStart: 'var(--chat-game-start)',
+  gameEnd: 'var(--chat-game-end)',
   internal: 'var(--chat-internal)',
   outbound: 'var(--accent)',
 };
@@ -44,6 +50,8 @@ export function chatColorKeyFor(type: ChatEventType): ChatColorKey | null {
     case ChatEventType.KIBITZ:
     case ChatEventType.WHISPER:
       return 'game';
+    case ChatEventType.CHALLENGE:
+      return 'challenge';
     case ChatEventType.INTERNAL:
       return 'internal';
     case ChatEventType.OUTBOUND:
@@ -54,6 +62,9 @@ export function chatColorKeyFor(type: ChatEventType): ChatColorKey | null {
 }
 
 const PREF_KEY: Record<ChatColorKey, keyof AppPreferences> = {
+  challenge: 'chatColorChallenge',
+  gameStart: 'chatColorGameStart',
+  gameEnd: 'chatColorGameEnd',
   channel: 'chatColorChannel',
   tell: 'chatColorTell',
   shout: 'chatColorShout',
@@ -64,10 +75,27 @@ const PREF_KEY: Record<ChatColorKey, keyof AppPreferences> = {
 
 /** Resolve the display color for an event under the given preferences. */
 export function chatColorFor(e: ChatEvent, prefs: AppPreferences): string {
-  const key = chatColorKeyFor(e.type);
+  const key =
+    chatColorKeyFor(e.type) ??
+    (e.type === ChatEventType.UNKNOWN ? gameLineKind(e.message) : null);
   if (!key) return 'var(--fg)';
   const pref = prefs[PREF_KEY[key]] as ClockColor;
   return pref === 'auto' ? CHAT_COLOR_AUTO[key] : pref;
+}
+
+// Game start/end lines have no ChatEventType of their own (the enum is
+// Raptor-parity), so they're classified at DISPLAY time from the text:
+// `{Game 15 (A vs. B) Creating unrated blitz match.}` starts one,
+// `{Game 15 (A vs. B) B checkmated} 0-1` ends one. End wins when a
+// chunk carries both.
+const GAME_END_LINE = /^\{Game \d+ \([^)]*\) [^}]*\}\s*(?:1-0|0-1|1\/2-1\/2|\*)/m;
+const GAME_START_LINE = /^\{Game \d+ \([^)]*\) (?:Creating|Continuing)/m;
+
+/** 'gameStart' | 'gameEnd' | null for a console line's text. */
+export function gameLineKind(message: string): 'gameStart' | 'gameEnd' | null {
+  if (GAME_END_LINE.test(message)) return 'gameEnd';
+  if (GAME_START_LINE.test(message)) return 'gameStart';
+  return null;
 }
 
 /** An outbound channel tell, if this outbound line is one. */

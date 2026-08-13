@@ -3,6 +3,7 @@ import { ChatEventType, makeChatEvent } from '@raptor3000/shared';
 import {
   CHAT_COLOR_AUTO,
   chatColorFor,
+  gameLineKind,
   lineBody,
   listOwnerFrom,
   rowAction,
@@ -56,6 +57,35 @@ describe('chatColorFor', () => {
 
   it('unknown types use the theme foreground', () => {
     expect(chatColorFor(ev(ChatEventType.UNKNOWN), DEFAULT_PREFERENCES)).toBe('var(--fg)');
+  });
+});
+
+describe('game line colors (2026-08-12)', () => {
+  const START = '{Game 15 (GuestHXKW vs. GuestBQHN) Creating unrated blitz match.}';
+  const END = '{Game 15 (GuestHXKW vs. GuestBQHN) GuestHXKW checkmated} 0-1';
+
+  it('classifies start and end lines from UNKNOWN text', () => {
+    expect(gameLineKind(START)).toBe('gameStart');
+    expect(gameLineKind(END)).toBe('gameEnd');
+    expect(gameLineKind('GuestX tells you: {Game 5 is fun}')).toBeNull();
+  });
+
+  it('end wins when a chunk carries both', () => {
+    expect(gameLineKind(START + '\n' + END)).toBe('gameEnd');
+  });
+
+  it('colors CHALLENGE and game lines through their own prefs', () => {
+    const prefs = {
+      ...DEFAULT_PREFERENCES,
+      chatColorChallenge: '#123456',
+      chatColorGameEnd: '#654321',
+    };
+    const challenge = ev(ChatEventType.CHALLENGE, { message: 'GuestX challenges you' });
+    expect(chatColorFor(challenge, prefs)).toBe('#123456');
+    const endEvt = ev(ChatEventType.UNKNOWN, { message: END });
+    expect(chatColorFor(endEvt, prefs)).toBe('#654321');
+    const startEvt = ev(ChatEventType.UNKNOWN, { message: START });
+    expect(chatColorFor(startEvt, prefs)).toBe('var(--chat-game-start)');
   });
 });
 

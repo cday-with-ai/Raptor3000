@@ -41,6 +41,9 @@ html[data-theme="dark"] {
   --chat-tell:    #8fe08f;
   --chat-shout:   #b8a3e0;
   --chat-game:    #9fc4e0;
+  --chat-challenge:  #e0a36b;
+  --chat-game-start: #7fd4a8;
+  --chat-game-end:   #d98fb8;
   --chat-internal:#888888;
   color-scheme: dark;
 }
@@ -69,6 +72,9 @@ html[data-theme="light"] {
   --chat-tell:    #2e7d32;
   --chat-shout:   #6a4fa3;
   --chat-game:    #2f6b96;
+  --chat-challenge:  #a05c1a;
+  --chat-game-start: #1f7a4d;
+  --chat-game-end:   #a53e73;
   --chat-internal:#6b7280;
   color-scheme: light;
 }
