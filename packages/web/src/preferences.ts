@@ -93,6 +93,7 @@ export interface AppPreferences {
   chatColorInternal: ClockColor;
   chatColorOutbound: ClockColor;
   soundMode: SoundMode;
+  moveSoundSet: 'sfx' | 'piano' | 'futuristic' | 'nes';
   showEngineAnalysis: boolean;
   autoJoinChannels: string;
   /**
@@ -135,6 +136,7 @@ export const DEFAULT_PREFERENCES: AppPreferences = {
   chatColorInternal: 'auto',
   chatColorOutbound: 'auto',
   soundMode: 'on',
+  moveSoundSet: 'sfx',
   showEngineAnalysis: true,
   autoJoinChannels: '1,4,53',
   channelHistoryUrl:
@@ -311,6 +313,7 @@ export function loadPreferences(): AppPreferences {
     chatColorInternal: readClockColor('chatColorInternal'),
     chatColorOutbound: readClockColor('chatColorOutbound'),
     soundMode: readString('soundMode', DEFAULT_PREFERENCES.soundMode, ['on', 'off']),
+    moveSoundSet: readString('moveSoundSet', DEFAULT_PREFERENCES.moveSoundSet, ['sfx', 'piano', 'futuristic', 'nes']),
     showEngineAnalysis: readBool(
       'showEngineAnalysis',
       DEFAULT_PREFERENCES.showEngineAnalysis,
@@ -364,6 +367,7 @@ export function savePreferences(prefs: AppPreferences): void {
   setRaw('chatColorInternal', prefs.chatColorInternal);
   setRaw('chatColorOutbound', prefs.chatColorOutbound);
   setRaw('soundMode', prefs.soundMode);
+  setRaw('moveSoundSet', prefs.moveSoundSet);
   setRaw('showEngineAnalysis', String(prefs.showEngineAnalysis));
   setRaw('autoJoinChannels', prefs.autoJoinChannels);
   setRaw('channelHistoryUrl', prefs.channelHistoryUrl);

@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { GameEndType, type GameEndMessage } from '@raptor3000/shared';
-import { gameEndSound, soundForSan } from '../sounds.js';
+import { MOVE_SOUND_SETS, gameEndSound, soundForSan } from '../sounds.js';
+import { DEFAULT_PREFERENCES } from '../preferences.js';
 
 /**
  * Board sounds (2026-08-12): the piano set — the only subtle lila set
@@ -45,5 +46,12 @@ describe('gameEndSound', () => {
   it('observers and the logged-out get the subtle notify', () => {
     expect(gameEndSound(end(GameEndType.WHITE_WON), 'Bystander')).toBe('notify');
     expect(gameEndSound(end(GameEndType.DRAW), null)).toBe('notify');
+  });
+});
+
+describe('move sound sets (2026-08-12)', () => {
+  it('offers exactly the freely licensed sets, sfx by default', () => {
+    expect([...MOVE_SOUND_SETS]).toEqual(['sfx', 'piano', 'futuristic', 'nes']);
+    expect(DEFAULT_PREFERENCES.moveSoundSet).toBe('sfx');
   });
 });

@@ -13,6 +13,7 @@ import {
   optionsGrid,
 } from './shellStyles.js';
 import { loadProfile, loadSelection, saveSelection } from '../loginProfiles.js';
+import { playSound } from '../sounds.js';
 import { CHAT_COLOR_AUTO, type ChatColorKey } from '../chatFormat.js';
 import {
   applyTheme,
@@ -500,6 +501,34 @@ function OptionsPage({
               ]}
             />
           </Row>
+          <Row label="Move sounds">
+            <select
+              style={textInput}
+              value={prefs.moveSoundSet}
+              onChange={e => update('moveSoundSet', e.target.value as AppPreferences['moveSoundSet'])}
+            >
+              <option value="sfx">Sfx</option>
+              <option value="piano">Piano</option>
+              <option value="futuristic">Futuristic</option>
+              <option value="nes">Nes (8-bit)</option>
+            </select>
+            <button
+              style={{ ...linkBtn, marginLeft: 8 }}
+              title="play move, capture, check from the selected set"
+              onClick={() => {
+                playSound('move');
+                setTimeout(() => playSound('capture'), 700);
+                setTimeout(() => playSound('check'), 1400);
+              }}
+            >
+              Preview
+            </button>
+          </Row>
+          <Note>
+            Moves, captures and checks use the selected set; game-end
+            sounds stay on Piano. All sets are lichess's freely licensed
+            ones — the famous "standard" set is not freely licensed.
+          </Note>
         </Section>
 
         <Section title="Channels">

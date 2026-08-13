@@ -26,6 +26,15 @@ export type SoundName =
   | 'draw'
   | 'explosion'; // the boom end-show's extra
 
+/** The free Enigmahack sets that ship (AGPLv3+, see the notices). The
+ *  MOVE sounds (move/capture/check) follow the moveSoundSet preference
+ *  — Carson found the piano notes "kind of strange" for moves but kept
+ *  them for verdicts, so everything else stays piano. */
+export const MOVE_SOUND_SETS = ['sfx', 'piano', 'futuristic', 'nes'] as const;
+export type MoveSoundSet = (typeof MOVE_SOUND_SETS)[number];
+
+const MOVE_CLASS: ReadonlySet<SoundName> = new Set(['move', 'capture', 'check']);
+
 const FILES: Record<SoundName, string> = {
   move: 'Move',
   capture: 'Capture',
@@ -86,14 +95,16 @@ export function gameEndSound(
 
 // One Audio per sound per window, created lazily and re-used — the
 // browser caches the fetch, currentTime rewinds for rapid replays.
-const cache = new Map<SoundName, HTMLAudioElement>();
+const cache = new Map<string, HTMLAudioElement>();
 
 /** Play in THIS window's document; rejects under autoplay policy. */
 function playHere(name: SoundName): Promise<void> {
-  let a = cache.get(name);
+  const set = MOVE_CLASS.has(name) ? loadPreferences().moveSoundSet : 'piano';
+  const key = `${set}/${name}`;
+  let a = cache.get(key);
   if (!a) {
-    a = new Audio(`/sound/piano/${FILES[name]}.mp3`);
-    cache.set(name, a);
+    a = new Audio(`/sound/${set}/${FILES[name]}.mp3`);
+    cache.set(key, a);
   }
   a.volume = VOLUME[name];
   a.currentTime = 0;
