@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { isMobileish } from '../mobile.js';
-import { PopupGate, popupsVerified } from './PopupGate.js';
+import { PopupGate } from './PopupGate.js';
 import {
   PROFILE_NAMES,
   loadProfile,
@@ -114,10 +114,12 @@ export function LoginScreen({
   return (
     <div style={{ ...shell, position: 'relative', overflow: 'auto', flexDirection: 'column', justifyContent: 'flex-start' }}>
       <StarField />
+      {/* Auto-tests popups on mount; renders nothing unless they're
+          blocked, so it sits above everything unconditionally. */}
+      <PopupGate />
       {/* margin:auto centers when there's room and top-aligns (scrollable)
           when there isn't — justify-center would clip the top instead. */}
       <div style={{ margin: 'auto', display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '0 12px' }}>
-        {!popupsVerified() && <PopupGate />}
         <form
         style={card}
         onSubmit={e => {

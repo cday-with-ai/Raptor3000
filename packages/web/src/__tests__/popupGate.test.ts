@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import {
   detectBrowserKey,
   orderedDirections,
+  runPopupAutoTest,
   runPopupTest,
 } from '../windows/PopupGate.js';
 
@@ -40,6 +41,33 @@ describe('runPopupTest', () => {
       },
     } as unknown as Window;
     expect(runPopupTest(() => grumpy)).toBe('allowed');
+  });
+});
+
+describe('runPopupAutoTest', () => {
+  // The on-load variant: no click to burn, so a single open is already
+  // activation-less — the exact conditions of a board window opening
+  // off a socket event.
+  it('opens once and reports what the browser decided', () => {
+    const names: string[] = [];
+    const fakeWin = { close: () => undefined } as unknown as Window;
+    expect(
+      runPopupAutoTest((_u, name) => {
+        names.push(name);
+        return fakeWin;
+      }),
+    ).toBe('allowed');
+    expect(names).toEqual(['raptor-popup-test']);
+    expect(runPopupAutoTest(() => null)).toBe('blocked');
+  });
+
+  it('a close() that throws still reports allowed', () => {
+    const grumpy = {
+      close: () => {
+        throw new Error('COOP says no');
+      },
+    } as unknown as Window;
+    expect(runPopupAutoTest(() => grumpy)).toBe('allowed');
   });
 });
 

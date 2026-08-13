@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 /**
  * The "Almost there…" popup gate (Carson, 2026-08-12, watching a fresh
@@ -218,7 +218,10 @@ export function PopupGate() {
 const gate = {
   width: 'min(420px, calc(100vw - 48px))',
   boxSizing: 'border-box',
-  margin: '24px 0 -8px',
+  // A flex item of the shell now, above the centered column: self-center
+  // horizontally, hug the top, and never eat into the column's height.
+  margin: '16px auto 0',
+  flexShrink: 0,
   padding: '14px 18px',
   borderRadius: 10,
   border: '1px solid #3d4c6e',
