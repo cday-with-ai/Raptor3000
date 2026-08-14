@@ -441,3 +441,99 @@ Still open from the 08-05 triage, untouched tonight: analysis-not-updating
 chat palette (tell/channel greens and ambers picked for dark), and wiring
 the three unconsumed preferences above. PLAN.md's "Next thing" section is
 rewritten tonight to match.
+
+## 2026-08-13 — Carson
+
+Login hiccup, diagnosed in a session tonight — the fix is designed, needs building.
+
+Symptom: first login prompt bounces with "Sorry, names can only consist of lower
+and upper case letters", second prompt accepts the handle. Looks like the
+username is sent twice, once corrupted. It isn't. The bad line is '=censor':
+ChatWindow's censor-list seeding (ChatWindow.tsx ~line 111) fires
+sendMessageHidden('=censor') on mount, and the chat window is opened via
+setTimeout(0) in the same effect that starts the login (MainWindow.tsx:66) — so
+it mounts mid-login. sendMessageHidden gates on this.connected, which is true
+from WebSocket OPEN (FicsConnector.ts:143), not from auth. The '=' is a
+non-letter, FICS's login reader eats it, and the state machine's one legitimate
+handle lands on the second prompt.
+
+Ruled out already, to save the walk: the Timeseal2 opener is innocent (probed
+wss 5001 sending only the opener and no handle — one clean login: prompt, no
+rejection), and the login state machine can't double-send (loginStage guard).
+
+Side effects of the same bug: the censor seeding itself is broken — its reply
+was that Sorry line, so the collector never got the list. And the race runs the
+other way too: mount before socket-open and sendMessageHidden returns false, the
+seed silently dropped.
+
+The fix, connector-level so no future call site reintroduces it (same
+philosophy as the prepareOutbound choke point):
+1. sendMessageHidden: socket up but loginStage !== 'authed' -> push onto a
+   preAuthQueue, return true.
+2. onLoggedIn(): after the login script runs, flush the queue in order.
+   (Stage is already 'authed' when onLoggedIn fires, so the script is safe.)
+3. Clear the queue in onclose and disconnect() — a command queued during a
+   failed login must not fire into a later session.
+4. Leave sendMessage (user-typed) untouched: typing at the login: prompt is the
+   documented log-in-by-hand fallback and must keep reaching the server raw.
+Rule being encoded: humans may talk to the login prompt; robots wait for auth.
+Plus a loginFlow test pinning "hidden send during login stays out of the login
+buffer". Follow-up worth doing while in there: ChatWindow re-seeds '=censor' on
+the logged-in signal rather than on mount, which closes the mount-before-open
+drop as well.
+
+Cosmetic, separate: the ?? pairs after login: and password: are FICS's telnet
+echo negotiation (FF FB 01 / FF FC 01) coming through TextDecoder as U+FFFD.
+Stripping /��\x01/g in handleRaw's normalization would clean the
+console.
+
+## 2026-08-13 — Carson
+
+Strange disconnects on raptor3000.pages.dev — diagnosed in a session, most
+likely FICS's 60-minute idle auto-logout, plus two aggravators. Evidence and
+fixes below; the deployed bundle was checked and is current (has keep-alive,
+kick handling, censor seed).
+
+Why it reads as strange: nothing surfaces the reason. FICS prints
+"**** Auto-logout because you were idle more than 60 minutes. ****" as ordinary
+text (nothing in the codebase matches Auto-logout — checked), then closes the
+socket, and the console's INTERNAL line says only "WebSocket closed" without
+even the close code. The farewell scrolls away and the disconnect looks
+causeless.
+
+Why it bites on pages.dev specifically: keepAlive defaults to 'off' and
+preferences are per-origin localStorage — settings flipped on localhost do not
+exist on raptor3000.pages.dev. Watching channel 39 without typing counts as
+idle to FICS (incoming traffic does not reset idleness), so a lurking session
+dies on the hour, every time.
+
+Aggravator 1: even with keep-alive on, 59 minutes against a 60-minute limit is
+razor thin, and the interval lives in PostLoginShell — the MAIN window, which
+sits backgrounded while play happens in the popups. Chrome throttles timers in
+backgrounded tabs (minute-aligned under intensive throttling), so the tick can
+land late and lose the race. 20-25 minutes keeps the same effect with margin.
+
+Aggravator 2 (the wildcard): the WebSocket lives in the main window; popups
+reach it via window.opener. Chrome's Memory Saver discards backgrounded tabs —
+a discarded main window kills the connection outright and orphans every popup,
+with no farewell at all. Worth an exemption note in Help, or checking
+chrome://discards after an unexplained drop.
+
+Fixes that follow, smallest first:
+1. Surface the auto-logout farewell exactly the way kicks are surfaced
+   (INTERNAL notice: "FICS logged this session out for idleness — keep-alive
+   is off; turn it on in Options"). Pattern: /Auto-logout because you were
+   idle/.
+2. Include ev.code in the "WebSocket closed" INTERNAL message — 1006 vs 1000
+   distinguishes a killed transport from a server goodbye, and costs one
+   template slot.
+3. Change the keep-alive interval to ~20-25 min. Consider defaulting the
+   toggle ON with the 'date' command — a chess client that silently dies at
+   the hour mark is the wrong default for a lurker's client.
+4. Longer game: the cross-tab lock from the triage list is adjacent — with
+   auto-login, a second tab kicks the first and the combination turns one
+   stray middle-click into a "strange disconnect" too.
+
+How to tell which one hit, next time it happens: scroll the console before
+reconnecting. Auto-logout line = idleness. "you can't both be logged in" = a
+second session. Nothing at all and dead popups = the tab was discarded.
