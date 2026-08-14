@@ -95,6 +95,9 @@ export interface AppPreferences {
   chatColorOutbound: ClockColor;
   soundMode: SoundMode;
   moveSoundSet: 'sfx' | 'piano' | 'futuristic' | 'nes';
+  /** Synthesized alerts for tells / friend arrivals / departures —
+   *  gated under the master soundMode, styled by moveSoundSet. */
+  alertSounds: SoundMode;
   keepAlive: SoundMode; // 'on' | 'off' — reuse the two-state type
   keepAliveCommand: string;
   loginScript: string; // one command per line
@@ -140,6 +143,7 @@ export const DEFAULT_PREFERENCES: AppPreferences = {
   chatColorInternal: 'auto',
   chatColorOutbound: 'auto',
   soundMode: 'on',
+  alertSounds: 'on',
   moveSoundSet: 'sfx',
   keepAlive: 'off',
   keepAliveCommand: 'date',
@@ -320,6 +324,7 @@ export function loadPreferences(): AppPreferences {
     chatColorInternal: readClockColor('chatColorInternal'),
     chatColorOutbound: readClockColor('chatColorOutbound'),
     soundMode: readString('soundMode', DEFAULT_PREFERENCES.soundMode, ['on', 'off']),
+    alertSounds: readString('alertSounds', DEFAULT_PREFERENCES.alertSounds, ['on', 'off']),
     moveSoundSet: readString('moveSoundSet', DEFAULT_PREFERENCES.moveSoundSet, ['sfx', 'piano', 'futuristic', 'nes']),
     keepAlive: readString('keepAlive', DEFAULT_PREFERENCES.keepAlive, ['on', 'off']),
     keepAliveCommand: getRaw('keepAliveCommand') ?? DEFAULT_PREFERENCES.keepAliveCommand,
@@ -377,6 +382,7 @@ export function savePreferences(prefs: AppPreferences): void {
   setRaw('chatColorInternal', prefs.chatColorInternal);
   setRaw('chatColorOutbound', prefs.chatColorOutbound);
   setRaw('soundMode', prefs.soundMode);
+  setRaw('alertSounds', prefs.alertSounds);
   setRaw('moveSoundSet', prefs.moveSoundSet);
   setRaw('keepAlive', prefs.keepAlive);
   setRaw('keepAliveCommand', prefs.keepAliveCommand);

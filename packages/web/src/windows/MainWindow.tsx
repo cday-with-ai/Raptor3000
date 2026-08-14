@@ -15,6 +15,7 @@ import {
 import { loadProfile, loadSelection, saveSelection } from '../loginProfiles.js';
 import { armRelaunchToLogin, consumeRelaunchToLogin } from '../relaunch.js';
 import { playSound } from '../sounds.js';
+import { playAlert } from '../alertSounds.js';
 import { useLivePreferences } from '../useLivePreferences.js';
 import { CHAT_COLOR_AUTO, type ChatColorKey } from '../chatFormat.js';
 import {
@@ -617,10 +618,33 @@ function OptionsPage({
               Preview
             </button>
           </Row>
+          <Row label="Alerts">
+            <Select<SoundMode>
+              value={prefs.alertSounds}
+              onChange={v => update('alertSounds', v)}
+              options={[
+                ['on', 'On'],
+                ['off', 'Off'],
+              ]}
+            />
+            <button
+              style={{ ...linkBtn, marginLeft: 8 }}
+              title="play tell, friend-arrives, friend-departs in the selected set's style"
+              onClick={() => {
+                playAlert('tell');
+                setTimeout(() => playAlert('arrive'), 900);
+                setTimeout(() => playAlert('depart'), 1800);
+              }}
+            >
+              Preview
+            </button>
+          </Row>
           <Note>
             Moves, captures and checks use the selected set; game-end
             sounds stay on Piano. All sets are lichess's freely licensed
             ones — the famous "standard" set is not freely licensed.
+            Alerts — an incoming tell, a friend arriving or departing —
+            are our own synthesized notes styled after the selected set.
           </Note>
         </Section>
 

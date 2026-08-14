@@ -41,7 +41,30 @@ back rank, 2026-08-09.
 ## Where this is
 
 The connector, the parser and the board renderer all exist and are wired
-together. 317 unit tests pass in `packages/shared`, 290 in `packages/web`.
+together. 317 unit tests pass in `packages/shared`, 304 in `packages/web`.
+
+**Social events make a sound now (2026-08-14).** An incoming person tell
+(partner tells count — a partner is a person with more urgency, not less),
+a friend arriving, a friend departing. `alertSounds.ts`: SYNTHESIZED, not
+sampled — each of the four shipped palettes gets its own recipes rendered
+via WebAudio in that palette's voice (sine chimes for piano, square blips
+for nes, filtered saw for futuristic, dry triangle taps for sfx), so no
+foreign samples and the licensing page stays truthful. Recipes are pure
+data; the 13 tests pin the design contract — arrive always rises and
+depart always falls in every palette, one wave per palette, under a
+second, under the verdict volume — plus the two traps: the listener is a
+MAIN-CONSOLE (fallback) listener because a specific listener accepting a
+TELL flips `consumedBySpecific` and changes routing for everyone else, and
+`handle()` re-derives the kind because the unconsumed-event fallback path
+calls handlers UNCONDITIONALLY, accepts() notwithstanding. Both verified
+by sabotage (addListener reddens 1, trusting accepts reddens 1). Gated on
+the new `alertSounds` pref (default on) under the master `soundMode`,
+styled by `moveSoundSet`; Options → Sound → Alerts has the toggle and a
+preview. Renderer never schedules against a suspended AudioContext —
+currentTime is frozen there, so queued notes would fire as one burst at
+the user's first click (the auto-login shape); it resumes and plays only
+if the alert is under 1.5s old, else drops. What no offline test can hear:
+the actual notes — Carson's ear is the last verifier.
 
 **On disconnect the main window now offers exactly one thing: Relaunch
 (2026-08-14).** Carson's spec via the box, relayed 12:15: the button itself

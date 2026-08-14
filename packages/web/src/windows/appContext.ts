@@ -15,6 +15,7 @@ import {
 import { EngineManager } from '../engine/EngineManager.js';
 import { getWindowManager } from './WindowManager.js';
 import { loadPreferences } from '../preferences.js';
+import { installAlertSounds } from '../alertSounds.js';
 
 /**
  * The app-wide context that every window reads. On the main window we
@@ -79,6 +80,10 @@ export function createContext(): RaptorContext {
   // say so in the console tab rather than only in devtools.
   if (gameManager) announceBlockedBoardWindows(gameManager, chatService);
   const engineManager = main ? new EngineManager(gameService) : null;
+  // Alert sounds live on the main window only — it holds the user's
+  // gestures (autoplay) and one event must be one sound, not one per
+  // open popup.
+  if (main) installAlertSounds(chatService);
   return {
     chatService,
     gameService,
