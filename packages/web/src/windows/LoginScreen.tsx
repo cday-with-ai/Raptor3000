@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { setMobileOverride, shouldBlockMobile } from '../mobile.js';
+import { isMobileDemo, setMobileOverride, shouldBlockMobile } from '../mobile.js';
 import { PopupGate } from './PopupGate.js';
 import {
   PROFILE_NAMES,
@@ -111,7 +111,7 @@ export function LoginScreen({
     }
   }
 
-  const [blocked, setBlocked] = useState(() => shouldBlockMobile());
+  const [blocked, setBlocked] = useState(() => isMobileDemo() || shouldBlockMobile());
   if (blocked) {
     return (
       <div style={{ ...shell, position: 'relative', overflow: 'auto', flexDirection: 'column', justifyContent: 'flex-start' }}>
@@ -132,7 +132,7 @@ export function LoginScreen({
           <button
             style={mobileTryAnyway}
             onClick={() => {
-              setMobileOverride();
+              if (!isMobileDemo()) setMobileOverride();
               setBlocked(false);
             }}
           >

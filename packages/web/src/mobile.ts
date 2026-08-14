@@ -47,6 +47,15 @@ export function shouldBlockMobile(
   return isMobileish(probe) && !override;
 }
 
+/** `?mobile=demo` — show the desktop-only stop from a desktop, for
+ *  eyeballing it (mirrors the popup gate's `?popupgate=demo`). Demo never
+ *  persists anything: "try anyway" just dismisses. */
+export function isMobileDemo(
+  search: string = typeof location !== 'undefined' ? location.search : '',
+): boolean {
+  return new URLSearchParams(search).get('mobile') === 'demo';
+}
+
 export function readMobileOverride(): boolean {
   try {
     return localStorage.getItem(OVERRIDE_KEY) === 'true';

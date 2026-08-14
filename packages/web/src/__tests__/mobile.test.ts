@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { isMobileish, shouldBlockMobile } from '../mobile.js';
+import { isMobileDemo, isMobileish, shouldBlockMobile } from '../mobile.js';
 
 /**
  * The mobile note (2026-08-12): coarse pointer + small screen = the
@@ -7,6 +7,17 @@ import { isMobileish, shouldBlockMobile } from '../mobile.js';
  * single-window mode after the cost check — popups-as-tabs plus mobile
  * popup blockers make the real fix a rework, not a control.
  */
+describe('isMobileDemo', () => {
+  // ?mobile=demo shows the desktop-only stop from a desktop for
+  // eyeballing; matches exactly, like the popup gate's demo param.
+  it('matches exactly mobile=demo', () => {
+    expect(isMobileDemo('?mobile=demo')).toBe(true);
+    expect(isMobileDemo('?window=chat&mobile=demo')).toBe(true);
+    expect(isMobileDemo('')).toBe(false);
+    expect(isMobileDemo('?mobile=1')).toBe(false);
+  });
+});
+
 describe('isMobileish', () => {
   it('flags a phone: coarse pointer, small short side', () => {
     expect(isMobileish({ coarsePointer: true, shortSide: 390 })).toBe(true);
