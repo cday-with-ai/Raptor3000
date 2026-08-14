@@ -5,6 +5,28 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <link rel="icon" type="image/svg+xml" href="/raptor3000.svg" />
     <title>Raptor3000</title>
+    <script>
+      // Cloudflare Web Analytics, self-hosted snippet with a gate: the
+      // question the counter answers is "how many HUMANS used it", so
+      // automation must not fire the beacon — Playwright e2e announces
+      // itself via navigator.webdriver, and a driven real browser can opt
+      // out by setting localStorage raptor.noCount. Dash auto-injection
+      // is OFF for this project (it injects unconditionally at the edge
+      // and would double-count everyone); this snippet is the only beacon.
+      (function () {
+        try {
+          if (navigator.webdriver) return;
+          if (localStorage.getItem('raptor.noCount')) return;
+        } catch (e) {
+          // storage unavailable: a human with strict settings still counts
+        }
+        var s = document.createElement('script');
+        s.defer = true;
+        s.src = 'https://static.cloudflareinsights.com/beacon.min.js';
+        s.setAttribute('data-cf-beacon', '{"token": "f4e8c60b70ec4fad9fc757f436ce6549"}');
+        document.head.appendChild(s);
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>

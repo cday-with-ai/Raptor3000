@@ -537,3 +537,7 @@ Fixes that follow, smallest first:
 How to tell which one hit, next time it happens: scroll the console before
 reconnecting. Auto-logout line = idleness. "you can't both be logged in" = a
 second session. Nothing at all and dead popups = the tab was discarded.
+
+## 2026-08-14 12:15 — Carson via second session
+
+On disconnect, just a relaunch button — not a chat-window reopen / connection-reconnect flow. No label above it; the button itself, with the verbiage below it. Carson, relayed from the second build session 2026-08-14: 'ok just a relaunch button is what is needed not a chat window reopen/connection reconnect… it doesnt even need a lable above it just relaunch button with the verbage below it'

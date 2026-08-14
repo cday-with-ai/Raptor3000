@@ -30,7 +30,18 @@ Logged as taken, per the house rule. Walk this on completion.
    eyeballed via the demo param); risk accepted, revisit if a Firefox
    user reports the banner looking off.
 
-5. **The watcher waits out transient activation (2026-08-14, found live
+5. **Humans-only analytics (2026-08-14: "can we get our e2e tests to not
+   be counted?").** Web Analytics runs from our own gated snippet in
+   index.html, not dash auto-injection: skip when `navigator.webdriver`
+   (Playwright e2e) or localStorage `raptor.noCount` (a driven real
+   browser sets it). Auto-injection must stay OFF in the dash — it
+   injects unconditionally at the edge and would double-count every
+   visitor next to this snippet. Popup windows load the same HTML, so a
+   session's boards add page views; visits/uniques stay honest, which is
+   the number that matters. The site token is public by design (it ships
+   in every visitor's page source).
+
+6. **The watcher waits out transient activation (2026-08-14, found live
    by Carson: "it says enabled … i didnt enable it").** A page click
    grants ~5s of activation and fresh-default browsers allow GESTURE
    popups, so a single-open check ticking inside that window inherits
