@@ -1,0 +1,9 @@
+[Unit]
+Description=Raptor3000 — yesterday's usage as a pager digest line
+Documentation=file:/home/cday/projects/raptor3000/bin/usage-digest.sh
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=%h/projects/raptor3000/bin/usage-digest.sh

@@ -1,0 +1,9 @@
+[Unit]
+Description=Raptor3000 usage digest, daily after breakfast
+
+[Timer]
+OnCalendar=*-*-* 08:20:00
+Persistent=true
+
+[Install]
+WantedBy=timers.target
