@@ -1,8 +1,10 @@
 import { describe, it, expect } from 'vitest';
 import {
+  ACTIVATION_COOLDOWN_MS,
   detectBrowserKey,
   isDemoMode,
   orderedDirections,
+  quietLongEnough,
   runPopupAutoTest,
   runPopupTest,
 } from '../windows/PopupGate.js';
@@ -96,6 +98,25 @@ describe('orderedDirections', () => {
     const ordered = orderedDirections('ios');
     expect(ordered[0].key).toBe('ios');
     expect(ordered).toHaveLength(5);
+  });
+});
+
+describe('quietLongEnough', () => {
+  // The watcher's false-positive guard (found live 2026-08-14): a page
+  // click grants ~5s of transient activation, and a fresh-default browser
+  // ALLOWS gesture popups — so an "activation-less" check inside that
+  // window inherits the click and lies "allowed". Checks must wait out
+  // the whole window.
+  it('holds the check inside the activation window and releases after', () => {
+    const clickAt = 100_000;
+    expect(quietLongEnough(clickAt, clickAt + 1)).toBe(false);
+    expect(quietLongEnough(clickAt, clickAt + 5_000)).toBe(false);
+    expect(quietLongEnough(clickAt, clickAt + ACTIVATION_COOLDOWN_MS - 1)).toBe(false);
+    expect(quietLongEnough(clickAt, clickAt + ACTIVATION_COOLDOWN_MS)).toBe(true);
+  });
+
+  it('the cooldown outlasts the ~5s transient-activation window', () => {
+    expect(ACTIVATION_COOLDOWN_MS).toBeGreaterThan(5_000);
   });
 });
 

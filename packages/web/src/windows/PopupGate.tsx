@@ -36,6 +36,20 @@ const VERIFIED_KEY = 'raptor.popupsVerified';
  *  one costs a single open-and-close flash and ends the gate. */
 export const RETEST_INTERVAL_MS = 4000;
 
+/** A click or keypress grants ~5s of transient activation (Chrome), and a
+ *  fresh-default browser ALLOWS gesture popups — so a single-open check
+ *  inside that window measures with a gesture and lies "allowed" while
+ *  socket-driven boards would still be blocked. Found live by Carson on
+ *  2026-08-14 ("it says enabled … i didnt enable it"): he clicked the
+ *  instructions, the next tick inherited the click. The watcher only
+ *  measures after this much quiet. */
+export const ACTIVATION_COOLDOWN_MS = 6000;
+
+/** Whether an activation-less measurement is honest right now. */
+export function quietLongEnough(lastInteraction: number, now: number): boolean {
+  return now - lastInteraction >= ACTIVATION_COOLDOWN_MS;
+}
+
 export function popupsVerified(): boolean {
   try {
     return localStorage.getItem(VERIFIED_KEY) === 'true';
@@ -240,6 +254,7 @@ function Instruction({ browserKey }: { browserKey: string }) {
       <div>
         <div style={step}><span style={stepNum}>1</span><span>Find this icon at the right end of your address bar — it appeared just now:</span></div>
         <ChromiumPicture />
+        <div style={caption}>(just a picture — the real one is up in your browser&apos;s own bar)</div>
         <div style={step}><span style={stepNum}>2</span><span>Click it, pick <strong>Always allow</strong>, then <strong>Done</strong>. That&apos;s the whole job.</span></div>
       </div>
     );
@@ -249,6 +264,7 @@ function Instruction({ browserKey }: { browserKey: string }) {
       <div>
         <div style={step}><span style={stepNum}>1</span><span>A bar just appeared at the top of the page:</span></div>
         <FirefoxPicture />
+        <div style={caption}>(just a picture — the real bar is Firefox&apos;s own, above the page)</div>
         <div style={step}><span style={stepNum}>2</span><span>Click <strong>Preferences</strong> and pick <strong>Allow pop-ups for raptor3000.pages.dev</strong>.</span></div>
       </div>
     );
@@ -271,6 +287,9 @@ export function PopupGate() {
     if (demo) return 'blocked';
     return autoResultThisLoad ?? (popupsVerified() ? 'allowed' : 'pending');
   });
+  // Demo only: Test again reports here instead of dismissing the banner —
+  // a demo that vanishes on an allowed browser can't be looked at.
+  const [demoVerdict, setDemoVerdict] = useState<PopupTestResult | null>(null);
 
   useEffect(() => {
     if (demo || autoResultThisLoad !== null) return;
@@ -285,20 +304,31 @@ export function PopupGate() {
   // The watcher: while blocked (and not a demo), re-test on focus — the
   // visitor comes straight back from the browser's own Allow UI — and on
   // a slow interval as a net. Blocked attempts are invisible by
-  // definition; the first allowed one is the last.
+  // definition; the first allowed one is the last. Every check waits out
+  // the transient-activation window after any page interaction, or it
+  // would measure the visitor's own click (see ACTIVATION_COOLDOWN_MS).
+  // Clicks on the browser's chrome (the Allow dialog) grant the page
+  // nothing, so the honest path — allow, come back — stays instant.
   useEffect(() => {
     if (demo || state !== 'blocked') return;
+    let lastInteraction = 0;
+    const note = () => { lastInteraction = Date.now(); };
     const check = () => {
+      if (!quietLongEnough(lastInteraction, Date.now())) return;
       if (runPopupAutoTest() === 'allowed') {
         autoResultThisLoad = 'allowed';
         persist('allowed');
         setState('justAllowed');
       }
     };
+    document.addEventListener('pointerdown', note, true);
+    document.addEventListener('keydown', note, true);
     const iv = setInterval(check, RETEST_INTERVAL_MS);
     window.addEventListener('focus', check);
     document.addEventListener('visibilitychange', check);
     return () => {
+      document.removeEventListener('pointerdown', note, true);
+      document.removeEventListener('keydown', note, true);
       clearInterval(iv);
       window.removeEventListener('focus', check);
       document.removeEventListener('visibilitychange', check);
@@ -325,10 +355,12 @@ export function PopupGate() {
 
   const retest = () => {
     const result = runPopupTest();
-    if (!demo) {
-      autoResultThisLoad = result;
-      persist(result);
+    if (demo) {
+      setDemoVerdict(result);
+      return;
     }
+    autoResultThisLoad = result;
+    persist(result);
     setState(result === 'allowed' ? 'justAllowed' : 'blocked');
   };
 
@@ -371,6 +403,11 @@ export function PopupGate() {
       <button type="button" style={gateButton} onClick={retest}>
         Test again
       </button>
+      {demo && demoVerdict ? (
+        <span style={{ marginLeft: 12, fontSize: 12, color: demoVerdict === 'allowed' ? '#8fd8ae' : '#e8a08f' }}>
+          demo — this browser right now: pop-ups {demoVerdict}
+        </span>
+      ) : null}
       <span style={{ marginLeft: 12, fontSize: 12, opacity: 0.8 }}>
         Still stuck?{' '}
         <a
@@ -435,7 +472,17 @@ const picture = {
   display: 'block',
   width: '100%',
   height: 'auto',
-  margin: '8px 0',
+  margin: '8px 0 2px',
+  // it LOOKS clickable by design; make sure it doesn't feel it
+  pointerEvents: 'none',
+  userSelect: 'none',
+} as const;
+
+const caption = {
+  fontSize: 11,
+  color: '#8fa0c2',
+  fontStyle: 'italic',
+  margin: '0 0 4px',
 } as const;
 
 const step = {

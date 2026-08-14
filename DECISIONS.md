@@ -29,3 +29,16 @@ Logged as taken, per the house rule. Walk this on completion.
    check.** Same SVG primitives as the chromium one (which was
    eyeballed via the demo param); risk accepted, revisit if a Firefox
    user reports the banner looking off.
+
+5. **The watcher waits out transient activation (2026-08-14, found live
+   by Carson: "it says enabled … i didnt enable it").** A page click
+   grants ~5s of activation and fresh-default browsers allow GESTURE
+   popups, so a single-open check ticking inside that window inherits
+   the click and lies "allowed" — the same trap the double-open test
+   was built against, re-entered through the interval. Fix: checks run
+   only after 6s of no pointerdown/keydown (`quietLongEnough`, pinned
+   by test). The honest path stays instant: clicks on the browser's own
+   Allow dialog grant the page nothing, so the focus-triggered check on
+   return is clean. Same pass: demo mode no longer self-dismisses
+   (Test again reports inline) and the mock pictures are captioned as
+   pictures with pointer-events off.
