@@ -14,9 +14,27 @@ import { useEffect, useState } from 'react';
  * opens, the site is genuinely allowed and we remember that. If it's
  * blocked, the browser shows its popup icon in the address bar, which
  * IS the permission prompt — the directions point at it.
+ *
+ * 2026-08-14, the ease pass: the gate's job is to make that browser
+ * surgery doable by someone who has never heard the word "popup".
+ * Three moves: the instruction is a PICTURE of the visitor's own
+ * browser (address-bar mock with the icon they must click), only their
+ * browser is shown (the rest fold away), and nobody has to report
+ * success — while blocked, the gate quietly re-runs the activation-less
+ * test on focus and on an interval, so the moment they click "Allow"
+ * it congratulates and gets out of the way on its own.
+ *
+ * `?popupgate=demo` forces the blocked rendering without testing or
+ * persisting — for eyeballing the banner from an already-allowed
+ * browser.
  */
 
 const VERIFIED_KEY = 'raptor.popupsVerified';
+
+/** How often the blocked gate re-tests on its own. Attempts while still
+ *  blocked are invisible (that is what blocked means); the first allowed
+ *  one costs a single open-and-close flash and ends the gate. */
+export const RETEST_INTERVAL_MS = 4000;
 
 export function popupsVerified(): boolean {
   try {
@@ -24,6 +42,13 @@ export function popupsVerified(): boolean {
   } catch {
     return false;
   }
+}
+
+/** `?popupgate=demo` — render the blocked banner without testing. */
+export function isDemoMode(
+  search: string = typeof location !== 'undefined' ? location.search : '',
+): boolean {
+  return new URLSearchParams(search).get('popupgate') === 'demo';
 }
 
 export type PopupTestResult = 'allowed' | 'blocked';
@@ -55,11 +80,10 @@ export function runPopupTest(
 
 /**
  * The automatic variant (Carson, 2026-08-12: "auto test board windows,
- * show it only when they are not available"). Runs on load, where there
- * is no click to burn, so a SINGLE open already has the activation-less
- * conditions the double-open test manufactures. Allowed sites open it;
- * everyone else gets 'blocked' and the browser lights its popup icon —
- * which is the prompt the directions point at.
+ * show it only when they are not available"). Runs on load and on the
+ * gate's own re-test ticks, where there is no click to burn, so a
+ * SINGLE open already has the activation-less conditions the
+ * double-open test manufactures.
  */
 export function runPopupAutoTest(
   open: (url: string, name: string, features: string) => Window | null =
@@ -86,7 +110,7 @@ const DIRECTIONS: readonly BrowserDirection[] = [
     key: 'chromium',
     name: 'Chrome / Brave / Edge',
     steps:
-      'After a blocked test, click the popup icon at the right end of the address bar and pick "Always allow pop-ups and redirects from this site". (Or: Settings → Privacy → Site settings → Pop-ups and redirects → add this site.)',
+      'Click the popup icon at the right end of the address bar and pick "Always allow pop-ups and redirects from this site", then Done. (Or: Settings → Privacy → Site settings → Pop-ups and redirects → add this site.)',
   },
   {
     key: 'firefox',
@@ -133,6 +157,7 @@ export function orderedDirections(currentKey: string): readonly BrowserDirection
 
 // One auto-test per page load: StrictMode double-mounts effects in dev,
 // and a revisit to the login screen within a load needn't flash again.
+// The gate's own re-test loop updates this when the visitor allows.
 let autoResultThisLoad: PopupTestResult | null = null;
 
 function persist(result: PopupTestResult): void {
@@ -144,59 +169,205 @@ function persist(result: PopupTestResult): void {
   }
 }
 
+// ---- the pictures ---------------------------------------------------------
+// An instruction that is a mock of the visitor's own browser beats any
+// sentence. Inline SVG: no assets, themes with the card, and the icon they
+// must find can pulse. Only chromium and firefox get pictures — those UIs
+// are stable and near-universal here; the rest stay textual.
+
+function ChromiumPicture() {
+  return (
+    <svg viewBox="0 0 384 150" style={picture} aria-hidden="true">
+      {/* address bar */}
+      <rect x="4" y="8" width="376" height="34" rx="17" fill="#101a33" stroke="#3d4c6e" />
+      <circle cx="24" cy="25" r="7" fill="none" stroke="#67759b" strokeWidth="1.5" />
+      <text x="40" y="30" fontSize="13" fill="#9fb3d9" fontFamily="system-ui">raptor3000.pages.dev</text>
+      {/* the blocked-popup icon: a little window with a red x */}
+      <g>
+        <rect x="336" y="16" width="20" height="15" rx="2" fill="none" stroke="#dfe8f5" strokeWidth="1.6" />
+        <line x1="336" y1="21" x2="356" y2="21" stroke="#dfe8f5" strokeWidth="1.6" />
+        <circle cx="356" cy="30" r="6" fill="#c23b2e" />
+        <path d="M353.6 27.6 l4.8 4.8 M358.4 27.6 l-4.8 4.8" stroke="#fff" strokeWidth="1.4" />
+        {/* pulse to say THIS one */}
+        <circle cx="346" cy="24" r="14" fill="none" stroke="#8fb8f0" strokeWidth="2">
+          <animate attributeName="r" values="12;20;12" dur="1.8s" repeatCount="indefinite" />
+          <animate attributeName="opacity" values="0.9;0;0.9" dur="1.8s" repeatCount="indefinite" />
+        </circle>
+      </g>
+      {/* dropdown the icon opens */}
+      <path d="M346 46 v10" stroke="#67759b" strokeDasharray="3 3" />
+      <rect x="96" y="58" width="284" height="84" rx="8" fill="#17223e" stroke="#3d4c6e" />
+      <circle cx="114" cy="80" r="6" fill="none" stroke="#79c19c" strokeWidth="2" />
+      <circle cx="114" cy="80" r="2.6" fill="#79c19c" />
+      <text x="128" y="77" fontSize="11" fill="#dfe8f5" fontFamily="system-ui">Always allow pop-ups and redirects</text>
+      <text x="128" y="91" fontSize="11" fill="#dfe8f5" fontFamily="system-ui">from this site</text>
+      <circle cx="114" cy="110" r="6" fill="none" stroke="#67759b" strokeWidth="1.5" />
+      <text x="128" y="114" fontSize="11" fill="#9fb3d9" fontFamily="system-ui">Continue blocking</text>
+      <rect x="308" y="116" width="60" height="20" rx="5" fill="#4f7cd1" />
+      <text x="338" y="130" fontSize="11" fill="#fff" fontFamily="system-ui" textAnchor="middle">Done</text>
+    </svg>
+  );
+}
+
+function FirefoxPicture() {
+  return (
+    <svg viewBox="0 0 384 118" style={picture} aria-hidden="true">
+      {/* the infobar firefox drops below its toolbar */}
+      <rect x="4" y="8" width="376" height="32" rx="6" fill="#101a33" stroke="#3d4c6e" />
+      <rect x="16" y="17" width="14" height="11" rx="2" fill="none" stroke="#dfe8f5" strokeWidth="1.5" />
+      <text x="40" y="28" fontSize="11" fill="#dfe8f5" fontFamily="system-ui">Firefox prevented this site from opening a pop-up window</text>
+      <rect x="290" y="14" width="82" height="20" rx="5" fill="#4f7cd1" />
+      <text x="331" y="28" fontSize="11" fill="#fff" fontFamily="system-ui" textAnchor="middle">Preferences ▾</text>
+      <circle cx="331" cy="24" r="16" fill="none" stroke="#8fb8f0" strokeWidth="2">
+        <animate attributeName="r" values="14;22;14" dur="1.8s" repeatCount="indefinite" />
+        <animate attributeName="opacity" values="0.9;0;0.9" dur="1.8s" repeatCount="indefinite" />
+      </circle>
+      {/* its menu */}
+      <path d="M331 42 v8" stroke="#67759b" strokeDasharray="3 3" />
+      <rect x="130" y="54" width="250" height="52" rx="8" fill="#17223e" stroke="#3d4c6e" />
+      <rect x="136" y="60" width="238" height="20" rx="4" fill="#22345c" />
+      <text x="146" y="74" fontSize="11" fill="#dfe8f5" fontFamily="system-ui">Allow pop-ups for raptor3000.pages.dev</text>
+      <text x="146" y="98" fontSize="11" fill="#9fb3d9" fontFamily="system-ui">Edit Pop-up Blocker Options…</text>
+    </svg>
+  );
+}
+
+/** The one-browser instruction block: picture where we have one,
+ *  sentence where we don't. */
+function Instruction({ browserKey }: { browserKey: string }) {
+  if (browserKey === 'chromium') {
+    return (
+      <div>
+        <div style={step}><span style={stepNum}>1</span><span>Find this icon at the right end of your address bar — it appeared just now:</span></div>
+        <ChromiumPicture />
+        <div style={step}><span style={stepNum}>2</span><span>Click it, pick <strong>Always allow</strong>, then <strong>Done</strong>. That&apos;s the whole job.</span></div>
+      </div>
+    );
+  }
+  if (browserKey === 'firefox') {
+    return (
+      <div>
+        <div style={step}><span style={stepNum}>1</span><span>A bar just appeared at the top of the page:</span></div>
+        <FirefoxPicture />
+        <div style={step}><span style={stepNum}>2</span><span>Click <strong>Preferences</strong> and pick <strong>Allow pop-ups for raptor3000.pages.dev</strong>.</span></div>
+      </div>
+    );
+  }
+  const d = DIRECTIONS.find(x => x.key === browserKey) ?? DIRECTIONS[0];
+  return <p style={gateP}>{d.steps}</p>;
+}
+
 /**
- * Auto-tested on mount, visible only on failure (Carson, 2026-08-12:
- * "auto test board windows and show that at the top only when they are
- * not available"). Allowed renders nothing — the working state needs no
- * furniture. Blocked renders the banner with per-browser directions and
- * a manual re-test button (that click has activation to burn, so the
- * button uses the honest double-open test).
+ * Auto-tested on mount, visible only on failure. Allowed renders
+ * nothing — the working state needs no furniture. Blocked renders the
+ * picture-instruction for the visitor's browser and then WAITS: an
+ * activation-less re-test on window focus and every few seconds means
+ * the visitor never has to report back that they clicked Allow — the
+ * gate notices, says so, and leaves.
  */
 export function PopupGate() {
-  const [state, setState] = useState<'pending' | PopupTestResult>(() =>
-    autoResultThisLoad ?? (popupsVerified() ? 'allowed' : 'pending'),
-  );
+  const demo = isDemoMode();
+  const [state, setState] = useState<'pending' | 'justAllowed' | PopupTestResult>(() => {
+    if (demo) return 'blocked';
+    return autoResultThisLoad ?? (popupsVerified() ? 'allowed' : 'pending');
+  });
 
   useEffect(() => {
-    if (autoResultThisLoad !== null) return;
+    if (demo || autoResultThisLoad !== null) return;
     // Runs even when a past visit verified: an allowlist entry can be
     // revoked, and re-proving costs one invisible open-and-close.
     const result = runPopupAutoTest();
     autoResultThisLoad = result;
     persist(result);
     setState(result);
-  }, []);
+  }, [demo]);
 
-  if (state !== 'blocked') return null;
+  // The watcher: while blocked (and not a demo), re-test on focus — the
+  // visitor comes straight back from the browser's own Allow UI — and on
+  // a slow interval as a net. Blocked attempts are invisible by
+  // definition; the first allowed one is the last.
+  useEffect(() => {
+    if (demo || state !== 'blocked') return;
+    const check = () => {
+      if (runPopupAutoTest() === 'allowed') {
+        autoResultThisLoad = 'allowed';
+        persist('allowed');
+        setState('justAllowed');
+      }
+    };
+    const iv = setInterval(check, RETEST_INTERVAL_MS);
+    window.addEventListener('focus', check);
+    document.addEventListener('visibilitychange', check);
+    return () => {
+      clearInterval(iv);
+      window.removeEventListener('focus', check);
+      document.removeEventListener('visibilitychange', check);
+    };
+  }, [state, demo]);
+
+  // Let the congratulation sit for a breath, then get out of the way.
+  useEffect(() => {
+    if (state !== 'justAllowed') return;
+    const t = setTimeout(() => setState('allowed'), 2800);
+    return () => clearTimeout(t);
+  }, [state]);
+
+  if (state === 'allowed' || state === 'pending') return null;
+
+  if (state === 'justAllowed') {
+    return (
+      <div style={{ ...gate, borderColor: '#3f7a5a' }}>
+        <div style={{ ...gateTitle, color: '#8fd8ae' }}>✓ Pop-ups allowed</div>
+        <p style={gateP}>Board and chat windows will open. Enjoy.</p>
+      </div>
+    );
+  }
 
   const retest = () => {
     const result = runPopupTest();
-    autoResultThisLoad = result;
-    persist(result);
-    setState(result);
+    if (!demo) {
+      autoResultThisLoad = result;
+      persist(result);
+    }
+    setState(result === 'allowed' ? 'justAllowed' : 'blocked');
   };
 
   const current = detectBrowserKey();
   return (
     <div style={gate}>
-      <div style={gateTitle}>Board windows are blocked</div>
+      <div style={gateTitle}>
+        Almost there…
+        {demo ? <span style={demoChip}>demo</span> : null}
+      </div>
       <p style={gateP}>
-        Raptor3000 opens boards and chat as <strong>real browser
-        windows</strong>, and they arrive from the server — not from your
-        clicks — so your browser must allow popups for this site. Right
-        now it doesn&apos;t:
+        Raptor3000 plays like a desktop app — chat and every board open as{' '}
+        <strong>real windows</strong>. Your browser is blocking them, and
+        fixing that takes two clicks:
       </p>
-      <ul style={gateList}>
-        {orderedDirections(current).map(d => (
-          <li key={d.key} style={{ marginBottom: 6 }}>
-            <strong>
-              {d.name}
-              {d.key === current ? ' (your browser)' : ''}
-            </strong>{' '}
-            — {d.steps}
-          </li>
-        ))}
-      </ul>
+      <Instruction browserKey={current} />
+      <div style={watchRow}>
+        <svg viewBox="0 0 10 10" width="10" height="10" style={{ flexShrink: 0 }} aria-hidden="true">
+          <circle cx="5" cy="5" r="4" fill="#8fb8f0">
+            <animate attributeName="opacity" values="1;0.25;1" dur="1.6s" repeatCount="indefinite" />
+          </circle>
+        </svg>
+        <span>
+          No need to tell anyone — this screen checks by itself and steps
+          aside the moment windows are allowed.
+        </span>
+      </div>
+      <details style={others}>
+        <summary style={{ cursor: 'pointer' }}>Using a different browser?</summary>
+        <ul style={gateList}>
+          {orderedDirections(current)
+            .filter(d => d.key !== current)
+            .map(d => (
+              <li key={d.key} style={{ marginBottom: 6 }}>
+                <strong>{d.name}</strong> — {d.steps}
+              </li>
+            ))}
+        </ul>
+      </details>
       <button type="button" style={gateButton} onClick={retest}>
         Test again
       </button>
@@ -216,7 +387,7 @@ export function PopupGate() {
 }
 
 const gate = {
-  width: 'min(420px, calc(100vw - 48px))',
+  width: 'min(460px, calc(100vw - 48px))',
   boxSizing: 'border-box',
   // A flex item of the shell now, above the centered column: self-center
   // horizontally, hug the top, and never eat into the column's height.
@@ -258,4 +429,61 @@ const gateButton = {
   fontSize: 13,
   fontWeight: 600,
   cursor: 'pointer',
+} as const;
+
+const picture = {
+  display: 'block',
+  width: '100%',
+  height: 'auto',
+  margin: '8px 0',
+} as const;
+
+const step = {
+  display: 'flex',
+  alignItems: 'baseline',
+  gap: 8,
+  margin: '8px 0 2px',
+} as const;
+
+const stepNum = {
+  flexShrink: 0,
+  display: 'inline-flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  width: 18,
+  height: 18,
+  borderRadius: '50%',
+  background: '#4f7cd1',
+  color: '#fff',
+  fontSize: 11,
+  fontWeight: 700,
+  transform: 'translateY(3px)',
+} as const;
+
+const watchRow = {
+  display: 'flex',
+  alignItems: 'center',
+  gap: 8,
+  margin: '10px 0 4px',
+  fontSize: 12,
+  color: '#b7c6e2',
+} as const;
+
+const others = {
+  margin: '8px 0 2px',
+  fontSize: 12,
+  color: '#b7c6e2',
+} as const;
+
+const demoChip = {
+  marginLeft: 8,
+  padding: '2px 8px',
+  borderRadius: 99,
+  border: '1px solid #9a7524',
+  color: '#d8b263',
+  fontSize: 10,
+  fontWeight: 600,
+  letterSpacing: '0.08em',
+  textTransform: 'uppercase',
+  verticalAlign: 'middle',
 } as const;

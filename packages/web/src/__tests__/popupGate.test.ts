@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   detectBrowserKey,
+  isDemoMode,
   orderedDirections,
   runPopupAutoTest,
   runPopupTest,
@@ -95,5 +96,17 @@ describe('orderedDirections', () => {
     const ordered = orderedDirections('ios');
     expect(ordered[0].key).toBe('ios');
     expect(ordered).toHaveLength(5);
+  });
+});
+
+describe('isDemoMode', () => {
+  // ?popupgate=demo renders the blocked banner without testing or
+  // persisting — the way to see the gate from an already-allowed browser.
+  it('matches exactly popupgate=demo', () => {
+    expect(isDemoMode('?popupgate=demo')).toBe(true);
+    expect(isDemoMode('?window=board&id=3&popupgate=demo')).toBe(true);
+    expect(isDemoMode('')).toBe(false);
+    expect(isDemoMode('?popupgate=1')).toBe(false);
+    expect(isDemoMode('?window=chat')).toBe(false);
   });
 });
