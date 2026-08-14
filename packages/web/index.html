@@ -15,6 +15,11 @@
       // and would double-count everyone); this snippet is the only beacon.
       (function () {
         try {
+          // Visit any URL with ?nocount once and this browser opts out
+          // for good (the owner shouldn't count as a user).
+          if (new URLSearchParams(location.search).has('nocount')) {
+            localStorage.setItem('raptor.noCount', '1');
+          }
           if (navigator.webdriver) return;
           if (localStorage.getItem('raptor.noCount')) return;
         } catch (e) {
