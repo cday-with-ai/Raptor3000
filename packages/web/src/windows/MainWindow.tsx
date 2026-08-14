@@ -13,6 +13,7 @@ import {
   optionsGrid,
 } from './shellStyles.js';
 import { loadProfile, loadSelection, saveSelection } from '../loginProfiles.js';
+import { armRelaunchToLogin, consumeRelaunchToLogin } from '../relaunch.js';
 import { playSound } from '../sounds.js';
 import { useLivePreferences } from '../useLivePreferences.js';
 import { CHAT_COLOR_AUTO, type ChatColorKey } from '../chatFormat.js';
@@ -82,6 +83,16 @@ export const MainWindow = observer(function MainWindow({
       sessionId={context.sessionId}
       reopenChat={() => wm.open({ kind: 'chat' })}
       reconnect={() => loginWithContext(context, connectorCreds(session))}
+      relaunch={() => {
+        // Full restart at the login screen: the reload is the teardown
+        // (nothing half-alive to leak); closing the popups first keeps
+        // them from waking up orphaned, and the armed flag makes the
+        // next launch stop at login even with auto-login on.
+        armRelaunchToLogin();
+        wm.closeAll();
+        context.connector.disconnect();
+        location.reload();
+      }}
     />
   );
 });
@@ -108,12 +119,14 @@ function PostLoginShell({
   sessionId,
   reopenChat,
   reconnect,
+  relaunch,
 }: {
   context: RaptorContext;
   session: LoginSubmission;
   sessionId: number;
   reopenChat: () => void;
   reconnect: () => void;
+  relaunch: () => void;
 }) {
   const [tab, setTab] = useState<NavTab>('options');
   const [themeMode, setThemeMode] = useState<ThemeMode>(() => loadThemeMode());
@@ -210,7 +223,7 @@ function PostLoginShell({
         </div>
       )}
 
-      {tab === 'options' && <OptionsPage reopenChat={reopenChat} reconnect={reconnect} />}
+      {tab === 'options' && <OptionsPage reopenChat={reopenChat} reconnect={reconnect} relaunch={relaunch} />}
       {tab === 'seek' && <SeekGraphTab context={context} />}
       {tab === 'help' && <HelpPage />}
 
@@ -301,14 +314,19 @@ function ThemeToggle({
 function OptionsPage({
   reopenChat,
   reconnect,
+  relaunch,
 }: {
   reopenChat: () => void;
   reconnect: () => void;
+  relaunch: () => void;
 }) {
   const [prefs, setPrefs] = useState<AppPreferences>(() => loadPreferences());
   // Two-step reset: first click arms it, second click resets. Avoids a
   // blocking confirm() dialog and still can't fire by accident.
   const [resetArmed, setResetArmed] = useState(false);
+  // Same two-step for relaunch: it drops the connection and every window,
+  // which mid-game is a real cost.
+  const [relaunchArmed, setRelaunchArmed] = useState(false);
 
   function update<K extends keyof AppPreferences>(k: K, v: AppPreferences[K]) {
     setPrefs(p => {
@@ -344,6 +362,31 @@ function OptionsPage({
             <Note>
               No-op while connected. Use it after another login kicks this
               session — it takes the account back (FICS kicks them in turn).
+            </Note>
+          </Row>
+          <Row label="Start over">
+            <button
+              style={{
+                ...linkBtn,
+                ...(relaunchArmed
+                  ? { borderColor: '#a04040', color: '#d86868', fontWeight: 600 }
+                  : {}),
+              }}
+              onClick={() => {
+                if (!relaunchArmed) {
+                  setRelaunchArmed(true);
+                  return;
+                }
+                relaunch();
+              }}
+              onMouseLeave={() => setRelaunchArmed(false)}
+            >
+              {relaunchArmed ? 'Click again to relaunch' : 'Relaunch'}
+            </button>
+            <Note>
+              Disconnects, closes every window, and restarts the whole app
+              at the login screen — auto-login is skipped for that one
+              launch. Nothing else is changed or reset.
             </Note>
           </Row>
           <AutoLoginRow />
@@ -1267,6 +1310,9 @@ function stockHex(state: ClockState, channel: 'bg' | 'text'): string {
 }
 
 function hydrateAutoLogin(): LoginSubmission | null {
+  // A relaunch asked for the login screen; the flag is one-shot, so the
+  // launch after this one auto-logins again as configured.
+  if (consumeRelaunchToLogin()) return null;
   const sel = loadSelection();
   if (!sel.autoConnect) return null;
   const creds = loadProfile(sel.activeProfile);
