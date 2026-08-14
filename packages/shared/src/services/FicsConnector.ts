@@ -81,6 +81,10 @@ export class FicsConnector extends BaseConnector implements Connector {
    *  X") — guests get their generated GuestXXXX name here. Null before
    *  login completes. */
   private loggedInAs: string | null = null;
+  /** Transport up/down subscribers — see onConnectionChange. A Set, not a
+   *  single assignable hook: two UI surfaces subscribing must not clobber
+   *  each other silently. */
+  private connectionListeners = new Set<(connected: boolean) => void>();
   private readonly options: Required<Omit<FicsConnectorOptions, 'gameService' | 'parser'>> &
     Pick<FicsConnectorOptions, 'gameService' | 'parser'>;
 
@@ -105,6 +109,24 @@ export class FicsConnector extends BaseConnector implements Connector {
 
   isConnected(): boolean {
     return this.connected;
+  }
+
+  /**
+   * Observe the transport going up or down. Level-triggered, not
+   * edge-triggered: `false` means "the link is down now" and may repeat
+   * (a user disconnect() is followed by the browser's own onclose), so
+   * consumers must treat a duplicate as a no-op. `false` also fires for
+   * a connect attempt that never opened — from the UI's side an
+   * unreachable server and a dropped session are the same dead link.
+   * Returns the unsubscribe, so a React effect can return it directly.
+   */
+  onConnectionChange(cb: (connected: boolean) => void): () => void {
+    this.connectionListeners.add(cb);
+    return () => this.connectionListeners.delete(cb);
+  }
+
+  private fireConnectionChange(connected: boolean): void {
+    for (const cb of this.connectionListeners) cb(connected);
   }
 
   /** The handle this session logged in as, or null before login. */
@@ -142,6 +164,7 @@ export class FicsConnector extends BaseConnector implements Connector {
       ws.send(encodeTimeseal(opener));
       this.connected = true;
       this.publishInternal('WebSocket connected; handshaking…');
+      this.fireConnectionChange(true);
     };
 
     ws.onmessage = async ev => {
@@ -162,6 +185,9 @@ export class FicsConnector extends BaseConnector implements Connector {
           ? 'Connection closed — this session was kicked by a newer login as the same account. Reconnect to take it back.'
           : `WebSocket closed${wasMidLogin ? ' during login' : ''}${ev.reason ? `: ${ev.reason}` : ''}`,
       );
+      // Unconditional: even a socket that never reached onopen concluded
+      // an attempt, and the UI's disconnect surface wants to hear it.
+      this.fireConnectionChange(false);
     };
 
     ws.onerror = err => {
@@ -178,9 +204,14 @@ export class FicsConnector extends BaseConnector implements Connector {
     }
     this.ws?.close(1000, 'User requested disconnect');
     this.ws = null;
+    const wasConnected = this.connected;
     this.connected = false;
     this.loginStage = 'pre';
     this.pendingCreds = null;
+    // Guarded, unlike onclose: teardown paths (beforeunload, relaunch)
+    // call disconnect() when the link may already be down, and an
+    // already-dead link going "down" again is not news.
+    if (wasConnected) this.fireConnectionChange(false);
   }
 
   /**

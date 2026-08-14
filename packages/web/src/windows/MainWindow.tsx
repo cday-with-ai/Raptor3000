@@ -150,6 +150,15 @@ function PostLoginShell({
     window.addEventListener('raptor:popup-blocked', onBlocked);
     return () => window.removeEventListener('raptor:popup-blocked', onBlocked);
   }, []);
+  // Dead link → the Relaunch panel (Carson, 2026-08-14: "just a relaunch
+  // button… no label above it, the verbiage below it" — explicitly NOT a
+  // reopen-chat / reconnect flow). Starts false so the initial handshake
+  // doesn't flash it; the connector's first event decides from then on.
+  const [linkDown, setLinkDown] = useState(false);
+  useEffect(
+    () => context.connector.onConnectionChange(up => setLinkDown(!up)),
+    [context],
+  );
 
   // Apply here as well as persist: a `storage` event does not fire in the
   // window that wrote the value, so the sync installed in `main.tsx` — which
@@ -220,6 +229,22 @@ function PostLoginShell({
               ×
             </button>
           </span>
+        </div>
+      )}
+
+      {linkDown && (
+        <div style={disconnectPanel}>
+          {/* One click, no arming — unlike the Options relaunch, there is
+              no live session left to lose. */}
+          <button style={disconnectRelaunch} onClick={relaunch}>
+            Relaunch
+          </button>
+          <div style={disconnectVerbiage}>
+            The connection to FICS closed. Relaunch restarts the app at the
+            login screen — the chat console&apos;s last lines say why the
+            session ended (idle logout, kicked by a newer login, or the
+            network dropped).
+          </div>
         </div>
       )}
 
@@ -933,6 +958,35 @@ const bannerAction = {
   cursor: 'pointer',
   fontSize: 12,
   fontWeight: 600,
+} as const;
+
+// The disconnect surface: the button IS the header — nothing above it,
+// the explanation below it, per Carson's 2026-08-14 spec.
+const disconnectPanel = {
+  display: 'flex',
+  flexDirection: 'column',
+  alignItems: 'center',
+  gap: 8,
+  margin: '10px 24px 0',
+  padding: '14px 16px',
+  borderRadius: 6,
+  border: '1px solid var(--border-strong)',
+  background: 'var(--bg-raised)',
+  flexShrink: 0,
+} as const;
+
+const disconnectRelaunch = {
+  ...bannerAction,
+  padding: '10px 32px',
+  fontSize: 15,
+} as const;
+
+const disconnectVerbiage = {
+  color: 'var(--fg-muted)',
+  fontSize: 13,
+  lineHeight: 1.5,
+  textAlign: 'center',
+  maxWidth: 520,
 } as const;
 
 const bannerDismiss = {

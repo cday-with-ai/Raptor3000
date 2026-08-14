@@ -41,7 +41,31 @@ back rank, 2026-08-09.
 ## Where this is
 
 The connector, the parser and the board renderer all exist and are wired
-together. 321 unit tests pass in `packages/shared`, 159 in `packages/web`.
+together. 317 unit tests pass in `packages/shared`, 290 in `packages/web`.
+
+**On disconnect the main window now offers exactly one thing: Relaunch
+(2026-08-14).** Carson's spec via the box, relayed 12:15: the button itself
+with no label above it and the verbiage below it — explicitly NOT a
+reopen-chat/reconnect flow. `FicsConnector.onConnectionChange(cb)` is the
+new seam: level-triggered transport up/down, a listener Set (two UI
+surfaces must not clobber each other) returning its own unsubscribe so a
+React effect can return it directly. Two asymmetries are deliberate and
+pinned: `onclose` fires `false` unconditionally — a socket that never
+reached onopen still concluded an attempt, and an unreachable server and a
+dropped session are the same dead link from the UI's side — while
+`disconnect()` fires only on a real transition, because teardown paths
+(beforeunload, relaunch) call it when the link may already be down. The
+browser's own onclose trails a user disconnect(), so consumers get a
+duplicate `false` by contract and must no-op on it. The panel in
+`PostLoginShell` starts hidden (no flash during the initial handshake; the
+connector's first event decides) and its Relaunch is one-click, unlike the
+armed two-step in Options — there is no live session left to lose. The 5
+tests in `connectionEvents.test.ts` are the first to drive the real
+`connect()` → ws.onopen/onclose path (stubbed global WebSocket) rather
+than injecting private state. Verified by sabotage: dropping the onclose
+fire reddens 4, unguarding disconnect() reddens 1. Live-verified on
+localhost: guest login, `ws.close()` from the page console, panel
+appeared, one click landed on the login screen.
 
 **The board is Chess Ascent's board now, and it plays (2026-08-12).** The
 full visual port from chessascent.app — its color themes plus the custom
@@ -796,12 +820,9 @@ work still mostly lives. Pointing the ratchet at both packages is a one-line cha
 `count_skips` does scan `packages/*/src`, so silencing a test is still caught
 either way.
 
-`npx tsc --noEmit` in `packages/web` is red on two pre-existing unused-symbol
-errors in `EngineManager.test.ts` (an unused `BoardMode` import and an unused
-`_mgr` binding, both TS6133). They predate 2026-08-05 and were left alone
-rather than swept up mid-increment, but they mean `yarn typecheck` there
-cannot currently be used as a gate. It is still worth running: those two lines
-are the whole expected output, so anything else in it is yours.
+`npx tsc --noEmit` in `packages/web` is CLEAN as of 2026-08-14 — the two
+TS6133s in `EngineManager.test.ts` this paragraph used to describe are gone,
+so it is now usable as a gate: any output at all is yours.
 
 `yarn lint` in `packages/web` does not run at all — the script calls eslint 10,
 which wants a flat `eslint.config.js`, and there is no eslint config anywhere in

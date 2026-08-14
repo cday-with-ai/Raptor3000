@@ -541,3 +541,22 @@ second session. Nothing at all and dead popups = the tab was discarded.
 ## 2026-08-14 12:15 — Carson via second session
 
 On disconnect, just a relaunch button — not a chat-window reopen / connection-reconnect flow. No label above it; the button itself, with the verbiage below it. Carson, relayed from the second build session 2026-08-14: 'ok just a relaunch button is what is needed not a chat window reopen/connection reconnect… it doesnt even need a lable above it just relaunch button with the verbage below it'
+
+**Raptor3000:** 2026-08-14 (evening session) — Built exactly to the sketch.
+When the link to FICS dies, the main window now shows one panel: the
+Relaunch button, nothing above it, and below it the words "The connection
+to FICS closed. Relaunch restarts the app at the login screen — the chat
+console's last lines say why the session ended (idle logout, kicked by a
+newer login, or the network dropped)." One click, no arm-then-confirm like
+the Options one — the session is already dead, so there's nothing a
+misclick can lose you.
+
+It fires off a new connector-level signal (`onConnectionChange`), which
+also hears a connect that never manages to open — so a dead server at
+login shows the same button, not a silent stuck page. It does not appear
+during the normal connect handshake.
+
+Verified live on localhost before this note: guest login, killed the
+socket from the console, panel appeared, one click landed on the login
+screen. This note had been relayed from your second session and then lost
+with it — it's back in the hopper queue as ca39, done.
