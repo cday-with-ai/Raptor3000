@@ -66,6 +66,35 @@ describe('toTimeline', () => {
   });
 });
 
+describe('toTimeline near-duplicate collapse', () => {
+  // Two logger instances overlapping (2026-08-13→14) stamped every tell
+  // twice, 0–130ms apart — the API itself served doubles.
+  it('collapses the same sender+text milliseconds apart into one tell', () => {
+    const t = toTimeline([
+      row('boodroe', 'ai wrote a song', 1786744046593),
+      row('boodroe', 'ai wrote a song', 1786744046580),
+    ]);
+    expect(t).toHaveLength(1);
+  });
+
+  it('keeps a genuine repeat said again later', () => {
+    const t = toTimeline([
+      row('cday', 'hahaha', 1786744100980),
+      row('cday', 'hahaha', 1786739252494), // hours earlier
+    ]);
+    expect(t).toHaveLength(2);
+  });
+
+  it('collapses doubles even when another tell lands between them', () => {
+    const t = toTimeline([
+      row('a', 'doubled line', 1000),
+      row('b', 'interleaved', 1040),
+      row('a', 'doubled line', 1080),
+    ]);
+    expect(t.map(e => e.message)).toEqual(['doubled line', 'interleaved']);
+  });
+});
+
 describe('mergeHistory', () => {
   const hist = toTimeline([row('b', 'later', 200), row('a', 'earlier', 100)]);
 
