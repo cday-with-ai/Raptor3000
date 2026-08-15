@@ -322,7 +322,20 @@ export class FicsConnector extends BaseConnector implements Connector {
     const normalized = cleaned
       .replace(/\n\r/g, '\n')
       .replace(/\r\n/g, '\n')
-      .replace(/\r/g, '\n');
+      .replace(/\r/g, '\n')
+      // Telnet echo negotiation, arriving as mojibake. FICS sends
+      // IAC WILL ECHO (FF FB 01) before `login:` and IAC WONT ECHO
+      // (FF FC 01) before `password:`. Neither FF nor FB/FC is valid
+      // UTF-8, so TextDecoder turns each into U+FFFD while the 01
+      // survives as a control character — that is the `??` pair sitting
+      // in front of both prompts, and again in the session banner.
+      //
+      // Anchored on the trailing \u0001 rather than stripping U+FFFD on
+      // sight: a replacement character in ordinary server text is
+      // someone's broken encoding and worth seeing, whereas this exact
+      // run is unambiguously the protocol half of telnet — which this
+      // client does not speak and nothing downstream wants.
+      .replace(/\uFFFD{1,2}\u0001/g, '');
 
     // Login-stage detection before handing bytes to FicsParser.
     if (this.loginStage !== 'authed') {

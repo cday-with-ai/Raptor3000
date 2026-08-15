@@ -218,3 +218,48 @@ describe('disconnect diagnostics', () => {
     expect(seen.at(-1)).not.toMatch(/transport dropped/i);
   });
 });
+
+/**
+ * The `??` in front of `login:` and `password:` (Carson, 2026-08-13,
+ * filed as cosmetic). It is telnet's IAC WILL/WONT ECHO arriving as
+ * mojibake — bytes this client has no use for.
+ */
+describe('telnet echo negotiation', () => {
+  const IAC_ECHO = '\uFFFD\uFFFD\u0001';
+
+  function normalize(input: string): string {
+    const chatService = new ChatService();
+    const gameService = new GameService();
+    const parser = new FicsParser({
+      chatParsers: defaultChatParsers(),
+      gameLineParsers: defaultGameLineParsers(),
+      chunkParsers: defaultChunkParsers(),
+      gameService,
+    });
+    const c = new FicsConnector({ chatService, gameService, parser });
+    const seen: string[] = [];
+    chatService.addMainConsoleListener({
+      id: 'probe',
+      accepts: () => true,
+      handle: e => seen.push(e.raw ?? ''),
+    });
+    (c as unknown as { connected: boolean }).connected = true;
+    (c as unknown as { loginStage: string }).loginStage = 'authed';
+    (c as unknown as { handleRaw(s: string): void }).handleRaw(input);
+    return seen.join('\n');
+  }
+
+  it('drops IAC WILL ECHO ahead of a prompt', () => {
+    const out = normalize(IAC_ECHO + '\nwelcome aboard\n');
+    expect(out).toContain('welcome aboard');
+    expect(out).not.toContain('\uFFFD');
+    expect(out).not.toContain('\u0001');
+  });
+
+  it('leaves a lone replacement character alone', () => {
+    // Someone else's broken encoding in ordinary server text is worth
+    // seeing; only the telnet run is unambiguous enough to delete.
+    const out = normalize('GuestA tells you: caf\uFFFD\n');
+    expect(out).toContain('caf\uFFFD');
+  });
+});
