@@ -5,6 +5,7 @@ import {
   resolveContext,
   type RaptorContext,
 } from './windows/appContext.js';
+import { installCloseGuard } from './windows/closeGuard.js';
 import { getWindowManager } from './windows/WindowManager.js';
 import { installOpenerWatch } from './windows/openerWatch.js';
 import { MainWindow } from './windows/MainWindow.js';
@@ -97,6 +98,18 @@ function MainWindowRoot() {
   // have to kick on our next login.
   useEffect(() => {
     const onUnload = () => {
+      // Resign FIRST, while there is still a socket to say it on
+      // (Carson, 2026-08-15: "if you close it you resign it"). The
+      // disconnect below is what makes the order load-bearing rather
+      // than tidy — a resign sent after it goes nowhere, silently, and
+      // the game sits on FICS forfeiting on time instead.
+      try {
+        if (window.raptor?.gameService.isPlayingAny()) {
+          window.raptor.connector.sendMessageHidden('resign');
+        }
+      } catch {
+        // nothing better to do from a dying page
+      }
       // Take the popups with us. The FICS session dies with this window
       // either way, so leaving boards and chat on screen only leaves
       // something that LOOKS connected — the state Carson spent an
@@ -118,25 +131,21 @@ function MainWindowRoot() {
       }
       delete window.raptor;
     };
-    window.addEventListener('beforeunload', onUnload);
-    return () => window.removeEventListener('beforeunload', onUnload);
+    // One guard for both halves, because they are the same decision:
+    // the dialog asks (only while a game is live — Carson's "if not
+    // playing just close everything"), and the teardown runs only once
+    // the page is really going. Hung off beforeunload, as it used to be,
+    // cancelling the dialog left you on a page whose connection had
+    // already been dismantled.
+    return installCloseGuard({
+      isPlaying: () => window.raptor?.gameService.isPlayingAny() ?? false,
+      onLeaving: onUnload,
+      addEventListener: (t, fn) => window.addEventListener(t, fn as EventListener),
+      removeEventListener: (t, fn) =>
+        window.removeEventListener(t, fn as EventListener),
+    });
   }, []);
 
-  // Guard the close only while a game is live (Carson: "do it Raptor
-  // style — if the user is playing a game when the main tab is closing,
-  // prompt an 'are you sure?'"). Browsers allow no custom text, so this
-  // is their generic Leave-site dialog; the point is that it is armed
-  // ONLY when there is something to lose. Observing and examining close
-  // silently, which is his "if not playing just close it".
-  useEffect(() => {
-    const confirmIfPlaying = (e: BeforeUnloadEvent) => {
-      if (!ctx.gameService.isPlayingAny()) return;
-      e.preventDefault();
-      e.returnValue = '';
-    };
-    window.addEventListener('beforeunload', confirmIfPlaying);
-    return () => window.removeEventListener('beforeunload', confirmIfPlaying);
-  }, [ctx]);
   return <MainWindow context={ctx} />;
 }
 

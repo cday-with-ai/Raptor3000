@@ -41,6 +41,7 @@ import {
   toolbarLayoutFor,
   type ToolbarItem,
 } from './boardToolbar.js';
+import { installCloseGuard, partingCommands } from './closeGuard.js';
 import { installPositionTracker, windowStorageKey } from './windowPosition.js';
 import type { EngineAnalysis } from '../engine/EngineService.js';
 import {
@@ -330,20 +331,38 @@ export const BoardWindow = observer(function BoardWindow({
   const topTicking = flipped ? whiteTicking : blackTicking;
   const bottomTicking = flipped ? blackTicking : whiteTicking;
 
-  // Closing an observed/examined board leaves the game on FICS too —
-  // Raptor behavior. beforeunload also fires on a popup reload, which
-  // costs one unobserve and a re-observe; closing is the common case.
+  // Closing a board leaves the game on FICS too — Raptor behavior, and
+  // Carson's report of 2026-08-15: after closing windows, FICS still
+  // said "(cdaysDog is observing game(s) 7 and 16)".
+  //
+  // This used to hang off `beforeunload`, which is the wrong event for
+  // an action: it fires when the browser CONSIDERS closing, and not at
+  // all in some script-driven closes. `installCloseGuard` splits the
+  // two — the dialog on beforeunload, the goodbye on pagehide — so a
+  // close initiated by the main window taking its popups with it still
+  // sends the unobserve, and a cancelled close sends nothing.
   useEffect(() => {
     const onUnload = () => {
       if (!gameId || ended || !context.connector.isConnected()) return;
-      if (mode === BoardMode.OBSERVING) {
-        context.connector.sendMessageHidden(`unobserve ${gameId}`);
-      } else if (mode === BoardMode.EXAMINING) {
-        context.connector.sendMessageHidden('unexamine');
+      // Closing a board mid-game resigns it (Carson: "if you try to
+      // close a window while you are playing you get a confirm box and
+      // if you close it you resign it"). Only reached once the page is
+      // really going — the dialog's Cancel never gets here.
+      for (const cmd of partingCommands({
+        playing: mode === BoardMode.PLAYING,
+        observing: mode === BoardMode.OBSERVING ? [gameId] : [],
+        examining: mode === BoardMode.EXAMINING,
+      })) {
+        context.connector.sendMessageHidden(cmd);
       }
     };
-    window.addEventListener('beforeunload', onUnload);
-    return () => window.removeEventListener('beforeunload', onUnload);
+    return installCloseGuard({
+      isPlaying: () => mode === BoardMode.PLAYING && !ended,
+      onLeaving: onUnload,
+      addEventListener: (t, fn) => window.addEventListener(t, fn as EventListener),
+      removeEventListener: (t, fn) =>
+        window.removeEventListener(t, fn as EventListener),
+    });
   }, [mode, ended, gameId, context]);
 
   // Toolbar nav: EXAMINING walks the game server-side; everything else

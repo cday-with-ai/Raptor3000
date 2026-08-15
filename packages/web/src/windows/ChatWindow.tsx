@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { ChatEventType, tokenize, type ChatEvent } from '@raptor3000/shared';
 import type { RaptorContext } from './appContext.js';
 import { ActionsTab } from './ActionsTab.js';
+import { installCloseGuard } from './closeGuard.js';
 import { SeekGraphTab } from './SeekGraphTab.js';
 import { installPositionTracker, windowStorageKey } from './windowPosition.js';
 import {
@@ -58,6 +59,32 @@ export const ChatWindow = function ChatWindow({
   const inputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => installPositionTracker(windowStorageKey('chat')), []);
+
+  // Closing the chat window while a game of yours is live asks first,
+  // and going through with it resigns (Carson, 2026-08-15: "if you
+  // close chat and you are playing lets do the same thing prompt you
+  // then yes is resign" — "if not playing just close everything").
+  //
+  // The chat window is not incidental here: it is where the connection
+  // is reachable from, so closing it while playing is the same act as
+  // walking away from the board. Resigning is the honest version of
+  // what FICS would eventually record anyway, and it happens now,
+  // deliberately, instead of as a forfeit on time later.
+  useEffect(
+    () =>
+      installCloseGuard({
+        isPlaying: () => context.gameService.isPlayingAny(),
+        onLeaving: () => {
+          if (!context.gameService.isPlayingAny()) return;
+          if (!context.connector.isConnected()) return;
+          context.connector.sendMessageHidden('resign');
+        },
+        addEventListener: (t, fn) => window.addEventListener(t, fn as EventListener),
+        removeEventListener: (t, fn) =>
+          window.removeEventListener(t, fn as EventListener),
+      }),
+    [context],
+  );
 
   // Subscribe to every chat event and fold into local state.
   useEffect(() => {
