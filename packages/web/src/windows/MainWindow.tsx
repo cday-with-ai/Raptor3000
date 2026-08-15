@@ -13,6 +13,8 @@ import {
   optionsGrid,
 } from './shellStyles.js';
 import { loadProfile, loadSelection, saveSelection } from '../loginProfiles.js';
+import { LanguageSelect, useT } from '../i18n/react.js';
+import type { MessageKey } from '../i18n/index.js';
 import { armRelaunchToLogin, consumeRelaunchToLogin } from '../relaunch.js';
 import { playSound } from '../sounds.js';
 import { playAlert } from '../alertSounds.js';
@@ -131,6 +133,7 @@ function PostLoginShell({
 }) {
   const [tab, setTab] = useState<NavTab>('options');
   const [themeMode, setThemeMode] = useState<ThemeMode>(() => loadThemeMode());
+  const { t, rich } = useT();
   // A board popup the browser refused (see announceBlockedBoardWindows).
   // On a fresh production origin every first observe lands here, so the
   // fix has to be one click away, not buried in a console line.
@@ -171,9 +174,9 @@ function PostLoginShell({
   }, [themeMode]);
 
   const who = session.creds.isAnonGuest
-    ? 'anonymous guest'
+    ? t('shell.who.anonGuest')
     : session.creds.isNamedGuest
-      ? `${session.creds.userName} (guest)`
+      ? t('shell.who.namedGuest', { name: session.creds.userName })
       : session.creds.userName;
 
   return (
@@ -185,20 +188,24 @@ function PostLoginShell({
             <div>
               <div style={brand}>Raptor3000</div>
               <div style={tagline}>
-              Signed in as <strong>{who}</strong> · {session.creds.serverUrl}:
-                {session.creds.port} · profile {session.profile}
+                {rich('shell.signedIn', {
+                  who,
+                  server: session.creds.serverUrl,
+                  port: session.creds.port,
+                  profile: session.profile,
+                })}
               </div>
             </div>
           </div>
           <nav style={navRow}>
             <NavButton active={tab === 'options'} onClick={() => setTab('options')}>
-              Options
+              {t('shell.nav.options')}
             </NavButton>
             <NavButton active={tab === 'seek'} onClick={() => setTab('seek')}>
-              Seek
+              {t('shell.nav.seek')}
             </NavButton>
             <NavButton active={tab === 'help'} onClick={() => setTab('help')}>
-              Help
+              {t('shell.nav.help')}
             </NavButton>
             <ThemeToggle mode={themeMode} onChange={setThemeMode} />
           </nav>
@@ -207,11 +214,7 @@ function PostLoginShell({
 
       {popupBlocked && (
         <div style={blockedBanner}>
-          <span>
-            <strong>Your browser blocked a board window.</strong> A game
-            opened on FICS but its board couldn't appear — allow popups
-            for this site and re-observe.
-          </span>
+          <span>{rich('shell.blocked.text')}</span>
           <span style={{ flexShrink: 0, display: 'inline-flex', gap: 8 }}>
             <button
               style={bannerAction}
@@ -220,11 +223,11 @@ function PostLoginShell({
                 setPopupBlocked(false);
               }}
             >
-              Show me how
+              {t('shell.blocked.showMe')}
             </button>
             <button
               style={bannerDismiss}
-              title="dismiss"
+              title={t('shell.blocked.dismiss')}
               onClick={() => setPopupBlocked(false)}
             >
               ×
@@ -238,14 +241,9 @@ function PostLoginShell({
           {/* One click, no arming — unlike the Options relaunch, there is
               no live session left to lose. */}
           <button style={disconnectRelaunch} onClick={relaunch}>
-            Relaunch
+            {t('shell.disconnect.relaunch')}
           </button>
-          <div style={disconnectVerbiage}>
-            The connection to FICS closed. Relaunch restarts the app at the
-            login screen — the chat console&apos;s last lines say why the
-            session ended (idle logout, kicked by a newer login, or the
-            network dropped).
-          </div>
+          <div style={disconnectVerbiage}>{t('shell.disconnect.body')}</div>
         </div>
       )}
 
@@ -254,14 +252,14 @@ function PostLoginShell({
       {tab === 'help' && <HelpPage />}
 
       <footer style={{ ...footer, display: 'flex', justifyContent: 'space-between' }}>
-        <span>session #{sessionId.toString(16).slice(-6)}</span>
+        <span>{t('shell.footer.session', { id: sessionId.toString(16).slice(-6) })}</span>
         <span>
           <a href={`${REPO_URL}/issues/new?labels=enhancement&title=Suggestion%3A%20`} target="_blank" rel="noreferrer" style={footerLink}>
-            suggest a feature
+            {t('shell.footer.suggest')}
           </a>
           {' · '}
           <a href={`${REPO_URL}/issues/new?labels=bug&title=Bug%3A%20`} target="_blank" rel="noreferrer" style={footerLink}>
-            report an issue
+            {t('shell.footer.report')}
           </a>
         </span>
       </footer>
@@ -307,22 +305,33 @@ function ThemeToggle({
   mode: ThemeMode;
   onChange: (m: ThemeMode) => void;
 }) {
+  const { t } = useT();
   const next: Record<ThemeMode, ThemeMode> = {
     light: 'dark',
     dark: 'system',
     system: 'light',
   };
+  const icon: Record<ThemeMode, string> = {
+    light: '\u2600\uFE0F',
+    dark: '\u{1F319}',
+    system: '\u{1F4BB}',
+  };
+  const name: Record<ThemeMode, MessageKey> = {
+    light: 'shell.theme.light',
+    dark: 'shell.theme.dark',
+    system: 'shell.theme.system',
+  };
   const label: Record<ThemeMode, string> = {
-    light: '\u2600\uFE0F Day',
-    dark: '\u{1F319} Night',
-    system: '\u{1F4BB} System',
+    light: `${icon.light} ${t(name.light)}`,
+    dark: `${icon.dark} ${t(name.dark)}`,
+    system: `${icon.system} ${t(name.system)}`,
   };
   return (
     <button
-      aria-label={`Theme: ${mode}. Click to switch.`}
+      aria-label={t('shell.theme.aria', { mode: t(name[mode]) })}
       onClick={() => onChange(next[mode])}
       style={{
-        marginLeft: 10,
+        marginInlineStart: 10,
         padding: '6px 12px',
         background: 'var(--bg-raised)',
         color: 'var(--fg)',
@@ -353,6 +362,7 @@ function OptionsPage({
   // Same two-step for relaunch: it drops the connection and every window,
   // which mid-game is a real cost.
   const [relaunchArmed, setRelaunchArmed] = useState(false);
+  const { t } = useT();
 
   function update<K extends keyof AppPreferences>(k: K, v: AppPreferences[K]) {
     setPrefs(p => {
@@ -374,23 +384,20 @@ function OptionsPage({
 
   return (
     <main style={optionsGrid}>
-        <Section title="Session">
-          <Row label="Chat window">
+        <Section title={t('options.session')}>
+          <Row label={t('options.session.chatWindow')}>
             <button style={linkBtn} onClick={reopenChat}>
-              Reopen
+              {t('options.session.reopen')}
             </button>
-            <Note>The chat window auto-opens at login; reopen here if closed.</Note>
+            <Note>{t('options.session.chatNote')}</Note>
           </Row>
-          <Row label="Connection">
+          <Row label={t('options.session.connection')}>
             <button style={linkBtn} onClick={reconnect}>
-              Reconnect
+              {t('options.session.reconnect')}
             </button>
-            <Note>
-              No-op while connected. Use it after another login kicks this
-              session — it takes the account back (FICS kicks them in turn).
-            </Note>
+            <Note>{t('options.session.connectionNote')}</Note>
           </Row>
-          <Row label="Start over">
+          <Row label={t('options.session.startOver')}>
             <button
               style={{
                 ...linkBtn,
@@ -407,53 +414,54 @@ function OptionsPage({
               }}
               onMouseLeave={() => setRelaunchArmed(false)}
             >
-              {relaunchArmed ? 'Click again to relaunch' : 'Relaunch'}
+              {t(relaunchArmed ? 'options.session.relaunchArmed' : 'options.session.relaunch')}
             </button>
-            <Note>
-              Disconnects, closes every window, and restarts the whole app
-              at the login screen — auto-login is skipped for that one
-              launch. Nothing else is changed or reset.
-            </Note>
+            <Note>{t('options.session.relaunchNote')}</Note>
           </Row>
           <AutoLoginRow />
+          <Row label={t('lang.label')}>
+            <LanguageSelect style={selectStyle} />
+            <Note>{t('lang.note')}</Note>
+          </Row>
         </Section>
 
-        <Section title="Board">
-          <Row label="Colors">
+        <Section title={t('options.board')}>
+          <Row label={t('options.board.colors')}>
             <Select<BoardTheme>
               value={prefs.boardTheme}
               onChange={v => update('boardTheme', v)}
               options={[
-                ['brown', 'Brown'],
-                ['blue', 'Blue'],
-                ['green', 'Green'],
-                ['purple', 'Purple'],
+                ['brown', t('boardTheme.brown')],
+                ['blue', t('boardTheme.blue')],
+                ['green', t('boardTheme.green')],
+                ['purple', t('boardTheme.purple')],
+                // Names, not colors — lichess's, and the same everywhere.
                 ['ic', 'IC'],
                 ['horsey', 'Horsey'],
-                ['custom', 'Custom'],
+                ['custom', t('boardTheme.custom')],
               ]}
             />
             <BoardPreview prefs={prefs} />
           </Row>
           {prefs.boardTheme === 'custom' && (
             <>
-              <Row label="Light squares">
+              <Row label={t('options.board.lightSquares')}>
                 <ColorField
-                  title="Light squares"
+                  title={t('options.board.lightSquares')}
                   value={prefs.customLightSquareColor}
                   onChange={hex => update('customLightSquareColor', hex)}
                 />
               </Row>
-              <Row label="Dark squares">
+              <Row label={t('options.board.darkSquares')}>
                 <ColorField
-                  title="Dark squares"
+                  title={t('options.board.darkSquares')}
                   value={prefs.customDarkSquareColor}
                   onChange={hex => update('customDarkSquareColor', hex)}
                 />
               </Row>
             </>
           )}
-          <Row label="Piece set">
+          <Row label={t('options.board.pieceSet')}>
             <Select<PieceSet>
               value={prefs.pieceSet}
               onChange={v => update('pieceSet', v)}
@@ -466,25 +474,25 @@ function OptionsPage({
               ]}
             />
           </Row>
-          <Row label="Move animations">
+          <Row label={t('options.board.animations')}>
             <Toggle
               checked={prefs.boardAnimations}
               onChange={v => update('boardAnimations', v)}
             />
           </Row>
-          <Row label="Show coordinates">
+          <Row label={t('options.board.coordinates')}>
             <Toggle
               checked={prefs.boardCoordinates}
               onChange={v => update('boardCoordinates', v)}
             />
           </Row>
-          <Row label="Flip when playing as black">
+          <Row label={t('options.board.flipAsBlack')}>
             <Toggle
               checked={prefs.flipOnPlayAsBlack}
               onChange={v => update('flipOnPlayAsBlack', v)}
             />
           </Row>
-          <Row label="Move list visible">
+          <Row label={t('options.board.moveList')}>
             <Toggle
               checked={prefs.moveListVisible}
               onChange={v => update('moveListVisible', v)}
@@ -492,55 +500,49 @@ function OptionsPage({
           </Row>
         </Section>
 
-        <Section title="Clock colors">
-          <ClockColorRow label="Active" state="active" prefs={prefs} update={update} />
-          <ClockColorRow label="Low on time" state="low" prefs={prefs} update={update} />
-          <ClockColorRow label="Idle" state="idle" prefs={prefs} update={update} />
-          <Note>
-            Auto follows the app theme (idle) and the stock green/red chips
-            (active, low). Pick colors to override — background, then text.
-          </Note>
+        <Section title={t('options.clock')}>
+          <ClockColorRow labelKey="options.clock.active" state="active" prefs={prefs} update={update} />
+          <ClockColorRow labelKey="options.clock.low" state="low" prefs={prefs} update={update} />
+          <ClockColorRow labelKey="options.clock.idle" state="idle" prefs={prefs} update={update} />
+          <Note>{t('options.clock.note')}</Note>
         </Section>
 
-        <Section title="Console">
-          <Row label="Font">
+        <Section title={t('options.console')}>
+          <Row label={t('options.console.font')}>
             <input
               style={{ ...textInput, width: 190 }}
               value={prefs.chatFontFamily}
               onChange={e => update('chatFontFamily', e.target.value)}
               spellCheck={false}
-              title="CSS font-family for the chat window"
+              title={t('options.console.fontFamilyTitle')}
             />
             <input
               type="number"
               min={8}
               max={24}
-              style={{ ...textInput, width: 52, marginLeft: 6 }}
+              style={{ ...textInput, width: 52, marginInlineStart: 6 }}
               value={prefs.chatFontSize}
               onChange={e => {
                 const v = parseInt(e.target.value, 10);
                 if (Number.isInteger(v) && v >= 8 && v <= 24) update('chatFontSize', v);
               }}
-              title="Font size (px)"
+              title={t('options.console.fontSizeTitle')}
             />
           </Row>
-          <ChatColorRow label="Channel tells" prefKey="chatColorChannel" autoKey="channel" prefs={prefs} update={update} />
-          <ChatColorRow label="Tells" prefKey="chatColorTell" autoKey="tell" prefs={prefs} update={update} />
-          <ChatColorRow label="Shouts" prefKey="chatColorShout" autoKey="shout" prefs={prefs} update={update} />
-          <ChatColorRow label="Kibitz / whisper" prefKey="chatColorGame" autoKey="game" prefs={prefs} update={update} />
-          <ChatColorRow label="Challenges" prefKey="chatColorChallenge" autoKey="challenge" prefs={prefs} update={update} />
-          <ChatColorRow label="Game starts" prefKey="chatColorGameStart" autoKey="gameStart" prefs={prefs} update={update} />
-          <ChatColorRow label="Game ends" prefKey="chatColorGameEnd" autoKey="gameEnd" prefs={prefs} update={update} />
-          <ChatColorRow label="Internal" prefKey="chatColorInternal" autoKey="internal" prefs={prefs} update={update} />
-          <ChatColorRow label="Your sends" prefKey="chatColorOutbound" autoKey="outbound" prefs={prefs} update={update} />
-          <Note>
-            Colors per message type; Auto is the stock palette. Open chat
-            windows restyle live.
-          </Note>
+          <ChatColorRow labelKey="options.console.channelTells" prefKey="chatColorChannel" autoKey="channel" prefs={prefs} update={update} />
+          <ChatColorRow labelKey="options.console.tells" prefKey="chatColorTell" autoKey="tell" prefs={prefs} update={update} />
+          <ChatColorRow labelKey="options.console.shouts" prefKey="chatColorShout" autoKey="shout" prefs={prefs} update={update} />
+          <ChatColorRow labelKey="options.console.kibitz" prefKey="chatColorGame" autoKey="game" prefs={prefs} update={update} />
+          <ChatColorRow labelKey="options.console.challenges" prefKey="chatColorChallenge" autoKey="challenge" prefs={prefs} update={update} />
+          <ChatColorRow labelKey="options.console.gameStarts" prefKey="chatColorGameStart" autoKey="gameStart" prefs={prefs} update={update} />
+          <ChatColorRow labelKey="options.console.gameEnds" prefKey="chatColorGameEnd" autoKey="gameEnd" prefs={prefs} update={update} />
+          <ChatColorRow labelKey="options.console.internal" prefKey="chatColorInternal" autoKey="internal" prefs={prefs} update={update} />
+          <ChatColorRow labelKey="options.console.outbound" prefKey="chatColorOutbound" autoKey="outbound" prefs={prefs} update={update} />
+          <Note>{t('options.console.note')}</Note>
         </Section>
 
-        <Section title="Defaults">
-          <Row label="All options">
+        <Section title={t('options.defaults')}>
+          <Row label={t('options.defaults.all')}>
             <button
               style={{
                 ...linkBtn,
@@ -551,51 +553,47 @@ function OptionsPage({
               onClick={resetToDefaults}
               onMouseLeave={() => setResetArmed(false)}
             >
-              {resetArmed ? 'Click again to confirm' : 'Reset to defaults'}
+              {t(resetArmed ? 'options.defaults.resetArmed' : 'options.defaults.reset')}
             </button>
-            <Note>
-              Restores every option above — board colors, pieces, clock
-              colors, toggles — to the shipped defaults. Login profiles are
-              not touched.
-            </Note>
+            <Note>{t('options.defaults.note')}</Note>
           </Row>
         </Section>
 
-        <Section title="Engine">
-          <Row label="Stockfish analysis available">
+        <Section title={t('options.engine')}>
+          <Row label={t('options.engine.available')}>
             <Toggle
               checked={prefs.showEngineAnalysis}
               onChange={v => update('showEngineAnalysis', v)}
             />
-            <Note>Only in observing, examining, and inactive modes — never while playing.</Note>
+            <Note>{t('options.engine.note')}</Note>
           </Row>
         </Section>
 
-        <Section title="Sound">
-          <Row label="Sounds">
+        <Section title={t('options.sound')}>
+          <Row label={t('options.sound.sounds')}>
             <Select<SoundMode>
               value={prefs.soundMode}
               onChange={v => update('soundMode', v)}
               options={[
-                ['on', 'On'],
-                ['off', 'Off'],
+                ['on', t('common.on')],
+                ['off', t('common.off')],
               ]}
             />
           </Row>
-          <Row label="Keep alive">
+          <Row label={t('options.sound.keepAlive')}>
             <Toggle
               checked={prefs.keepAlive === 'on'}
               onChange={v => update('keepAlive', v ? 'on' : 'off')}
             />
             <input
-              style={{ ...textInput, width: 120, marginLeft: 8 }}
+              style={{ ...textInput, width: 120, marginInlineStart: 8 }}
               value={prefs.keepAliveCommand}
               onChange={e => update('keepAliveCommand', e.target.value)}
               spellCheck={false}
-              title="sent (hidden) every 59 minutes while connected"
+              title={t('options.sound.keepAliveTitle')}
             />
           </Row>
-          <Row label="Move sounds">
+          <Row label={t('options.sound.moveSounds')}>
             <select
               style={textInput}
               value={prefs.moveSoundSet}
@@ -607,48 +605,42 @@ function OptionsPage({
               <option value="nes">Nes (8-bit)</option>
             </select>
             <button
-              style={{ ...linkBtn, marginLeft: 8 }}
-              title="play move, capture, check from the selected set"
+              style={{ ...linkBtn, marginInlineStart: 8 }}
+              title={t('options.sound.movePreviewTitle')}
               onClick={() => {
                 playSound('move');
                 setTimeout(() => playSound('capture'), 700);
                 setTimeout(() => playSound('check'), 1400);
               }}
             >
-              Preview
+              {t('common.preview')}
             </button>
           </Row>
-          <Row label="Alerts">
+          <Row label={t('options.sound.alerts')}>
             <Select<SoundMode>
               value={prefs.alertSounds}
               onChange={v => update('alertSounds', v)}
               options={[
-                ['on', 'On'],
-                ['off', 'Off'],
+                ['on', t('common.on')],
+                ['off', t('common.off')],
               ]}
             />
             <button
-              style={{ ...linkBtn, marginLeft: 8 }}
-              title="play tell, friend-arrives, friend-departs in the selected set's style"
+              style={{ ...linkBtn, marginInlineStart: 8 }}
+              title={t('options.sound.alertPreviewTitle')}
               onClick={() => {
                 playAlert('tell');
                 setTimeout(() => playAlert('arrive'), 900);
                 setTimeout(() => playAlert('depart'), 1800);
               }}
             >
-              Preview
+              {t('common.preview')}
             </button>
           </Row>
-          <Note>
-            Moves, captures and checks use the selected set; game-end
-            sounds stay on Piano. All sets are lichess's freely licensed
-            ones — the famous "standard" set is not freely licensed.
-            Alerts — an incoming tell, a friend arriving or departing —
-            are our own synthesized notes styled after the selected set.
-          </Note>
+          <Note>{t('options.sound.note')}</Note>
         </Section>
 
-        <Section title="Login script">
+        <Section title={t('options.loginScript')}>
           <textarea
             style={{ ...textInput, width: '100%', minHeight: 210, fontFamily: 'monospace', resize: 'vertical', boxSizing: 'border-box' }}
             value={prefs.loginScript}
@@ -656,25 +648,23 @@ function OptionsPage({
             spellCheck={false}
           />
           <Note>
-            Sent (hidden) after each login, one command per line; blank
-            lines are skipped; applies to the next connect. Keep{' '}
-            <code style={code}>iset lock 1</code> LAST if you keep it —
-            it seals interface settings, and anything after it is
-            refused.
+            {t('options.loginScript.note1')}{' '}
+            <code style={code}>iset lock 1</code>{' '}
+            {t('options.loginScript.note2')}
           </Note>
         </Section>
 
-        <Section title="Channels">
-          <Row label="Auto-join on login">
+        <Section title={t('options.channels')}>
+          <Row label={t('options.channels.autoJoin')}>
             <input
               style={textInput}
               value={prefs.autoJoinChannels}
               onChange={e => update('autoJoinChannels', e.target.value)}
               placeholder="e.g. 1,4,53"
             />
-            <Note>Comma-separated channel numbers.</Note>
+            <Note>{t('options.channels.autoJoinNote')}</Note>
           </Row>
-          <Row label="History backfill">
+          <Row label={t('options.channels.backfill')}>
             <input
               style={textInput}
               value={prefs.channelHistoryUrl}
@@ -682,11 +672,7 @@ function OptionsPage({
               placeholder="https://… (empty = off)"
               spellCheck={false}
             />
-            <Note>
-              Channel-log API (the chessascent bot). On chat-window open,
-              each auto-join channel is backfilled with up to 24h of tells
-              from before login — scroll up to read them. Empty disables.
-            </Note>
+            <Note>{t('options.channels.backfillNote')}</Note>
           </Row>
         </Section>
       </main>
@@ -694,180 +680,150 @@ function OptionsPage({
 }
 
 function HelpPage() {
+  const { t, rich } = useT();
   return (
     <main style={helpContainer}>
-      <Section title="What is this page?">
-        <p style={helpP}>
-          This is the <strong>Options &amp; Help</strong> surface. It's not a
-          launcher — the chat window auto-opens when you sign in, and board
-          windows pop up automatically when you observe or play a game. Use
-          the <em>Options</em> tab to change app preferences.
-        </p>
+      <Section title={t('help.what.title')}>
+        <p style={helpP}>{rich('help.what.body1')}</p>
       </Section>
 
-      <Section title="Allow popups (required)">
-        <p style={helpP}>
-          Boards open when FICS says a game started — from a network
-          event, not from your click — which is exactly what popup
-          blockers block. Until this origin is allowed, observing a game
-          logs a console line instead of opening a board. One-time fix:
-        </p>
+      <Section title={t('help.popups.title')}>
+        <p style={helpP}>{t('help.popups.intro')}</p>
         <ul style={helpUl}>
           <li>
-            <strong>Chrome / Brave / Edge</strong> — click the popup icon
-            at the right end of the address bar when it appears and pick{' '}
-            <em>Always allow pop-ups from this site</em>. Or: Settings →
-            Privacy → Site settings → Pop-ups and redirects → Add this
-            site to "Allowed".
+            <strong>Chrome / Brave / Edge</strong> — {t('help.popups.chromium')}
           </li>
           <li>
-            <strong>Firefox</strong> — a yellow bar appears when a popup
-            is blocked; choose <em>Preferences</em> →{' '}
-            <em>Allow pop-ups for this site</em>. Or: Settings → Privacy
-            &amp; Security → Permissions → Block pop-up windows →
-            Exceptions.
+            <strong>Firefox</strong> — {t('help.popups.firefox')}
           </li>
           <li>
-            <strong>Safari</strong> — Safari → Settings → Websites →
-            Pop-up Windows → set this site to <em>Allow</em>.
+            <strong>Safari</strong> — {t('help.popups.safari')}
           </li>
         </ul>
         <p style={helpP}>
-          In <code style={code}>--app</code> mode (next section) popups
-          from the app window inherit the allowance once the origin is
-          allowed.
+          {t('help.popups.appmode1')} <code style={code}>--app</code>{' '}
+          {t('help.popups.appmode2')}
         </p>
       </Section>
 
-      <Section title="Script commands">
-        <p style={helpP}>
-          A few lines the client handles itself (ported from Raptor's
-          aliases) — type them into any chat input:
-        </p>
+      <Section title={t('help.commands.title')}>
+        <p style={helpP}>{t('help.commands.intro')}</p>
         <ul style={helpUl}>
           <li>
             <code style={code}>clear censor</code> /{' '}
-            <code style={code}>clear noplay</code> — fetches your list
-            and removes every name on it, one{' '}
+            <code style={code}>clear noplay</code> — {t('help.commands.clear1')}{' '}
             <code style={code}>-censor</code> /{' '}
-            <code style={code}>-noplay</code> at a time.
+            <code style={code}>-noplay</code> {t('help.commands.clear2')}
           </li>
           <li>
-            <code style={code}>+tab 39</code> — opens a channel tab.{' '}
-            <code style={code}>+tab HammerTime</code> — opens a person
-            tab. Both are local: nothing is sent to the server.
+            <code style={code}>+tab 39</code> — {t('help.commands.tab1')}{' '}
+            <code style={code}>+tab HammerTime</code> —{' '}
+            {t('help.commands.tab2')}
           </li>
         </ul>
         <p style={helpP}>
-          Everything else goes to FICS as typed —{' '}
+          {t('help.commands.rest1')}{' '}
           <a
             href="https://www.freechess.org/Help/AllFiles.html"
             target="_blank"
             rel="noreferrer"
             style={helpLink}
           >
-            the FICS command reference
+            {t('help.commands.refLink')}
           </a>{' '}
-          documents the whole command set.
+          {t('help.commands.rest2')}
         </p>
       </Section>
 
-      <Section title="Hide the browser address bar (app mode)">
+      <Section title={t('help.appmode.title')}>
         <p style={helpP}>
-          Modern browsers require an address bar on regular tabs and popups for
-          security. But Chromium-based browsers (Chrome, Brave, Edge) support an{' '}
-          <code style={code}>--app=&lt;url&gt;</code> launch flag that opens a
-          given URL in a chromeless window — no URL bar, no tab strip, no menu.
-          Create a shortcut that passes the flag and pin it to your
-          taskbar/dock.
+          {t('help.appmode.intro1')}{' '}
+          <code style={code}>--app=&lt;url&gt;</code>{' '}
+          {t('help.appmode.intro2')}
         </p>
         <p style={helpP}>
-          The commands below are baked with{' '}
-          <code style={code}>{appOrigin()}</code> — the address you're
-          reading this from — so they're copy-paste correct wherever the
-          app is served.
+          {t('help.appmode.baked1')} <code style={code}>{appOrigin()}</code>{' '}
+          {t('help.appmode.baked2')}
         </p>
 
-        <h4 style={subHeading}>Linux (GNOME / Pop!_OS / KDE)</h4>
+        <h4 style={subHeading}>{t('help.appmode.linux')}</h4>
         <ol style={helpOl}>
           <li>
-            Create <code style={code}>~/.local/share/applications/raptor3000.desktop</code>{' '}
-            with this content:
+            {t('help.appmode.linux1')}{' '}
+            <code style={code}>~/.local/share/applications/raptor3000.desktop</code>{' '}
+            {t('help.appmode.linux1b')}
             <pre style={pre}>{DESKTOP_FILE_CONTENTS}</pre>
           </li>
           <li>
-            Refresh the app menu:{' '}
+            {t('help.appmode.linux2')}{' '}
             <code style={code}>
               update-desktop-database ~/.local/share/applications/
             </code>
           </li>
-          <li>
-            Open Activities / app menu, search "Raptor3000", right-click → Pin
-            to Dash or drag to your taskbar.
-          </li>
+          <li>{t('help.appmode.linux3')}</li>
         </ol>
         <p style={helpP}>
-          Substitute <code style={code}>brave-browser</code> with{' '}
-          <code style={code}>google-chrome</code> or{' '}
-          <code style={code}>microsoft-edge</code> if you use those instead.
+          {t('help.appmode.linuxSub1')}{' '}
+          <code style={code}>brave-browser</code> {t('help.appmode.linuxSub2')}{' '}
+          <code style={code}>google-chrome</code> {t('help.appmode.linuxSub3')}{' '}
+          <code style={code}>microsoft-edge</code> {t('help.appmode.linuxSub4')}
         </p>
 
-        <h4 style={subHeading}>Windows</h4>
+        <h4 style={subHeading}>{t('help.appmode.windows')}</h4>
         <ol style={helpOl}>
-          <li>Right-click your desktop → New → Shortcut.</li>
+          <li>{t('help.appmode.windows1')}</li>
           <li>
-            For the location, paste (adjust the path if your browser lives
-            elsewhere):
+            {t('help.appmode.windows2')}
             <pre style={pre}>{WINDOWS_TARGET_BRAVE}</pre>
-            For Chrome instead:
+            {t('help.appmode.windows2b')}
             <pre style={pre}>{WINDOWS_TARGET_CHROME}</pre>
           </li>
-          <li>Name it "Raptor3000", click Finish.</li>
-          <li>Right-click the new shortcut → Pin to taskbar.</li>
+          <li>{t('help.appmode.windows3')}</li>
+          <li>{t('help.appmode.windows4')}</li>
         </ol>
         <p style={helpP}>
-          (Optional) Right-click the shortcut → Properties → Change Icon, point
-          at a <code style={code}>.ico</code> so it doesn't look like Brave.
+          {t('help.appmode.windowsIcon1')} <code style={code}>.ico</code>{' '}
+          {t('help.appmode.windowsIcon2')}
         </p>
 
-        <h4 style={subHeading}>macOS</h4>
+        <h4 style={subHeading}>{t('help.appmode.macos')}</h4>
         <p style={helpP}>
-          macOS doesn't accept raw CLI flags on Dock shortcuts, so wrap the
-          launch in a tiny <strong>Automator</strong> app:
+          {t('help.appmode.macosIntro1')} <strong>Automator</strong>{' '}
+          {t('help.appmode.macosIntro2')}
         </p>
         <ol style={helpOl}>
           <li>
-            Open <strong>Automator</strong> → New Document → <strong>Application</strong>.
+            {t('help.appmode.macos1a')} <strong>Automator</strong>{' '}
+            {t('help.appmode.macos1b')} <strong>Application</strong>.
           </li>
           <li>
-            Add a <em>Run Shell Script</em> action. Paste (adjust the browser
-            path if needed):
+            {t('help.appmode.macos2a')} <em>Run Shell Script</em>{' '}
+            {t('help.appmode.macos2b')}
             <pre style={pre}>{MACOS_SHELL_BRAVE}</pre>
-            For Chrome:
+            {t('help.appmode.macos2c')}
             <pre style={pre}>{MACOS_SHELL_CHROME}</pre>
           </li>
           <li>
-            Save as <code style={code}>Raptor3000.app</code> into{' '}
+            {t('help.appmode.macos3a')}{' '}
+            <code style={code}>Raptor3000.app</code>{' '}
+            {t('help.appmode.macos3b')}{' '}
             <code style={code}>/Applications</code>.
           </li>
           <li>
-            Drag <code style={code}>Raptor3000.app</code> into the Dock.
+            {t('help.appmode.macos4a')}{' '}
+            <code style={code}>Raptor3000.app</code>{' '}
+            {t('help.appmode.macos4b')}
           </li>
         </ol>
         <p style={helpP}>
-          (Optional) Right-click <code style={code}>Raptor3000.app</code> in
-          Finder → Get Info → drag a custom icon onto the icon well for a
-          distinct Dock look.
+          {t('help.appmode.macosIcon1')}{' '}
+          <code style={code}>Raptor3000.app</code>{' '}
+          {t('help.appmode.macosIcon2')}
         </p>
       </Section>
 
-      <Section title="About &amp; licenses">
-        <p style={helpP}>
-          Raptor3000 is <strong>MIT-licensed</strong> — the third of a
-          line after <strong>Raptor</strong> (SWT) and{' '}
-          <strong>Decaf</strong> (Java). It stands on generously licensed
-          shoulders:
-        </p>
+      <Section title={t('help.about.title')}>
+        <p style={helpP}>{rich('help.about.intro')}</p>
         <ul style={helpUl}>
           <li>
             <strong>
@@ -875,8 +831,7 @@ function HelpPage() {
                 Stockfish
               </a>
             </strong>{' '}
-            — the analysis engine, running in your browser as WebAssembly
-            (GPL-3.0).
+            {t('help.about.stockfish')}
           </li>
           <li>
             <strong>
@@ -884,8 +839,7 @@ function HelpPage() {
                 chessops
               </a>
             </strong>{' '}
-            — lichess's chess library: SAN, legality, replay
-            (GPL-3.0-or-later).
+            {t('help.about.chessops')}
           </li>
           <li>
             <strong>
@@ -893,7 +847,7 @@ function HelpPage() {
                 lichess chess-openings
               </a>
             </strong>{' '}
-            — the opening names and ECO codes (CC0 public domain).
+            {t('help.about.openings')}
           </li>
           <li>
             <strong>
@@ -901,9 +855,7 @@ function HelpPage() {
                 lichess
               </a>
             </strong>{' '}
-            — the piano sound set by Enigmahack (AGPL-3.0+) and the piece
-            sets (cburnett by Colin M.L. Burnett and friends, each under
-            its own license).
+            {t('help.about.lichess')}
           </li>
           <li>
             <strong>
@@ -911,47 +863,46 @@ function HelpPage() {
                 FICS
               </a>
             </strong>{' '}
-            — the Free Internet Chess Server this whole app exists to
-            talk to. Be nice in channel 39.
+            {t('help.about.fics')}
           </li>
         </ul>
         <p style={helpP}>
-          The complete inventory with exact licenses lives in{' '}
-          <code style={code}>THIRD_PARTY_NOTICES.md</code> in{' '}
+          {t('help.about.outro1')}{' '}
+          <code style={code}>THIRD_PARTY_NOTICES.md</code>{' '}
+          {t('help.about.outro2')}{' '}
           <a href={REPO_URL} target="_blank" rel="noreferrer" style={helpLink}>
-            the source repository
+            {t('help.about.repoLink')}
           </a>
-          . Something broken or missing?{' '}
+          {t('help.about.outro3')}{' '}
           <a href={`${REPO_URL}/issues/new?labels=bug&title=Bug%3A%20`} target="_blank" rel="noreferrer" style={helpLink}>
-            Report an issue
+            {t('help.about.reportLink')}
           </a>{' '}
-          or{' '}
+          {t('help.about.outro4')}{' '}
           <a href={`${REPO_URL}/issues/new?labels=enhancement&title=Suggestion%3A%20`} target="_blank" rel="noreferrer" style={helpLink}>
-            suggest a feature
+            {t('help.about.suggestLink')}
           </a>
           .
         </p>
       </Section>
 
-      <Section title="Troubleshooting">
+      <Section title={t('help.trouble.title')}>
         <ul style={helpUl}>
           <li>
-            <strong>Address bar still shows.</strong> Modern browsers show a
-            one-line origin strip at the top of popups regardless of features.
-            The <code style={code}>--app</code> mode above avoids it entirely
-            for the main window. Popups opened from inside an app-mode window
-            inherit the same chromeless treatment.
+            <strong>{t('help.trouble.addressBarTitle')}</strong>{' '}
+            {t('help.trouble.addressBar1')} <code style={code}>--app</code>{' '}
+            {t('help.trouble.addressBar2')}
           </li>
           <li>
-            <strong>Popup blocker.</strong> Allow popups for{' '}
-            <code style={code}>localhost:5173</code> (or your prod host). In
-            Brave: Settings → Privacy and security → Site settings → Pop-ups.
+            <strong>{t('help.trouble.blockerTitle')}</strong>{' '}
+            {t('help.trouble.blocker1')}{' '}
+            <code style={code}>localhost:5173</code>{' '}
+            {t('help.trouble.blocker2')}
           </li>
           <li>
-            <strong>Shortcut opens a regular tab, not an app window.</strong>{' '}
-            Make sure the flag is <code style={code}>--app=URL</code> with an{' '}
-            <code style={code}>=</code> and no space, and the browser isn't
-            already running with a profile that overrides it.
+            <strong>{t('help.trouble.shortcutTitle')}</strong>{' '}
+            {t('help.trouble.shortcut1')}{' '}
+            <code style={code}>--app=URL</code> {t('help.trouble.shortcut2')}{' '}
+            <code style={code}>=</code> {t('help.trouble.shortcut3')}
           </li>
         </ul>
       </Section>
@@ -1105,6 +1056,7 @@ function Toggle({
   checked: boolean;
   onChange: (v: boolean) => void;
 }) {
+  const { t } = useT();
   return (
     <label style={{ display: 'inline-flex', alignItems: 'center', gap: 6, cursor: 'pointer' }}>
       <input
@@ -1112,7 +1064,9 @@ function Toggle({
         checked={checked}
         onChange={e => onChange(e.target.checked)}
       />
-      <span style={{ fontSize: 13, opacity: 0.9 }}>{checked ? 'On' : 'Off'}</span>
+      <span style={{ fontSize: 13, opacity: 0.9 }}>
+        {t(checked ? 'common.on' : 'common.off')}
+      </span>
     </label>
   );
 }
@@ -1152,7 +1106,7 @@ function BoardPreview({ prefs }: { prefs: AppPreferences }) {
         borderRadius: 3,
         overflow: 'hidden',
         border: '1px solid var(--border-soft)',
-        marginLeft: 10,
+        marginInlineStart: 10,
         verticalAlign: 'middle',
       }}
     >
@@ -1246,16 +1200,17 @@ const hexInput = {
  * live theme variables, so the starting point is what's on screen.
  */
 function ClockColorRow({
-  label,
+  labelKey,
   state,
   prefs,
   update,
 }: {
-  label: string;
+  labelKey: MessageKey;
   state: ClockState;
   prefs: AppPreferences;
   update: <K extends keyof AppPreferences>(k: K, v: AppPreferences[K]) => void;
 }) {
+  const { t } = useT();
   const bgKey = `clock${capState(state)}Bg` as const;
   const textKey = `clock${capState(state)}Text` as const;
   const bg = prefs[bgKey];
@@ -1273,24 +1228,24 @@ function ClockColorRow({
   };
 
   return (
-    <Row label={label}>
+    <Row label={t(labelKey)}>
       <label style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 13, cursor: 'pointer' }}>
         <input
           type="checkbox"
           checked={isAuto}
           onChange={e => toggleAuto(e.target.checked)}
         />
-        Auto
+        {t('common.auto')}
       </label>
       {!isAuto && (
-        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8, marginLeft: 10 }}>
+        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8, marginInlineStart: 10 }}>
           <ColorField
-            title="Background"
+            title={t('options.color.background')}
             value={bg === 'auto' ? stockHex(state, 'bg') : bg}
             onChange={hex => update(bgKey, hex)}
           />
           <ColorField
-            title="Text"
+            title={t('options.color.text')}
             value={text === 'auto' ? stockHex(state, 'text') : text}
             onChange={hex => update(textKey, hex)}
           />
@@ -1306,8 +1261,9 @@ function ClockColorRow({
  */
 function AutoLoginRow() {
   const [autoConnect, setAutoConnect] = useState(() => loadSelection().autoConnect);
+  const { t } = useT();
   return (
-    <Row label="Auto-login">
+    <Row label={t('options.session.autoLogin')}>
       <Toggle
         checked={autoConnect}
         onChange={v => {
@@ -1316,28 +1272,27 @@ function AutoLoginRow() {
           setAutoConnect(v);
         }}
       />
-      <Note>
-        Off shows the login screen on the next launch instead of connecting
-        with the saved profile.
-      </Note>
+      <Note>{t('options.session.autoLoginNote')}</Note>
     </Row>
   );
 }
 
 /** One chat event type's color: Auto checkbox + picker when custom. */
 function ChatColorRow({
-  label,
+  labelKey,
   prefKey,
   autoKey,
   prefs,
   update,
 }: {
-  label: string;
+  labelKey: MessageKey;
   prefKey: keyof AppPreferences;
   autoKey: ChatColorKey;
   prefs: AppPreferences;
   update: <K extends keyof AppPreferences>(k: K, v: AppPreferences[K]) => void;
 }) {
+  const { t } = useT();
+  const label = t(labelKey);
   const value = prefs[prefKey] as string;
   const isAuto = value === 'auto';
   const stock = () => {
@@ -1358,10 +1313,10 @@ function ChatColorRow({
             update(prefKey, (e.target.checked ? 'auto' : stock()) as AppPreferences[typeof prefKey])
           }
         />
-        Auto
+        {t('common.auto')}
       </label>
       {!isAuto && (
-        <span style={{ marginLeft: 10, display: 'inline-flex' }}>
+        <span style={{ marginInlineStart: 10, display: 'inline-flex' }}>
           <ColorField title={label} value={value} onChange={hex => update(prefKey, hex as AppPreferences[typeof prefKey])} />
         </span>
       )}

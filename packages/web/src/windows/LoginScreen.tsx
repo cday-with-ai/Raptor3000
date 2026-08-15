@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { isMobileDemo, setMobileOverride, shouldBlockMobile } from '../mobile.js';
+import { LanguageSelect, useT } from '../i18n/react.js';
+import type { MessageKey } from '../i18n/index.js';
 import { PopupGate } from './PopupGate.js';
 import {
   PROFILE_NAMES,
@@ -43,8 +45,11 @@ export function LoginScreen({
   const [autoConnect, setAutoConnect] = useState<boolean>(
     () => loadSelection().autoConnect,
   );
-  const [error, setError] = useState<string | null>(null);
+  // The key, not the sentence: a validation error showing while the
+  // visitor switches language would otherwise stay frozen in the old one.
+  const [error, setError] = useState<MessageKey | null>(null);
   const handleRef = useRef<HTMLInputElement>(null);
+  const { t, rich } = useT();
 
   // Switching profile loads its creds. Save the outgoing profile so the
   // user doesn't lose in-flight edits — mirrors the Java ModifyListener.
@@ -77,19 +82,19 @@ export function LoginScreen({
   function submit() {
     const handle = creds.userName.trim();
     if (handle !== '' && (handle.length < 3 || handle.length > 17)) {
-      setError('Handle must be 3 to 17 characters.');
+      setError('login.err.handleLength');
       return;
     }
     if (handle !== '' && !/^[a-zA-Z]*$/.test(handle)) {
-      setError('Handle must contain only letters.');
+      setError('login.err.handleLetters');
       return;
     }
     if (!isGuest && handle === '') {
-      setError('Please enter a handle or check Guest login.');
+      setError('login.err.noHandle');
       return;
     }
     if (!isGuest && creds.password === '') {
-      setError('Please enter a password.');
+      setError('login.err.noPassword');
       return;
     }
 
@@ -119,16 +124,10 @@ export function LoginScreen({
         <div style={mobileStop}>
           <img src="/raptor3000.svg" alt="" style={{ width: 88, height: 88, margin: '0 auto 10px', display: 'block' }} />
           <div style={{ fontSize: 22, fontWeight: 700, letterSpacing: '0.02em' }}>
-            Raptor3000 is a desktop app
+            {t('mobile.title')}
           </div>
-          <p style={{ lineHeight: 1.55, opacity: 0.9 }}>
-            Boards and chat open as <strong>real browser windows</strong>, driven
-            live from the chess server — phones can&apos;t do that, so the app
-            doesn&apos;t work here.
-          </p>
-          <p style={{ lineHeight: 1.55, opacity: 0.9 }}>
-            On a computer, visit <strong>raptor3000.pages.dev</strong>.
-          </p>
+          <p style={{ lineHeight: 1.55, opacity: 0.9 }}>{rich('mobile.body1')}</p>
+          <p style={{ lineHeight: 1.55, opacity: 0.9 }}>{rich('mobile.body2')}</p>
           <button
             style={mobileTryAnyway}
             onClick={() => {
@@ -136,8 +135,11 @@ export function LoginScreen({
               setBlocked(false);
             }}
           >
-            I have a keyboard and low expectations — try anyway
+            {t('mobile.tryAnyway')}
           </button>
+          <div style={{ marginTop: 16 }}>
+            <LanguageSelect style={loginLangSelect} />
+          </div>
         </div>
       </div>
     );
@@ -161,11 +163,11 @@ export function LoginScreen({
       >
         <img src="/raptor3000.svg" alt="" style={loginIcon} />
         <div style={brand}>Raptor3000</div>
-        <div style={tagline}>Sign in to FICS</div>
+        <div style={tagline}>{t('login.tagline')}</div>
 
 
         <label style={row}>
-          <span style={label}>Profile</span>
+          <span style={label}>{t('login.profile')}</span>
           <select
             style={input}
             value={profile}
@@ -180,7 +182,7 @@ export function LoginScreen({
         </label>
 
         <label style={row}>
-          <span style={label}>Handle</span>
+          <span style={label}>{t('login.handle')}</span>
           <input
             ref={handleRef}
             style={input}
@@ -193,7 +195,7 @@ export function LoginScreen({
         </label>
 
         <label style={row}>
-          <span style={label}>Password</span>
+          <span style={label}>{t('login.password')}</span>
           <input
             type="password"
             style={{
@@ -209,7 +211,7 @@ export function LoginScreen({
         </label>
 
         <label style={row}>
-          <span style={label}>Server</span>
+          <span style={label}>{t('login.server')}</span>
           <input
             style={input}
             value={creds.serverUrl}
@@ -220,7 +222,7 @@ export function LoginScreen({
         </label>
 
         <label style={row}>
-          <span style={label}>Port</span>
+          <span style={label}>{t('login.port')}</span>
           <input
             style={input}
             value={creds.port}
@@ -237,7 +239,7 @@ export function LoginScreen({
               checked={isGuest}
               onChange={e => setGuestChecked(e.target.checked)}
             />
-            <span>Guest login</span>
+            <span>{t('login.guest')}</span>
           </label>
           <label style={check}>
             <input
@@ -245,7 +247,7 @@ export function LoginScreen({
               checked={creds.timesealEnabled}
               onChange={e => setField('timesealEnabled', e.target.checked)}
             />
-            <span>Timeseal enabled</span>
+            <span>{t('login.timeseal')}</span>
           </label>
           <label style={check}>
             <input
@@ -253,21 +255,25 @@ export function LoginScreen({
               checked={autoConnect}
               onChange={e => setAutoConnect(e.target.checked)}
             />
-            <span>Log me in automatically next time</span>
+            <span>{t('login.autoConnect')}</span>
+          </label>
+          <label style={{ ...check, cursor: 'default' }}>
+            <span style={{ ...label, width: 'auto' }}>{t('lang.label')}</span>
+            <LanguageSelect style={loginLangSelect} />
           </label>
         </div>
 
-        {error && <div style={errStyle}>{error}</div>}
+        {error && <div style={errStyle}>{t(error)}</div>}
 
         <button type="submit" style={submitBtn}>
-          Login
+          {t('login.submit')}
         </button>
         </form>
         {/* What's inside — shots refresh via scripts/screenshots.mjs. */}
         <div style={galleryRow}>
-          {GALLERY.map(([file, alt]) => (
+          {GALLERY.map(([file, altKey]) => (
             <a key={file} href={`/screenshots/${file}`} target="_blank" rel="noreferrer">
-              <img src={`/screenshots/${file}`} alt={alt} style={galleryThumb} loading="lazy" />
+              <img src={`/screenshots/${file}`} alt={t(altKey)} style={galleryThumb} loading="lazy" />
             </a>
           ))}
         </div>
@@ -322,12 +328,22 @@ function StarField() {
   );
 }
 
-const GALLERY: ReadonlyArray<[string, string]> = [
-  ['observing.jpg', 'observing a game with engine analysis'],
-  ['playing.jpg', 'playing a blitz game'],
-  ['chat-split.jpg', 'the chat console in split view'],
-  ['seek-graph.jpg', 'the live seek graph'],
+const GALLERY: ReadonlyArray<[string, MessageKey]> = [
+  ['observing.jpg', 'login.shot.observing'],
+  ['playing.jpg', 'login.shot.playing'],
+  ['chat-split.jpg', 'login.shot.chat'],
+  ['seek-graph.jpg', 'login.shot.seek'],
 ];
+
+const loginLangSelect = {
+  padding: '4px 6px',
+  background: 'var(--bg-input)',
+  color: 'var(--fg)',
+  border: '1px solid var(--border)',
+  borderRadius: 3,
+  fontSize: 12,
+  fontFamily: 'inherit',
+} as const;
 
 const galleryRow = {
   display: 'flex',

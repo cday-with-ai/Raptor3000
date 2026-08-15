@@ -149,6 +149,11 @@ packages/
 - [x] Day / Night / System theme toggle in top-right, persisted
 - [x] Inline Seek tab (placeholder — scatter-plot rendering pending)
 - [x] Help page with Linux/Windows/macOS instructions for chromeless `--app` mode
+- [x] First-contact surfaces in 12 languages (2026-08-15) — the popup gate,
+      login screen and Options/Help detect the browser's language and follow
+      it, overridable from a picker on each. Deliberately *not* app-wide:
+      FICS speaks English, so chat, boards and game text stay English and the
+      client only translates when it is talking about itself.
 - [x] ~~Per-gameId GameStore + GameRegistry~~ — overtaken: GameService went per-id maps on its own; move history is deliberately window-local instead (Carson, 2026-08-12 — see PLAN "Next thing")
 - [ ] Tab stores: MainConsole, Channel, Person, RegEx, GameChat, BughousePartner
 - [x] Real chess piece sets + drag/drop board interaction (2026-08-12, ported from chessascent.app)

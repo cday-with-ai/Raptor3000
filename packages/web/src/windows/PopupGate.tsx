@@ -1,4 +1,6 @@
 import { useEffect, useState } from 'react';
+import { LanguageSelect, useT } from '../i18n/react.js';
+import type { MessageKey } from '../i18n/index.js';
 
 /**
  * The "Almost there…" popup gate (Carson, 2026-08-12, watching a fresh
@@ -115,41 +117,17 @@ export function runPopupAutoTest(
 
 export interface BrowserDirection {
   key: string;
+  /** Product name — the same in every language, so it is not a message. */
   name: string;
-  steps: string;
+  stepsKey: MessageKey;
 }
 
 const DIRECTIONS: readonly BrowserDirection[] = [
-  {
-    key: 'chromium',
-    name: 'Chrome / Brave / Edge',
-    steps:
-      'Click the popup icon at the right end of the address bar and pick "Always allow pop-ups and redirects from this site", then Done. (Or: Settings → Privacy → Site settings → Pop-ups and redirects → add this site.)',
-  },
-  {
-    key: 'firefox',
-    name: 'Firefox',
-    steps:
-      'A bar appears at the top when a popup is blocked — choose Preferences → "Allow pop-ups for this site". (Or: Settings → Privacy & Security → Permissions → Block pop-up windows → Exceptions.)',
-  },
-  {
-    key: 'safari',
-    name: 'Safari (Mac)',
-    steps:
-      'Safari menu → Settings → Websites → Pop-up Windows → set this site to Allow.',
-  },
-  {
-    key: 'ios',
-    name: 'iPhone / iPad',
-    steps:
-      'Settings app → Safari → turn OFF "Block Pop-ups". (Fair warning: phones get browser tabs instead of windows — a desktop is the real experience.)',
-  },
-  {
-    key: 'android',
-    name: 'Android Chrome',
-    steps:
-      '⋮ menu → Settings → Site settings → Pop-ups and redirects → allow. (Same fair warning — tabs, not windows.)',
-  },
+  { key: 'chromium', name: 'Chrome / Brave / Edge', stepsKey: 'dir.chromium.steps' },
+  { key: 'firefox', name: 'Firefox', stepsKey: 'dir.firefox.steps' },
+  { key: 'safari', name: 'Safari (Mac)', stepsKey: 'dir.safari.steps' },
+  { key: 'ios', name: 'iPhone / iPad', stepsKey: 'dir.ios.steps' },
+  { key: 'android', name: 'Android Chrome', stepsKey: 'dir.android.steps' },
 ];
 
 /** Best-effort UA match so the visitor's browser is listed first. */
@@ -249,28 +227,29 @@ function FirefoxPicture() {
 /** The one-browser instruction block: picture where we have one,
  *  sentence where we don't. */
 function Instruction({ browserKey }: { browserKey: string }) {
+  const { t, rich } = useT();
   if (browserKey === 'chromium') {
     return (
       <div>
-        <div style={step}><span style={stepNum}>1</span><span>Find this icon at the right end of your address bar — it appeared just now:</span></div>
+        <div style={step}><span style={stepNum}>1</span><span>{t('gate.chromium.step1')}</span></div>
         <ChromiumPicture />
-        <div style={caption}>(just a picture — the real one is up in your browser&apos;s own bar)</div>
-        <div style={step}><span style={stepNum}>2</span><span>Click it, pick <strong>Always allow</strong>, then <strong>Done</strong>. That&apos;s the whole job.</span></div>
+        <div style={caption}>{t('gate.chromium.caption')}</div>
+        <div style={step}><span style={stepNum}>2</span><span>{rich('gate.chromium.step2')}</span></div>
       </div>
     );
   }
   if (browserKey === 'firefox') {
     return (
       <div>
-        <div style={step}><span style={stepNum}>1</span><span>A bar just appeared at the top of the page:</span></div>
+        <div style={step}><span style={stepNum}>1</span><span>{t('gate.firefox.step1')}</span></div>
         <FirefoxPicture />
-        <div style={caption}>(just a picture — the real bar is Firefox&apos;s own, above the page)</div>
-        <div style={step}><span style={stepNum}>2</span><span>Click <strong>Preferences</strong> and pick <strong>Allow pop-ups for raptor3000.pages.dev</strong>.</span></div>
+        <div style={caption}>{t('gate.firefox.caption')}</div>
+        <div style={step}><span style={stepNum}>2</span><span>{rich('gate.firefox.step2')}</span></div>
       </div>
     );
   }
   const d = DIRECTIONS.find(x => x.key === browserKey) ?? DIRECTIONS[0];
-  return <p style={gateP}>{d.steps}</p>;
+  return <p style={gateP}>{t(d.stepsKey)}</p>;
 }
 
 /**
@@ -282,6 +261,7 @@ function Instruction({ browserKey }: { browserKey: string }) {
  * gate notices, says so, and leaves.
  */
 export function PopupGate() {
+  const { t, rich } = useT();
   const demo = isDemoMode();
   const [state, setState] = useState<'pending' | 'justAllowed' | PopupTestResult>(() => {
     if (demo) return 'blocked';
@@ -347,8 +327,8 @@ export function PopupGate() {
   if (state === 'justAllowed') {
     return (
       <div style={{ ...gate, borderColor: '#3f7a5a' }}>
-        <div style={{ ...gateTitle, color: '#8fd8ae' }}>✓ Pop-ups allowed</div>
-        <p style={gateP}>Board and chat windows will open. Enjoy.</p>
+        <div style={{ ...gateTitle, color: '#8fd8ae' }}>✓ {t('gate.allowed.title')}</div>
+        <p style={gateP}>{t('gate.allowed.body')}</p>
       </div>
     );
   }
@@ -367,15 +347,17 @@ export function PopupGate() {
   const current = detectBrowserKey();
   return (
     <div style={gate}>
-      <div style={gateTitle}>
-        Almost there…
-        {demo ? <span style={demoChip}>demo</span> : null}
+      <div style={gateTitleRow}>
+        <div style={gateTitle}>
+          {t('gate.title')}
+          {demo ? <span style={demoChip}>{t('gate.demoChip')}</span> : null}
+        </div>
+        {/* First contact, so the language guess has to be correctable
+            right here — a visitor who cannot read the gate cannot go
+            find a language setting somewhere else. */}
+        <LanguageSelect style={gateLangSelect} />
       </div>
-      <p style={gateP}>
-        Raptor3000 plays like a desktop app — chat and every board open as{' '}
-        <strong>real windows</strong>. Your browser is blocking them, and
-        fixing that takes two clicks:
-      </p>
+      <p style={gateP}>{rich('gate.intro')}</p>
       <Instruction browserKey={current} />
       <div style={watchRow}>
         <svg viewBox="0 0 10 10" width="10" height="10" style={{ flexShrink: 0 }} aria-hidden="true">
@@ -383,40 +365,37 @@ export function PopupGate() {
             <animate attributeName="opacity" values="1;0.25;1" dur="1.6s" repeatCount="indefinite" />
           </circle>
         </svg>
-        <span>
-          No need to tell anyone — this screen checks by itself and steps
-          aside the moment windows are allowed.
-        </span>
+        <span>{t('gate.watching')}</span>
       </div>
       <details style={others}>
-        <summary style={{ cursor: 'pointer' }}>Using a different browser?</summary>
+        <summary style={{ cursor: 'pointer' }}>{t('gate.others')}</summary>
         <ul style={gateList}>
           {orderedDirections(current)
             .filter(d => d.key !== current)
             .map(d => (
               <li key={d.key} style={{ marginBottom: 6 }}>
-                <strong>{d.name}</strong> — {d.steps}
+                <strong>{d.name}</strong> — {t(d.stepsKey)}
               </li>
             ))}
         </ul>
       </details>
       <button type="button" style={gateButton} onClick={retest}>
-        Test again
+        {t('gate.testAgain')}
       </button>
       {demo && demoVerdict ? (
-        <span style={{ marginLeft: 12, fontSize: 12, color: demoVerdict === 'allowed' ? '#8fd8ae' : '#e8a08f' }}>
-          demo — this browser right now: pop-ups {demoVerdict}
+        <span style={{ marginInlineStart: 12, fontSize: 12, color: demoVerdict === 'allowed' ? '#8fd8ae' : '#e8a08f' }}>
+          {t(demoVerdict === 'allowed' ? 'gate.demo.allowed' : 'gate.demo.blocked')}
         </span>
       ) : null}
-      <span style={{ marginLeft: 12, fontSize: 12, opacity: 0.8 }}>
-        Still stuck?{' '}
+      <span style={{ marginInlineStart: 12, fontSize: 12, opacity: 0.8 }}>
+        {t('gate.stuck')}{' '}
         <a
           href="https://github.com/cday-with-ai/Raptor3000/issues/new?labels=bug&title=Popup%20gate%3A%20"
           target="_blank"
           rel="noreferrer"
           style={{ color: '#8fb8f0' }}
         >
-          report it
+          {t('gate.report')}
         </a>
       </span>
     </div>
@@ -440,11 +419,31 @@ const gate = {
   zIndex: 1,
 } as const;
 
+const gateTitleRow = {
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'space-between',
+  gap: 10,
+} as const;
+
 const gateTitle = {
   fontSize: 17,
   fontWeight: 700,
   letterSpacing: '0.02em',
   marginBottom: 4,
+} as const;
+
+// Deliberately quiet: the language control must be findable by someone
+// who can't read the card, but it is not what the card is asking them
+// to do.
+const gateLangSelect = {
+  flexShrink: 0,
+  background: '#101a33',
+  color: '#b7c6e2',
+  border: '1px solid #3d4c6e',
+  borderRadius: 5,
+  padding: '3px 6px',
+  fontSize: 12,
 } as const;
 
 const gateP = {
@@ -453,7 +452,7 @@ const gateP = {
 
 const gateList = {
   margin: '6px 0',
-  paddingLeft: 18,
+  paddingInlineStart: 18,
 } as const;
 
 const gateButton = {
@@ -476,6 +475,12 @@ const picture = {
   // it LOOKS clickable by design; make sure it doesn't feel it
   pointerEvents: 'none',
   userSelect: 'none',
+  // These mocks are drawn at fixed x coordinates, so an RTL document
+  // (Hebrew) re-anchors every <text> and the address bar renders
+  // clipped with the dropdown's labels outside their box — seen live
+  // 2026-08-15. The picture is a diagram, not prose: pin it LTR and
+  // let the Hebrew text around it flow as it should.
+  direction: 'ltr',
 } as const;
 
 const caption = {
@@ -523,7 +528,7 @@ const others = {
 } as const;
 
 const demoChip = {
-  marginLeft: 8,
+  marginInlineStart: 8,
   padding: '2px 8px',
   borderRadius: 99,
   border: '1px solid #9a7524',
