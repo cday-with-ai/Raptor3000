@@ -1647,6 +1647,7 @@ function SidePanel({
   const engineRatio = liveEngineRatio ?? loadBoardLayout(bucket).engineRatio;
   const clampEngine = (v: number) => Math.min(0.7, Math.max(0.15, v));
   const engineShown = showEngine && engineAnalysisAllowed(mode);
+  const engineOpen = loadBoardLayout(bucket).engineOpen;
   return (
     <div
       ref={panelRef}
@@ -1737,10 +1738,34 @@ function SidePanel({
               setLiveEngineRatio(null);
             }}
             onPointerCancel={() => setLiveEngineRatio(null)}
-          />
-          <div style={{ flexBasis: `${(engineRatio * 100).toFixed(2)}%`, flexShrink: 0, minHeight: 0, overflowY: 'auto' }}>
-            <EnginePanel context={context} gameId={gameId} fen={analysisFen} viewing={viewPly !== null} />
+          >
+            {/* The fold, on the seam that was already there (Carson,
+                2026-08-15: "Engine needs a point arrow down to collapse
+                it and another to bring it back"). ▾ folds it away, ▴
+                brings it back, which is the same vocabulary the panel
+                and toolbar seams already speak.
+
+                It stops its own pointer events: the seam beneath is a
+                drag handle, and a press that both starts a resize and
+                ends in a collapse is the classic way an affordance
+                becomes untrustworthy. */}
+            <button
+              style={engineFold}
+              title={engineOpen ? 'hide the engine' : 'show the engine'}
+              onClick={() =>
+                saveBoardLayoutField(bucket, 'engineOpen', !engineOpen)
+              }
+              onPointerDown={e => e.stopPropagation()}
+              onPointerUp={e => e.stopPropagation()}
+            >
+              {engineOpen ? '▾' : '▴'}
+            </button>
           </div>
+          {engineOpen && (
+            <div style={{ flexBasis: `${(engineRatio * 100).toFixed(2)}%`, flexShrink: 0, minHeight: 0, overflowY: 'auto' }}>
+              <EnginePanel context={context} gameId={gameId} fen={analysisFen} viewing={viewPly !== null} />
+            </div>
+          )}
         </>
       )}
     </div>
@@ -1753,6 +1778,26 @@ const engineSeam = {
   background: 'var(--border-soft)',
   cursor: 'row-resize',
   touchAction: 'none',
+  // The seam carries the fold triangle, so it needs somewhere to put it.
+  position: 'relative',
+} as const;
+
+// The engine fold, centred on the seam — the same treatment the side
+// panel and toolbar collapses already get, so the three read as one
+// idiom rather than three inventions.
+const engineFold = {
+  position: 'absolute',
+  top: '50%',
+  left: '50%',
+  transform: 'translate(-50%, -50%)',
+  background: 'transparent',
+  color: 'var(--fg-dim)',
+  border: 'none',
+  opacity: 0.55,
+  cursor: 'pointer',
+  fontSize: 11,
+  lineHeight: '11px',
+  padding: '0 6px',
 } as const;
 
 /** `26) … Rg8` — the collapsed one-line summary of where the game is. */

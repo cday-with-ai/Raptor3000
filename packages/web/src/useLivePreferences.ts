@@ -53,6 +53,13 @@ export interface BoardLayoutPrefs {
   toolbarOpen: boolean;
   engineRatio: number;
   movesExpanded: boolean;
+  /** The engine block's own fold, separate from whether the engine is
+   *  offered at all. `showEngineAnalysis` lives on the Options page in
+   *  the main window — a different room from the board you are looking
+   *  at — so this is the one you reach for mid-game (Carson,
+   *  2026-08-15: "Engine needs a point arrow down to collapse it and
+   *  another to bring it back"). */
+  engineOpen: boolean;
 }
 
 const RATIO_BOUNDS: Record<string, [number, number]> = {
@@ -71,7 +78,10 @@ export function loadBoardLayout(bucket: LayoutBucket): BoardLayoutPrefs {
     const [lo, hi] = RATIO_BOUNDS[field];
     return Number.isFinite(v) && v >= lo && v <= hi ? v : fallback;
   };
-  const bool = (field: 'panelOpen' | 'toolbarOpen' | 'movesExpanded', fallback: boolean) => {
+  const bool = (
+    field: 'panelOpen' | 'toolbarOpen' | 'movesExpanded' | 'engineOpen',
+    fallback: boolean,
+  ) => {
     const v = localStorage.getItem(rawKey(bucket, field));
     return v === 'true' ? true : v === 'false' ? false : fallback;
   };
@@ -82,6 +92,10 @@ export function loadBoardLayout(bucket: LayoutBucket): BoardLayoutPrefs {
     engineRatio: num('engineRatio', g.engineSplitRatio),
     // Playing starts its move list collapsed by default (Carson).
     movesExpanded: bool('movesExpanded', bucket === 'playing' ? false : g.moveListVisible),
+    // Open until folded: the engine block has always been visible where
+    // it is offered, and a new control should not change what you see
+    // before you touch it.
+    engineOpen: bool('engineOpen', true),
   };
 }
 
