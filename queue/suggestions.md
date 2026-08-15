@@ -801,3 +801,50 @@ the armed Relaunch button in Options uses `#d86868` on `#a04040`, which was
 picked for a dark page and is thin against white. It is one small control
 and its own decision; say the word if you want it themed.
 
+
+**Raptor3000:** 2026-08-15 (live session, second half) — Everything you
+called out during the launch is built and verified in real games. In order:
+
+- **Move list wheel scroll.** Worth knowing what was actually wrong: the
+  pane always *did* scroll under the cursor — I measured it before changing
+  anything. What it didn't do was scroll when the pointer was over the
+  status line, the opening caption or the arrows, which in a short window is
+  most of the panel. So the wheel now works from anywhere in the panel, and
+  yields to the engine block if that is what you are over. Touch/gesture is
+  deliberately left for the mobile work, per your "when we get there".
+- **Status on three lines** — `Status:` left, the state and the game
+  description centred under it, exactly as you spelled it out.
+- **Opening name on two lines** with the variation under a bullet. This
+  reverses the one-line rule from d9b29e1, so worth flagging: that rule
+  existed because the name *wrapped badly*, not because one line was
+  wanted. The variation gets its own indented row so it can wrap without
+  dragging the ECO code around. A live Najdorf renders "B90 Sicilian
+  Defense / · Najdorf Variation".
+- **Engine fold.** ▾ on the seam folds it, ▴ brings it back, remembered per
+  board type so it opens the way you left that kind of board.
+- **Follow under the best commands.** Here I found the pane was lying: its
+  own comment said "there is no `follow /<flag>`; `follow` takes a handle",
+  and the note sent you to the input line to type one. FICS takes the SAME
+  selectors for both verbs, so `follow /b` is one command. Six buttons now,
+  observe and follow, plus a stop that prints bare `follow` because that is
+  FICS's own off switch. Checked against the server's help file rather than
+  my memory.
+- **Closing windows.** Your `(cdaysDog is observing game(s) 7 and 16)` is
+  fixed: the unobserve existed but hung off `beforeunload`, which is not
+  fired for every close, so a board taken down by the main window went
+  without a word. And closing on a live game now prompts, with yes meaning
+  resign — in the board, the chat and the main window alike.
+
+One thing about the resign I want you to know rather than discover: it fires
+on `pagehide`, never on the dialog. `beforeunload` cannot tell you which
+button was pressed, so a resign wired there would resign your game every
+time you *considered* closing and thought better of it. There is a test that
+raises the dialog twice, cancels, and asserts nothing was sent.
+
+Also fixed en route, from looking at the app rather than the code: the
+playing toolbar had started clipping "Adjourn" to "Adjou" — the automation
+controls made the row wider than the board window, and flex children shrink
+before they wrap. It wraps now.
+
+Queue is empty again. Nothing here is deployed — commits are local, as
+always.
