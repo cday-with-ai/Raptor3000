@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import {
   ALERT_KINDS,
   ALERT_RECIPES,
@@ -240,7 +240,8 @@ describe('alert audio unlocking', () => {
     g.AudioContext = fake.ctor;
     g.document = fake.doc;
     try {
-      const { unlockAlertAudio } = await import('../alertSounds.js?unlock1');
+      vi.resetModules();
+      const { unlockAlertAudio } = await import('../alertSounds.js');
       unlockAlertAudio();
       // Armed but nothing built: a context created outside a gesture is
       // the whole bug, so it must not be built on install.
@@ -271,7 +272,8 @@ describe('alert audio unlocking', () => {
     };
     g.document = fake.doc;
     try {
-      const { unlockAlertAudio } = await import('../alertSounds.js?unlock2');
+      vi.resetModules();
+      const { unlockAlertAudio } = await import('../alertSounds.js');
       unlockAlertAudio();
       fake.gesture();
       await Promise.resolve();
@@ -293,7 +295,8 @@ describe('alert audio unlocking', () => {
     };
     g.window = { };
     try {
-      const mod = await import('../alertSounds.js?peer1');
+      vi.resetModules();
+      const mod = await import('../alertSounds.js');
       const heard: string[] = [];
       const peer = {
         closed: false,
@@ -320,7 +323,8 @@ describe('alert audio unlocking', () => {
     };
     g.window = { };
     try {
-      const mod = await import('../alertSounds.js?peer2');
+      vi.resetModules();
+      const mod = await import('../alertSounds.js');
       const dead = { closed: true } as unknown as Window;
       const alive: string[] = [];
       mod.registerAlertPeer(dead);
