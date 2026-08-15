@@ -149,3 +149,72 @@ describe('onConnectionChange', () => {
     expect(b).toEqual([true, false]);
   });
 });
+
+/**
+ * Why the link died, said out loud (Carson, 2026-08-13, on "strange
+ * disconnects"): FICS announces an idle logout in plain text and then
+ * closes the socket, and the console used to say only "WebSocket
+ * closed" — no cause, no code. The farewell scrolled away and the
+ * disconnect looked causeless.
+ */
+describe('disconnect diagnostics', () => {
+  function internals(chat: ChatService) {
+    const seen: string[] = [];
+    chat.addMainConsoleListener({
+      id: 'probe',
+      accepts: () => true,
+      handle: e => {
+        if (e.type === 'INTERNAL') seen.push(e.message ?? '');
+      },
+    });
+    return seen;
+  }
+
+  function connected() {
+    const chatService = new ChatService();
+    const gameService = new GameService();
+    const parser = new FicsParser({
+      chatParsers: defaultChatParsers(),
+      gameLineParsers: defaultGameLineParsers(),
+      chunkParsers: defaultChunkParsers(),
+      gameService,
+    });
+    const c = new FicsConnector({ chatService, gameService, parser });
+    const seen = internals(chatService);
+    c.connect(CREDS);
+    lastSocket().onopen?.();
+    // Skip the handshake: we are testing what happens to an authed session.
+    (c as unknown as { loginStage: string }).loginStage = 'authed';
+    return { c, seen };
+  }
+
+  it('names the idle logout when FICS announces it', () => {
+    const { c, seen } = connected();
+    (c as unknown as { handleRaw(s: string): void }).handleRaw(
+      '\n\r**** Auto-logout because you were idle more than 60 minutes. ****\n\r',
+    );
+    expect(seen.some(m => /idle for 60 minutes/i.test(m))).toBe(true);
+    expect(seen.some(m => /Keep-alive/i.test(m))).toBe(true);
+
+    // …and the close that follows blames idleness, not the transport.
+    lastSocket().onclose?.({ code: 1006, reason: '' });
+    expect(seen.at(-1)).toMatch(/dropped this session for idleness/i);
+  });
+
+  it('carries the close code when FICS said nothing', () => {
+    // 1006 vs 1000 is the difference between a killed transport and a
+    // server goodbye, and it is the only evidence there is in the
+    // silent case.
+    const { seen } = connected();
+    lastSocket().onclose?.({ code: 1006, reason: '' });
+    expect(seen.at(-1)).toMatch(/code 1006/);
+    expect(seen.at(-1)).toMatch(/transport dropped/i);
+  });
+
+  it('a clean server goodbye reads as 1000, without the transport note', () => {
+    const { seen } = connected();
+    lastSocket().onclose?.({ code: 1000, reason: '' });
+    expect(seen.at(-1)).toMatch(/code 1000/);
+    expect(seen.at(-1)).not.toMatch(/transport dropped/i);
+  });
+});

@@ -63,6 +63,13 @@ export interface LoginCredentials {
 
 const TIMESEAL_KEY = 'Timestamp (FICS) v1.0 - programmed by Henrik Gram.';
 
+/**
+ * FICS's idle farewell: "**** Auto-logout because you were idle more
+ * than 60 minutes. ****". Loose about the number because it is a server
+ * setting, and about the surrounding stars because they are decoration.
+ */
+const AUTO_LOGOUT = /Auto-?logout because you were idle/i;
+
 export class FicsConnector extends BaseConnector implements Connector {
   private ws: WebSocket | null = null;
   private connected = false;
@@ -77,6 +84,9 @@ export class FicsConnector extends BaseConnector implements Connector {
   /** Set when FICS announces this session lost the account to a newer
    *  login, so the onclose that follows can say why the socket died. */
   private kicked = false;
+  /** Set when FICS announces it is dropping this session for idleness —
+   *  same job as `kicked`, different cause. */
+  private idleLoggedOut = false;
   /** The handle FICS started this session as ("Starting FICS session as
    *  X") — guests get their generated GuestXXXX name here. Null before
    *  login completes. */
@@ -146,6 +156,7 @@ export class FicsConnector extends BaseConnector implements Connector {
     this.pendingCreds = creds;
     this.loginStage = 'pre';
     this.kicked = false;
+    this.idleLoggedOut = false;
     this.loggedInAs = null;
 
     const scheme = this.options.secure ? 'wss' : 'ws';
@@ -175,6 +186,7 @@ export class FicsConnector extends BaseConnector implements Connector {
     ws.onclose = ev => {
       console.log(`[FicsConnector] WebSocket onclose: code=${ev.code} reason=${ev.reason}`);
       const wasKicked = this.kicked;
+      const wasIdleLogout = this.idleLoggedOut;
       const wasMidLogin = this.loginStage !== 'authed' && this.loginStage !== 'failed';
       this.connected = false;
       this.ws = null;
@@ -186,7 +198,17 @@ export class FicsConnector extends BaseConnector implements Connector {
       this.publishInternal(
         wasKicked
           ? 'Connection closed — this session was kicked by a newer login as the same account. Reconnect to take it back.'
-          : `WebSocket closed${wasMidLogin ? ' during login' : ''}${ev.reason ? `: ${ev.reason}` : ''}`,
+          : wasIdleLogout
+            ? 'Connection closed — FICS dropped this session for idleness.'
+            : // The close code is the difference between "the server said
+              // goodbye" (1000) and "the transport died under us" (1006),
+              // and it is the only evidence available when FICS said
+              // nothing at all. It cost one template slot and was the
+              // first thing wanted every time a disconnect got
+              // investigated.
+              `WebSocket closed${wasMidLogin ? ' during login' : ''} (code ${ev.code}${
+                ev.code === 1006 ? ', no close frame — the transport dropped' : ''
+              })${ev.reason ? `: ${ev.reason}` : ''}`,
       );
       // Unconditional: even a socket that never reached onopen concluded
       // an attempt, and the UI's disconnect surface wants to hear it.
@@ -313,6 +335,22 @@ export class FicsConnector extends BaseConnector implements Connector {
       this.kicked = true;
       this.publishInternal(
         'Kicked: a newer login as this account has taken over the session.',
+      );
+    } else if (AUTO_LOGOUT.test(normalized)) {
+      // FICS drops an idle session after 60 minutes and says so in plain
+      // text — "**** Auto-logout because you were idle more than 60
+      // minutes. ****" — then closes the socket. Nothing matched that
+      // string, so the farewell scrolled away with the rest of the
+      // console and the disconnect looked causeless. This is the whole
+      // of Carson's "strange disconnects on raptor3000.pages.dev"
+      // (2026-08-13): watching channel 39 without typing is idle as far
+      // as FICS is concerned — incoming traffic does not reset the
+      // clock — so a lurking session dies on the hour, every hour.
+      this.idleLoggedOut = true;
+      this.publishInternal(
+        'FICS logged this session out for being idle for 60 minutes. ' +
+          'Keep-alive (Options → Sound → Keep alive) sends a hidden ' +
+          'command periodically so a session you are only watching stays up.',
       );
     }
 

@@ -153,7 +153,14 @@ export const DEFAULT_PREFERENCES: AppPreferences = {
   soundMode: 'on',
   alertSounds: 'on',
   moveSoundSet: 'sfx',
-  keepAlive: 'off',
+  // ON by default since 2026-08-15. FICS logs out an idle session after
+  // 60 minutes, and watching a channel does not count as activity — so a
+  // lurker's client that ships this off dies on the hour, every hour,
+  // and says nothing. Preferences are per-origin localStorage, which is
+  // why flipping it on localhost never helped raptor3000.pages.dev: that
+  // origin had never had the toggle turned on at all. One hidden `date`
+  // every 20 minutes is a rounding error against a chat stream.
+  keepAlive: 'on',
   keepAliveCommand: 'date',
   loginScript: DEFAULT_LOGIN_SCRIPT.join('\n'),
   showEngineAnalysis: true,

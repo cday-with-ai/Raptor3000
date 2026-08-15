@@ -111,6 +111,17 @@ function connectorCreds(session: LoginSubmission) {
 // Seek left this nav on 2026-08-15 — it is a chat-window layout now
 // (Carson: "next to (plain, tabs, split)"), which is where you are when
 // you go looking for a game.
+/**
+ * How often the keep-alive ticks. It was 59 minutes against FICS's
+ * 60-minute idle limit — a one-minute margin, in a timer that lives in
+ * the MAIN window, which sits backgrounded while play happens in the
+ * popups. Chrome throttles timers in backgrounded tabs (minute-aligned
+ * under intensive throttling), so the tick could land late and lose a
+ * race it should never have been running. 20 minutes has the same effect
+ * on FICS and three chances to land before the limit.
+ */
+export const KEEP_ALIVE_MS = 20 * 60 * 1000;
+
 type NavTab = 'options' | 'help';
 
 /**
@@ -148,7 +159,7 @@ function PostLoginShell({
     if (shellPrefs.keepAlive !== 'on') return undefined;
     const t = setInterval(() => {
       context.connector.sendMessageHidden(shellPrefs.keepAliveCommand.trim() || 'date');
-    }, 59 * 60 * 1000);
+    }, KEEP_ALIVE_MS);
     return () => clearInterval(t);
   }, [shellPrefs.keepAlive, shellPrefs.keepAliveCommand, context]);
   useEffect(() => {
