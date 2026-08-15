@@ -381,6 +381,12 @@ export const ChatWindow = function ChatWindow({
         <span style={prefixLabel}>{'>'}</span>
         <input
           ref={inputRef}
+          // The line has no visible label — the `>` beside it is a prompt,
+          // not a name — so this is the only thing a screen reader or a
+          // test can call it by. Every live e2e spec addressed it by a
+          // placeholder that no longer exists, which is how four specs
+          // came to hang on a fill() that could never find its target.
+          aria-label="FICS command"
           style={inputBox}
           value={input}
           onChange={e => {

@@ -58,7 +58,7 @@ async function loginAsGuest(
 }
 
 async function typeInChat(chat: Page, cmd: string): Promise<void> {
-  const input = chat.getByPlaceholder(/FICS command/i);
+  const input = chat.getByLabel("FICS command");
   await input.fill(cmd);
   await input.press('Enter');
 }

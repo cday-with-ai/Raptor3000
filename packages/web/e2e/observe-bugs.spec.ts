@@ -39,7 +39,7 @@ test('obs N — board window + chat leak diagnosis', async ({ page, context }) =
   }
   expect(banner).toBe(true);
 
-  const input = chat.getByPlaceholder(/FICS command/i);
+  const input = chat.getByLabel("FICS command");
 
   // Run `games` and wait for the listing to arrive.
   await input.fill('games');

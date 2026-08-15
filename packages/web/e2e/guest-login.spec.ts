@@ -45,7 +45,7 @@ test('guest login → chat flow → observe spawns a board', async ({ page, cont
     predicate: p => p.url().includes('window=board'),
   });
 
-  const input = chatPage.getByPlaceholder(/FICS command/i);
+  const input = chatPage.getByLabel("FICS command");
   await input.fill('observe /b');
   await input.press('Enter');
 
