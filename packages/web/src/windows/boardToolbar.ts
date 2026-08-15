@@ -22,6 +22,7 @@
  * cannot see is the rendering itself; that still needs jsdom.
  */
 import { BoardMode, type BoardModeCode } from '@raptor3000/shared';
+import { AUTO_PROMOTE_PIECES, type AutoPromote } from '../preferences.js';
 
 export type ToolbarItem = {
   /** Stable id, for tests and for handler lookup once handlers exist. */
@@ -34,10 +35,17 @@ export type ToolbarItem = {
 /**
  * A toolbar row: `left` and `right` with a flexible gap between them.
  * Most modes put navigation on the left; SETUP replaces it entirely.
+ *
+ * `autoPromote` is not a button, which is why it is a flag rather than an
+ * item: it is a row of checkboxes with their own rule (see
+ * `nextAutoPromote`) and their own persisted state. It rides here anyway
+ * so that "which modes show it" stays one testable mapping instead of a
+ * second condition spelled out in the JSX.
  */
 export type ToolbarLayout = {
   left: ToolbarItem[];
   right: ToolbarItem[];
+  autoPromote: boolean;
 };
 
 /** Hover text for a button with nothing behind it yet. */
@@ -113,13 +121,36 @@ export function toolbarLayoutFor(
         dead('setup-start', 'Start'),
       ],
       right: [dead('setup-done', 'Done')],
+      autoPromote: false,
     };
   }
 
   return {
     left: [],
     right: [live('flip', 'Flip'), ...modeItems(mode, endedFrom)],
+    // Only while playing. Examining moves pieces for you and observing
+    // has no move of yours to promote, so the control would be a setting
+    // with nothing to act on — and a checkbox that changes nothing is the
+    // dead-button complaint this module was written to answer.
+    autoPromote: mode === BoardMode.PLAYING,
   };
+}
+
+/**
+ * Clicking a piece box. Checkbox look, radio behaviour: a click arms that
+ * piece and disarms whatever was armed, so the four boxes are never both
+ * lit. Clicking the piece that is already armed clears it, which is the
+ * only way back to the promotion picker — see `AutoPromote`.
+ *
+ * A pure function because it is the whole rule, and the whole rule is
+ * worth pinning without a DOM: the failure it prevents is a promotion
+ * silently playing a piece the board says is not selected.
+ */
+export function nextAutoPromote(
+  current: AutoPromote,
+  clicked: (typeof AUTO_PROMOTE_PIECES)[number],
+): AutoPromote {
+  return current === clicked ? 'off' : clicked;
 }
 
 const baseButtonStyle = {

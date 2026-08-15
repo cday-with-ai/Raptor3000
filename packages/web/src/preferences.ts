@@ -19,6 +19,26 @@ export type BoardTheme =
   | 'horsey'
   | 'custom';
 export type SoundMode = 'on' | 'off';
+
+/**
+ * Auto-promote (Carson, 2026-08-15: "auto promote should be checkboxes
+ * with pieces. we did this in raptor. It bypasses the popup if selected.
+ * Default is on queen.").
+ *
+ * The armed piece, or `'off'` for the promotion picker. Checkbox LOOK,
+ * radio BEHAVIOUR — the original Raptor's control, and Raptor is the
+ * authority where the two differ (README). `'off'` is what unchecking
+ * the armed box leaves behind, and it is the only way back to the
+ * picker, which is why unchecking has to be allowed at all: four boxes
+ * that can never all be clear would be a radio group wearing a costume.
+ */
+export type AutoPromote = 'off' | 'Q' | 'R' | 'B' | 'N';
+/** The pieces, in the order the checkboxes are drawn. */
+export const AUTO_PROMOTE_PIECES = ['Q', 'R', 'B', 'N'] as const;
+export const AUTO_PROMOTE_VALUES: readonly AutoPromote[] = [
+  'off',
+  ...AUTO_PROMOTE_PIECES,
+];
 export type PieceSet = 'alpha' | 'cardinal' | 'cburnett' | 'leipzig' | 'mpchess';
 
 export const BOARD_THEMES: readonly BoardTheme[] = [
@@ -154,6 +174,12 @@ export interface AppPreferences {
   boardCoordinates: boolean;
   flipOnPlayAsBlack: boolean;
   moveListVisible: boolean;
+  /**
+   * The piece a promotion plays without asking, or `'off'` to be asked.
+   * See `AutoPromote` — the default is a queen, so out of the box a
+   * promotion never opens a dialog.
+   */
+  autoPromote: AutoPromote;
 }
 
 export const DEFAULT_PREFERENCES: AppPreferences = {
@@ -204,6 +230,9 @@ export const DEFAULT_PREFERENCES: AppPreferences = {
     'https://chessascent-app-back-end-861468272048.us-central1.run.app',
   boardCoordinates: true,
   flipOnPlayAsBlack: true,
+  // Queen, per Carson — a promotion plays one with no dialog until you
+  // say otherwise.
+  autoPromote: 'Q',
   moveListVisible: true,
 };
 
@@ -409,6 +438,11 @@ export function loadPreferences(): AppPreferences {
       'moveListVisible',
       DEFAULT_PREFERENCES.moveListVisible,
     ),
+    autoPromote: readString(
+      'autoPromote',
+      DEFAULT_PREFERENCES.autoPromote,
+      AUTO_PROMOTE_VALUES,
+    ),
   };
 }
 
@@ -453,4 +487,5 @@ export function savePreferences(prefs: AppPreferences): void {
   setRaw('boardCoordinates', String(prefs.boardCoordinates));
   setRaw('flipOnPlayAsBlack', String(prefs.flipOnPlayAsBlack));
   setRaw('moveListVisible', String(prefs.moveListVisible));
+  setRaw('autoPromote', prefs.autoPromote);
 }

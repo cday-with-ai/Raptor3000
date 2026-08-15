@@ -30,6 +30,7 @@ import { detectOpening, loadOpenings, type Opening } from '../game/openings.js';
 import type { RaptorContext } from './appContext.js';
 import { BoardLayout } from '../layout/BoardLayout.js';
 import {
+  nextAutoPromote,
   toolbarButtonProps,
   toolbarLayoutFor,
   type ToolbarItem,
@@ -37,13 +38,16 @@ import {
 import { installPositionTracker, windowStorageKey } from './windowPosition.js';
 import type { EngineAnalysis } from '../engine/EngineService.js';
 import {
+  AUTO_PROMOTE_PIECES,
   boardColors,
   clockChipColors,
   type AppPreferences,
+  type AutoPromote,
 } from '../preferences.js';
 import {
   loadBoardLayout,
   saveBoardLayoutField,
+  saveLivePreference,
   useLivePreferences,
   type LayoutBucket,
 } from '../useLivePreferences.js';
@@ -448,7 +452,19 @@ export const BoardWindow = observer(function BoardWindow({
           gameEnd={gameEnd}
         />
       }
-      toolbar={<Toolbar mode={mode} endedFrom={endedFrom} handlers={toolbarHandlers} />}
+      toolbar={
+        <Toolbar
+          mode={mode}
+          endedFrom={endedFrom}
+          handlers={toolbarHandlers}
+          autoPromote={prefs.autoPromote}
+          onAutoPromote={p => saveLivePreference('autoPromote', p)}
+          pieceSet={prefs.pieceSet}
+          // The pieces in the boxes wear our colour, so the control shows
+          // the piece we would actually get.
+          asWhite={!s12?.isWhiteOnTop}
+        />
+      }
     />
   );
 });
@@ -820,6 +836,11 @@ function Board({
   const interactive =
     !viewing && (mode === BoardMode.PLAYING || mode === BoardMode.EXAMINING);
   const canPremove = !viewing && mode === BoardMode.PLAYING;
+  // Which colour a promotion of ours would be: while playing, the side
+  // that is not on top; anywhere else we are only ever moving white's
+  // pieces around, so white.
+  const promotingAsWhite =
+    mode === BoardMode.PLAYING ? !s12?.isWhiteOnTop : true;
 
   const [selected, setSelected] = useState<string | null>(null);
   const [promotion, setPromotion] = useState<{ from: string; to: string } | null>(null);
@@ -959,6 +980,17 @@ function Board({
     const movingPiece = pieceAt(s12, from);
     const toRank = parseSquare(to)!.rank;
     if (isPawn(movingPiece) && (toRank === 0 || toRank === 7)) {
+      // Auto-promote (Carson): an armed piece bypasses the picker
+      // entirely. Gated on our turn, because sending off-turn is a move
+      // FICS will only reject. Off-turn promotions keep the behaviour
+      // they have always had — picker, then an immediate send that is
+      // equally out of turn — which is its own bug and not this one's
+      // to fix quietly: the premove path below cannot carry a promotion
+      // piece, so there is nowhere for that move to wait.
+      if (prefs.autoPromote !== 'off' && isMyTurn) {
+        sendPromotion(from, to, prefs.autoPromote);
+        return;
+      }
       setPromotion({ from, to });
       return;
     }
@@ -1093,9 +1125,28 @@ function Board({
     setDragFrom(null);
   }
 
+  /**
+   * Send a promotion. One path for both the picker and auto-promote, so
+   * arming a piece changes only whether you were asked.
+   *
+   * The optimistic hold matters more here than it looks. A normal move
+   * suppresses its own echo (`completeMoveTo`); a promotion never did,
+   * because the picker put a human pause between the drop and the send
+   * and the flicker hid inside it. Auto-promote removes the pause, so
+   * without this the pawn would snap back to its old square and fly
+   * again when the server echoed. The piece held at the destination is
+   * the promoted one, not the pawn — the board should show what you are
+   * about to have.
+   */
+  function sendPromotion(from: string, to: string, promo: 'Q' | 'R' | 'B' | 'N') {
+    lastDragRef.current = { from, to, t: Date.now() };
+    setPending({ from, to, piece: promoCode(promo, promotingAsWhite) });
+    sendMove(context, from, to, promo);
+  }
+
   function onPromotionPick(promo: 'Q' | 'R' | 'B' | 'N') {
     if (!promotion) return;
-    sendMove(context, promotion.from, promotion.to, promo);
+    sendPromotion(promotion.from, promotion.to, promo);
     setPromotion(null);
   }
 
@@ -1147,6 +1198,13 @@ function Board({
       cols.push(
         <div
           key={`${rank}-${file}`}
+          // The only way a test can name a square. Everything else about
+          // this element is geometry — the coordinate lives in a React
+          // key, which never reaches the DOM — so without this an e2e can
+          // click the board only by computing pixels from the flipped
+          // orientation, which is a second copy of the layout maths and
+          // wrong in exactly the cases worth testing.
+          data-square={sq}
           style={{
             background: highlight ?? baseBg,
             aspectRatio: '1',
@@ -1334,7 +1392,7 @@ function Board({
           onPick={onPromotionPick}
           onCancel={() => setPromotion(null)}
           set={prefs.pieceSet}
-          asWhite={mode === BoardMode.PLAYING ? !s12?.isWhiteOnTop : true}
+          asWhite={promotingAsWhite}
         />
       )}
     </div>
@@ -2147,24 +2205,109 @@ function Toolbar({
   mode,
   endedFrom,
   handlers,
+  autoPromote,
+  onAutoPromote,
+  pieceSet,
+  asWhite,
 }: {
   mode: BoardModeCode;
   endedFrom: BoardModeCode | null;
   handlers: Record<string, () => void>;
+  autoPromote: AutoPromote;
+  onAutoPromote: (p: AutoPromote) => void;
+  pieceSet: AppPreferences['pieceSet'];
+  asWhite: boolean;
 }) {
-  const { left, right } = toolbarLayoutFor(mode, { endedFrom });
+  const layout = toolbarLayoutFor(mode, { endedFrom });
   return (
     <ToolbarShell>
-      {left.map((item) => (
+      {layout.left.map((item) => (
         <TbButton key={item.id} item={item} onClick={handlers[item.id]} />
       ))}
+      {layout.autoPromote && (
+        <AutoPromoteBoxes
+          value={autoPromote}
+          onChange={onAutoPromote}
+          set={pieceSet}
+          asWhite={asWhite}
+        />
+      )}
       <span style={{ flex: 1 }} />
-      {right.map((item) => (
+      {layout.right.map((item) => (
         <TbButton key={item.id} item={item} onClick={handlers[item.id]} />
       ))}
     </ToolbarShell>
   );
 }
+
+/**
+ * Auto-promote: four piece boxes on the playing row (Carson, 2026-08-15).
+ * They are drawn as the pieces themselves rather than the letters Q R B N
+ * — the toolbar already sits under a board wearing whichever set you
+ * chose, and a picture of the piece you will get needs no translating,
+ * which the letters would (the app speaks twelve languages, and B for
+ * bishop is B only in English).
+ *
+ * The rule is `nextAutoPromote`; this is only its dressing. The label
+ * says which way the control points, because four boxes with none lit is
+ * a real state and has to look deliberate rather than broken.
+ */
+function AutoPromoteBoxes({
+  value,
+  onChange,
+  set,
+  asWhite,
+}: {
+  value: AutoPromote;
+  onChange: (p: AutoPromote) => void;
+  set: AppPreferences['pieceSet'];
+  asWhite: boolean;
+}) {
+  return (
+    <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+      <span style={{ fontSize: 11, opacity: 0.7 }}>
+        {value === 'off' ? 'Promote: ask' : 'Promote:'}
+      </span>
+      {AUTO_PROMOTE_PIECES.map(p => {
+        const on = value === p;
+        return (
+          <button
+            key={p}
+            onClick={() => onChange(nextAutoPromote(value, p))}
+            title={
+              on
+                ? `Promoting to ${PIECE_NAMES[p]} without asking — click to be asked instead`
+                : `Always promote to ${PIECE_NAMES[p]}`
+            }
+            aria-pressed={on}
+            style={{
+              width: 26,
+              height: 26,
+              padding: 2,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              background: on ? 'var(--bg-input)' : 'transparent',
+              border: `1px solid ${on ? 'var(--accent)' : 'var(--border-soft)'}`,
+              borderRadius: 4,
+              cursor: 'pointer',
+              opacity: on ? 1 : 0.45,
+            }}
+          >
+            <PieceImg code={promoCode(p, asWhite)} set={set} />
+          </button>
+        );
+      })}
+    </span>
+  );
+}
+
+const PIECE_NAMES = {
+  Q: 'a queen',
+  R: 'a rook',
+  B: 'a bishop',
+  N: 'a knight',
+} as const;
 
 function ToolbarShell({ children }: { children: React.ReactNode }) {
   return (

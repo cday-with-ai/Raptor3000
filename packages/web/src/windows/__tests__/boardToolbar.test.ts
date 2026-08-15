@@ -2,10 +2,16 @@ import { describe, it, expect } from 'vitest';
 import { BoardMode, type BoardModeCode } from '@raptor3000/shared';
 import {
   NOT_IMPLEMENTED_HINT,
+  nextAutoPromote,
   toolbarButtonProps,
   toolbarLayoutFor,
   type ToolbarItem,
 } from '../boardToolbar.js';
+import {
+  AUTO_PROMOTE_PIECES,
+  AUTO_PROMOTE_VALUES,
+  DEFAULT_PREFERENCES,
+} from '../../preferences.js';
 
 /**
  * The toolbar as data: which buttons a mode gets, and how a button with
@@ -174,5 +180,63 @@ describe('toolbarButtonProps', () => {
     for (const key of ['padding', 'border', 'borderRadius', 'fontSize', 'background']) {
       expect(b[key], key).toEqual(a[key]);
     }
+  });
+});
+
+/**
+ * Auto-promote (Carson, 2026-08-15): "auto promote should be checkboxes
+ * with pieces … It bypasses the popup if selected. Default is on queen."
+ *
+ * Checkbox look, radio behaviour. The rule is small enough to read and
+ * still worth pinning, because both ways of getting it wrong are silent:
+ * a click that arms a second piece leaves two boxes lit and the board
+ * promoting to whichever one the code happens to check first, and a
+ * click that cannot disarm strands you with no way back to the picker.
+ * Neither shows up as an error anywhere — you just get a piece you did
+ * not ask for, mid-game.
+ */
+describe('nextAutoPromote', () => {
+  it('arms the piece you clicked', () => {
+    expect(nextAutoPromote('off', 'Q')).toBe('Q');
+    expect(nextAutoPromote('Q', 'N')).toBe('N');
+  });
+
+  it('disarms when you click the piece already armed — the way back to the picker', () => {
+    expect(nextAutoPromote('Q', 'Q')).toBe('off');
+    expect(nextAutoPromote('N', 'N')).toBe('off');
+  });
+
+  it('never leaves two pieces armed, from any start and any click', () => {
+    for (const start of AUTO_PROMOTE_VALUES) {
+      for (const clicked of AUTO_PROMOTE_PIECES) {
+        const next = nextAutoPromote(start, clicked);
+        // The state IS the armed piece, so "one at a time" is the claim
+        // that the result is a single piece or nothing — never a set.
+        expect(AUTO_PROMOTE_VALUES, `${start} + ${clicked}`).toContain(next);
+      }
+    }
+  });
+
+  it('reaches every piece from every state in one click', () => {
+    for (const start of AUTO_PROMOTE_VALUES) {
+      for (const clicked of AUTO_PROMOTE_PIECES) {
+        if (start === clicked) continue;
+        expect(nextAutoPromote(start, clicked), `${start} + ${clicked}`).toBe(clicked);
+      }
+    }
+  });
+});
+
+describe('the auto-promote control appears only where it can act', () => {
+  it('is on the playing toolbar and nowhere else', () => {
+    for (const mode of ALL_MODES) {
+      expect(toolbarLayoutFor(mode).autoPromote, mode).toBe(
+        mode === BoardMode.PLAYING,
+      );
+    }
+  });
+
+  it('defaults to a queen, so a promotion never opens a dialog out of the box', () => {
+    expect(DEFAULT_PREFERENCES.autoPromote).toBe('Q');
   });
 });

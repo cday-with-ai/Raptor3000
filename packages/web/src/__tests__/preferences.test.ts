@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import {
+  AUTO_PROMOTE_VALUES,
   BOARD_THEMES,
   CHAT_LAYOUTS,
   CHAT_TYPES,
@@ -229,6 +230,27 @@ describe('chat layout roster', () => {
 
   it('defaults to a console type, never a view', () => {
     expect(CHAT_TYPES).toContain(DEFAULT_PREFERENCES.chatLayout);
+  });
+});
+
+/**
+ * Auto-promote persists like any other UI preference. The one that
+ * matters is the fallback: this value decides what piece a promotion
+ * plays without asking, so a stored value nobody recognizes must land on
+ * the queen rather than on something clever — being asked is a state you
+ * choose ('off'), never one you arrive at because storage was corrupt.
+ */
+describe('auto-promote', () => {
+  it('round-trips every value, including off', () => {
+    for (const value of AUTO_PROMOTE_VALUES) {
+      savePreferences({ ...DEFAULT_PREFERENCES, autoPromote: value });
+      expect(loadPreferences().autoPromote).toBe(value);
+    }
+  });
+
+  it('falls back to the queen when the stored value is not a piece', () => {
+    localStorage.setItem('pref.autoPromote', 'K');
+    expect(loadPreferences().autoPromote).toBe('Q');
   });
 });
 
