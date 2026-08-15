@@ -24,6 +24,7 @@ import {
   premoveSan,
   pvToSan,
   replaySans,
+  repetitionCount,
   whiteToMoveFromFen,
 } from '../game/chessBridge.js';
 import { detectOpening, loadOpenings, type Opening } from '../game/openings.js';
@@ -363,8 +364,58 @@ export const BoardWindow = observer(function BoardWindow({
     }
   };
 
+  /**
+   * Auto-draw (Carson, 2026-08-15): "auto draw mode will first offer the
+   * opponent a draw. If the opponent declines it looks for 3 position
+   * repeats after every move made and if found sends draw (forcing a
+   * draw)." And the reason, which decides the whole design: "it is for
+   * time scrambles."
+   *
+   * So it must cost nothing once armed — no clicks, no attention, no
+   * confirmation — and it must not be late. A claim that arrives a move
+   * after the repetition is worthless, which is why the check runs in an
+   * effect on the position itself rather than on a timer or a poll.
+   *
+   * Deliberately NOT a persisted preference. It disarms when the game
+   * ends, so it cannot follow you into the next one. The failure mode
+   * that decision avoids is the expensive one: a draw offer going out,
+   * unasked, in a game you were winning. Arming it again is one click.
+   * (Carson has the open question of whether he wants it to survive a
+   * game; this is the safe default until he says otherwise.)
+   */
+  const [autoDraw, setAutoDraw] = useState(false);
+  const claimedAtRef = useRef(-1);
+
+  useEffect(() => {
+    if (!autoDraw) return;
+    if (mode !== BoardMode.PLAYING || ended) {
+      setAutoDraw(false);
+      return;
+    }
+    const ply = replay.fens.length - 1;
+    if (ply === claimedAtRef.current) return;
+    if (repetitionCount(replay.fens) >= 3) {
+      claimedAtRef.current = ply;
+      // Same word as the offer. FICS reads `draw` in a threefold
+      // position as the claim rather than another offer, so the two
+      // stages of this machine are one command sent at two moments.
+      context.connector.sendMessageHidden('draw');
+    }
+  }, [autoDraw, mode, ended, replay.fens, context]);
+
   const toolbarHandlers: Record<string, () => void> = {
     flip: () => setFlipOverride(o => !o),
+    'auto-draw': () => {
+      const next = !autoDraw;
+      setAutoDraw(next);
+      // Arming IS the offer — stage one. Disarming sends nothing: a
+      // draw already offered cannot be recalled, and pretending
+      // otherwise would be the control lying about what it did.
+      if (next) {
+        claimedAtRef.current = -1;
+        context.connector.sendMessageHidden('draw');
+      }
+    },
     // PLAYING-mode one-liners.
     draw: () => context.connector.sendMessageHidden('draw'),
     abort: () => context.connector.sendMessageHidden('abort'),
@@ -459,6 +510,8 @@ export const BoardWindow = observer(function BoardWindow({
           handlers={toolbarHandlers}
           autoPromote={prefs.autoPromote}
           onAutoPromote={p => saveLivePreference('autoPromote', p)}
+          autoDraw={autoDraw}
+          onAutoDraw={toolbarHandlers['auto-draw']}
           pieceSet={prefs.pieceSet}
           // The pieces in the boxes wear our colour, so the control shows
           // the piece we would actually get.
@@ -2207,6 +2260,8 @@ function Toolbar({
   handlers,
   autoPromote,
   onAutoPromote,
+  autoDraw,
+  onAutoDraw,
   pieceSet,
   asWhite,
 }: {
@@ -2215,6 +2270,8 @@ function Toolbar({
   handlers: Record<string, () => void>;
   autoPromote: AutoPromote;
   onAutoPromote: (p: AutoPromote) => void;
+  autoDraw: boolean;
+  onAutoDraw: () => void;
   pieceSet: AppPreferences['pieceSet'];
   asWhite: boolean;
 }) {
@@ -2231,6 +2288,9 @@ function Toolbar({
           set={pieceSet}
           asWhite={asWhite}
         />
+      )}
+      {layout.autoDraw && (
+        <AutoDrawToggle armed={autoDraw} onToggle={onAutoDraw} />
       )}
       <span style={{ flex: 1 }} />
       {layout.right.map((item) => (
@@ -2299,6 +2359,49 @@ function AutoPromoteBoxes({
         );
       })}
     </span>
+  );
+}
+
+/**
+ * Auto-draw: one toggle beside the promote boxes (Carson, 2026-08-15 —
+ * "it is for time scrambles", which is also why it is here and not
+ * behind a menu; with seconds on the clock you cannot go looking).
+ *
+ * Armed, it reads "Auto-draw ●" so a glance at the toolbar tells you an
+ * offer is standing and a claim is watching. That matters more than it
+ * looks: this is a control that acts on your behalf while you are busy,
+ * and the one thing worse than it not firing is not knowing it is on.
+ */
+function AutoDrawToggle({
+  armed,
+  onToggle,
+}: {
+  armed: boolean;
+  onToggle: () => void;
+}) {
+  return (
+    <button
+      onClick={onToggle}
+      aria-pressed={armed}
+      title={
+        armed
+          ? 'Auto-draw armed — the offer is out, and a threefold repetition will be claimed the moment it appears. Click to stop watching.'
+          : 'Auto-draw — offer a draw now, then claim automatically on a threefold repetition'
+      }
+      style={{
+        padding: '4px 8px',
+        fontSize: 12,
+        background: armed ? 'var(--bg-input)' : 'transparent',
+        color: 'var(--fg)',
+        border: `1px solid ${armed ? 'var(--accent)' : 'var(--border-soft)'}`,
+        borderRadius: 4,
+        cursor: 'pointer',
+        opacity: armed ? 1 : 0.65,
+        whiteSpace: 'nowrap',
+      }}
+    >
+      {armed ? 'Auto-draw ●' : 'Auto-draw'}
+    </button>
   );
 }
 

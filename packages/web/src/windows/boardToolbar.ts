@@ -36,16 +36,20 @@ export type ToolbarItem = {
  * A toolbar row: `left` and `right` with a flexible gap between them.
  * Most modes put navigation on the left; SETUP replaces it entirely.
  *
- * `autoPromote` is not a button, which is why it is a flag rather than an
- * item: it is a row of checkboxes with their own rule (see
- * `nextAutoPromote`) and their own persisted state. It rides here anyway
- * so that "which modes show it" stays one testable mapping instead of a
- * second condition spelled out in the JSX.
+ * `autoPromote` and `autoDraw` are not buttons, which is why they are
+ * flags rather than items: one is a row of checkboxes with its own rule
+ * (see `nextAutoPromote`) and a persisted piece, the other is a toggle
+ * that is armed or not. They ride here anyway so that "which modes show
+ * them" stays one testable mapping instead of conditions spelled out in
+ * the JSX. Two flags rather than one "automation" flag because they are
+ * separate controls that happen to agree today, and a shared flag would
+ * quietly decide they must always agree.
  */
 export type ToolbarLayout = {
   left: ToolbarItem[];
   right: ToolbarItem[];
   autoPromote: boolean;
+  autoDraw: boolean;
 };
 
 /** Hover text for a button with nothing behind it yet. */
@@ -122,6 +126,7 @@ export function toolbarLayoutFor(
       ],
       right: [dead('setup-done', 'Done')],
       autoPromote: false,
+      autoDraw: false,
     };
   }
 
@@ -133,6 +138,9 @@ export function toolbarLayoutFor(
     // with nothing to act on — and a checkbox that changes nothing is the
     // dead-button complaint this module was written to answer.
     autoPromote: mode === BoardMode.PLAYING,
+    // Same reasoning: an auto-draw offer needs a game of ours to offer
+    // it in. Observing or examining, there is nobody to offer it to.
+    autoDraw: mode === BoardMode.PLAYING,
   };
 }
 

@@ -227,10 +227,18 @@ describe('nextAutoPromote', () => {
   });
 });
 
-describe('the auto-promote control appears only where it can act', () => {
-  it('is on the playing toolbar and nowhere else', () => {
+describe('the automation controls appear only where they can act', () => {
+  it('auto-promote is on the playing toolbar and nowhere else', () => {
     for (const mode of ALL_MODES) {
       expect(toolbarLayoutFor(mode).autoPromote, mode).toBe(
+        mode === BoardMode.PLAYING,
+      );
+    }
+  });
+
+  it('auto-draw likewise — there is nobody to offer a draw to otherwise', () => {
+    for (const mode of ALL_MODES) {
+      expect(toolbarLayoutFor(mode).autoDraw, mode).toBe(
         mode === BoardMode.PLAYING,
       );
     }

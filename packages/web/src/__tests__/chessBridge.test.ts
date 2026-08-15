@@ -5,7 +5,9 @@ import {
   premoveSan,
   formatEvalWhitePov,
   formatSanLine,
+  positionKey,
   pvToSan,
+  repetitionCount,
   replaySans,
 } from '../game/chessBridge.js';
 
@@ -120,5 +122,64 @@ describe('figurines (2026-08-12)', () => {
     const line = { sans: ['Nf3', 'Nc6'], moveNumber: 2, startsWithBlack: false };
     expect(formatSanLine(line)).toBe('2. ♘f3 ♞c6');
     expect(formatSanLine(line, { figurines: false })).toBe('2. Nf3 Nc6');
+  });
+});
+
+/**
+ * Threefold repetition, for auto-draw (Carson, 2026-08-15: "it looks for
+ * 3 position repeats after every move made and if found sends draw").
+ *
+ * The trap these tests exist for is the halfmove/fullmove counters. They
+ * advance on moves that do not change the position's identity, so two
+ * genuinely repeated positions carry different FENs as a matter of
+ * course — comparing whole FEN strings does not find fewer repetitions,
+ * it finds none at all, and the feature would be silently dead while
+ * looking perfectly reasonable in review.
+ */
+describe('repetitionCount', () => {
+  const shuffle = ['Nf3', 'Nf6', 'Ng1', 'Ng8', 'Nf3', 'Nf6', 'Ng1', 'Ng8'];
+
+  it('counts a position the first time as one', () => {
+    expect(repetitionCount(replaySans([]).fens)).toBe(1);
+    expect(repetitionCount(replaySans(['e4']).fens)).toBe(1);
+  });
+
+  it('finds the threefold in a knight shuffle back to the start', () => {
+    // After 4 knight moves the start position is back for the 2nd time;
+    // after all 8, for the 3rd — the classic repetition draw.
+    expect(repetitionCount(replaySans(shuffle.slice(0, 4)).fens)).toBe(2);
+    expect(repetitionCount(replaySans(shuffle).fens)).toBe(3);
+  });
+
+  it('ignores the move counters, which is the whole difficulty', () => {
+    // The same position by two routes, differing only in how many quiet
+    // moves preceded it. Whole-FEN comparison would call these distinct.
+    const fens = replaySans(shuffle).fens;
+    const keys = new Set(fens.map(positionKey));
+    expect(keys.size).toBeLessThan(fens.length);
+    // And prove the counters really do differ across a repetition, so
+    // this test is not passing for the wrong reason.
+    const startFens = fens.filter(f => positionKey(f) === positionKey(fens[0]));
+    expect(startFens.length).toBe(3);
+    expect(new Set(startFens).size).toBe(3);
+  });
+
+  it('does not confuse side to move — same men, other turn, other position', () => {
+    const a = positionKey(replaySans(['e4']).fens.at(-1)!);
+    const b = positionKey(replaySans(['e4', 'e5']).fens.at(-1)!);
+    expect(a).not.toBe(b);
+  });
+
+  it('treats castling rights as part of the position', () => {
+    // Rooks out and back: every man stands where it started, but both
+    // sides have lost the right to castle kingside, so it is NOT a
+    // repetition — and a position-only key that dropped the castling
+    // field would wrongly call it one.
+    const fens = replaySans(['Nf3', 'Nf6', 'Rg1', 'Rg8', 'Rh1', 'Rh8']).fens;
+    expect(repetitionCount(fens)).toBe(1);
+  });
+
+  it('is empty-safe', () => {
+    expect(repetitionCount([])).toBe(0);
   });
 });

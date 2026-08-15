@@ -194,3 +194,36 @@ export function figurine(san: string, whiteMover: boolean): string {
     .replace(/^([KQRBN])/, (_, p: string) => table[p])
     .replace(/=([QRBN])/, (_, p: string) => '=' + table[p]);
 }
+
+/**
+ * The repetition identity of a FEN: placement, side to move, castling
+ * rights and the en-passant square — the first four fields, and never
+ * the halfmove or fullmove counters.
+ *
+ * Those last two are why this function exists rather than a string
+ * compare. The halfmove clock advances on every quiet move and the
+ * fullmove number on every Black move, so two genuinely identical
+ * positions produce different FENs as a matter of course. Comparing
+ * whole FENs does not find fewer repetitions — it finds none, ever.
+ */
+export function positionKey(fen: string): string {
+  return fen.split(' ').slice(0, 4).join(' ');
+}
+
+/**
+ * How many times the position at the end of `fens` has occurred in it.
+ * A position that has just arisen for the first time counts 1, so a
+ * threefold claim is `>= 3`.
+ *
+ * chessops has no repetition helper (checked — the package ships none),
+ * so this is hand-rolled, which is also why it is a pure function over
+ * a FEN list rather than something hung off a Position: the list is
+ * what the board already keeps, replayed from the game's own movelist.
+ */
+export function repetitionCount(fens: readonly string[]): number {
+  if (fens.length === 0) return 0;
+  const key = positionKey(fens[fens.length - 1]);
+  let n = 0;
+  for (const fen of fens) if (positionKey(fen) === key) n++;
+  return n;
+}
