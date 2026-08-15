@@ -1638,11 +1638,40 @@ function SidePanel({
   const panelRef = useRef<HTMLDivElement | null>(null);
   const [liveEngineRatio, setLiveEngineRatio] = useState<number | null>(null);
   useLivePreferences(); // re-render on layout-memory changes
+  const movesScrollRef = useRef<HTMLDivElement | null>(null);
   const engineRatio = liveEngineRatio ?? loadBoardLayout(bucket).engineRatio;
   const clampEngine = (v: number) => Math.min(0.7, Math.max(0.15, v));
   const engineShown = showEngine && engineAnalysisAllowed(mode);
   return (
-    <div ref={panelRef} style={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0, gap: 6 }}>
+    <div
+      ref={panelRef}
+      style={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0, gap: 6 }}
+      // Wheel anywhere in the panel scrolls the move list (Carson,
+      // 2026-08-15: "move list needs wheel support to scroll it").
+      //
+      // The pane itself has always scrolled natively under the cursor —
+      // I measured that before changing anything. What it did not do was
+      // scroll when the pointer was over the status line, the opening
+      // caption, the nav arrows or the gap around them, which in a short
+      // window is most of the panel and all of the part your hand is
+      // already near. So this widens the target rather than adding
+      // scrolling that was missing.
+      //
+      // Anything already scrollable under the pointer — the engine block
+      // — keeps the wheel, so the two never fight over one gesture.
+      onWheel={e => {
+        const list = movesScrollRef.current;
+        if (!list) return;
+        if (list.scrollHeight <= list.clientHeight) return;
+        for (let n = e.target as HTMLElement | null; n && n !== e.currentTarget; n = n.parentElement) {
+          if (n === list) return; // already the right target; let it be
+          if (n.scrollHeight > n.clientHeight && /auto|scroll/.test(getComputedStyle(n).overflowY)) {
+            return; // the engine block, or any future scroller
+          }
+        }
+        list.scrollTop += e.deltaY;
+      }}
+    >
       <div style={{ flexShrink: 0, borderBottom: '1px solid var(--border-soft)', paddingBottom: 6, fontSize: 12 }}>
         <span style={{ fontWeight: 700, opacity: 0.75 }}>Status:</span>{' '}
         <span style={{ opacity: 0.85 }}>
@@ -1652,7 +1681,14 @@ function SidePanel({
           )}
         </span>
       </div>
-      <div style={{ flex: 1, minHeight: 0, overflowY: 'auto' }}>
+      {/* Named so a test can ask whether the thing that is supposed to
+          scroll actually scrolled; the pane is otherwise anonymous
+          geometry, same problem `data-square` solves on the board. */}
+      <div
+        ref={movesScrollRef}
+        data-pane="moves"
+        style={{ flex: 1, minHeight: 0, overflowY: 'auto' }}
+      >
         <MovesSection
           s12={s12}
           bucket={bucket}
