@@ -174,20 +174,45 @@ function ChromiumPicture() {
       <rect x="4" y="8" width="376" height="34" rx="17" fill="#101a33" stroke="#3d4c6e" />
       <circle cx="24" cy="25" r="7" fill="none" stroke="#67759b" strokeWidth="1.5" />
       <text x="40" y="30" fontSize="13" fill="#9fb3d9" fontFamily="system-ui">raptor3000.pages.dev</text>
-      {/* the blocked-popup icon: a little window with a red x */}
+      {/*
+        BOTH blocked-popup icons, because they are not the same glyph
+        (Carson, 2026-08-15, with a screenshot of his own Brave: "the
+        icon you show and what brave shows do not match … neither
+        billjr nor naomi could manage it last night").
+
+        Chrome draws a little window with a red ✕ badge. Brave draws a
+        monochrome window struck through with a diagonal slash — no
+        red, no badge. Someone hunting the address bar for OUR icon
+        never finds THEIRS, and stops.
+
+        Drawing both, side by side under one pulse, is deliberately
+        more robust than detecting the browser and drawing one: a
+        detection that guesses wrong leaves the visitor hunting for an
+        icon that isn't there, which is the exact failure being fixed.
+        Two glyphs and "one of these is in your bar" cannot miss.
+      */}
       <g>
-        <rect x="336" y="16" width="20" height="15" rx="2" fill="none" stroke="#dfe8f5" strokeWidth="1.6" />
-        <line x1="336" y1="21" x2="356" y2="21" stroke="#dfe8f5" strokeWidth="1.6" />
-        <circle cx="356" cy="30" r="6" fill="#c23b2e" />
-        <path d="M353.6 27.6 l4.8 4.8 M358.4 27.6 l-4.8 4.8" stroke="#fff" strokeWidth="1.4" />
-        {/* pulse to say THIS one */}
-        <circle cx="346" cy="24" r="14" fill="none" stroke="#8fb8f0" strokeWidth="2">
-          <animate attributeName="r" values="12;20;12" dur="1.8s" repeatCount="indefinite" />
+        {/* Chrome / Edge: window + red ✕ badge */}
+        <rect x="306" y="16" width="20" height="15" rx="2" fill="none" stroke="#dfe8f5" strokeWidth="1.6" />
+        <line x1="306" y1="21" x2="326" y2="21" stroke="#dfe8f5" strokeWidth="1.6" />
+        <circle cx="326" cy="30" r="6" fill="#c23b2e" />
+        <path d="M323.6 27.6 l4.8 4.8 M328.4 27.6 l-4.8 4.8" stroke="#fff" strokeWidth="1.4" />
+
+        {/* Brave: window with a second window notched at the corner,
+            struck by a diagonal. Traced off Carson's screenshot. */}
+        <rect x="344" y="15" width="19" height="14" rx="2" fill="none" stroke="#dfe8f5" strokeWidth="1.6" />
+        <path d="M356 24 h8 v8" fill="none" stroke="#dfe8f5" strokeWidth="1.6" />
+        <line x1="341" y1="12" x2="367" y2="34" stroke="#dfe8f5" strokeWidth="2.2" />
+
+        {/* one pulse around the pair — the message is "in this corner,
+            looking like one of these", not "this exact one" */}
+        <circle cx="336" cy="23" r="20" fill="none" stroke="#8fb8f0" strokeWidth="2">
+          <animate attributeName="r" values="18;30;18" dur="1.8s" repeatCount="indefinite" />
           <animate attributeName="opacity" values="0.9;0;0.9" dur="1.8s" repeatCount="indefinite" />
         </circle>
       </g>
-      {/* dropdown the icon opens */}
-      <path d="M346 46 v10" stroke="#67759b" strokeDasharray="3 3" />
+      {/* dropdown either icon opens */}
+      <path d="M336 48 v8" stroke="#67759b" strokeDasharray="3 3" />
       <rect x="96" y="58" width="284" height="84" rx="8" fill="#17223e" stroke="#3d4c6e" />
       <circle cx="114" cy="80" r="6" fill="none" stroke="#79c19c" strokeWidth="2" />
       <circle cx="114" cy="80" r="2.6" fill="#79c19c" />
