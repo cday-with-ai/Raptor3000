@@ -560,3 +560,39 @@ Verified live on localhost before this note: guest login, killed the
 socket from the console, panel appeared, one click landed on the login
 screen. This note had been relayed from your second session and then lost
 with it — it's back in the hopper queue as ca39, done.
+
+## 2026-08-14 20:15 — Carson via second session
+
+COMMENT (no comment box found): no move/notification sounds on live after fdff757 — see alert-sounds commit; suspect AudioContext gesture-unlock or default-mute. Carson: 'i dont hear the move or notification sounds'
+
+## 2026-08-14 20:16 — Carson via second session
+
+Refinement on the silent-sounds note: move sounds DO play on the board, so audio/AudioContext is fine — it is specifically the new fdff757 alert layer (tells/arrivals/departures) that is silent. Check: default-muted toggle, event wiring, or the new synth path erroring where the old move-sound path works. Carson: 'i hear move sounds on the board'
+
+## 2026-08-14 20:16 — Carson via second session
+
+Exact repro for the silent alerts: send a tell to yourself — board move sounds play, the self-tell produces no sound at all. Carson: 'i told myself something and didnt hear a sound'
+
+## 2026-08-14 21:49 — nighthawk-session
+
+Direct tells arrive silent — channel tells (PawnPawn(39): ...) play their sound, a direct tell plays nothing. Seen 2026-08-14 ~21:30 in the deployed app (raptor3000.pages.dev, Brave app window) while Carson was connected live. The alertSounds tests assert an incoming TELL plays exactly one 'tell' alert, so likely one of: the deployed build predates the alert work, the tell alert kind is muted/zero-volume in saved preferences, or the throttle/cooldown eats the first tell. Reported to the nighthawk session in passing; filing here where it belongs.
+
+## 2026-08-14 21:56 — nighthawk-session
+
+Silent disconnect, second report tonight (2026-08-14 ~22:00, deployed app): Carson got cut off from FICS with no banner, no reconnect, no status change — the session just went quiet. He only discovered it when a command came back '· (not connected — command not sent)'. Last lines before discovery, verbatim from his paste: channel 39 tells flowing normally, RelayInfo/TScheduleBot c-shouts, 'SirCMP has departed.', then 'cday tells you: test / (told cday)' twice (he was testing direct tells for the sound bug filed earlier tonight), then the not-connected line on his next send. Two asks implied: (1) detect the dead connection (ping/timeout) rather than waiting for a failed send; (2) say so loudly in the UI when it happens — a disconnected client that looks connected is the worst state. His word for it: 'it was strange'.
+
+## 2026-08-14 22:12 — carson, relayed by nighthawk-session
+
+Mystery closed on tonight's silent-disconnect note: Carson's own words — 'i think i am a dumbass, it was me closing the raptor3000 tab which disconnected.' The main tab going away tore down the FICS connection while sub-windows stayed open looking alive, which is what read as a silent cutoff. His ask: closing the main raptor3000 tab should close all its sub-windows too, so a dead session can't linger looking connected. (The earlier detect-and-banner ask still stands on its own merits — a real network drop would present identically.)
+
+## 2026-08-14 22:12 — carson, relayed by nighthawk-session
+
+Amendment to the close-all-sub-windows note, Carson's words: do it Raptor style — if the user is playing a game when the main tab is closing, prompt an 'are you sure?' before tearing the session down. Close freely when idle; guard the close when a game is live.
+
+## 2026-08-14 22:13 — nighthawk-session
+
+Feasibility note on the close-behavior thread (Carson asked 'if you can do that i duno'): both halves are doable. Sub-windows: track window.open() handles and close them from the opener, or more robustly have each sub-window watch a BroadcastChannel heartbeat / window.opener.closed and self-close when the main tab dies — survives abrupt kills. Are-you-sure: browsers allow no custom text on tab close; the mechanism is a beforeunload handler armed only while a game is live (generic 'Leave site?' dialog), disarmed when idle so an idle close is silent — which matches his 'if not playing just close it'. Custom Raptor-styled confirms remain possible on in-app close buttons only.
+
+## 2026-08-14 22:13 — carson, relayed by nighthawk-session
+
+Priority ruling from Carson on the close thread: the sub-window cleanup is the must-have; the in-game confirm is nice-to-have. His words: 'if not its ok just kill it all … i mean its dead anyway' — the FICS session dies with the main tab regardless, so when in doubt, close everything cleanly rather than protect a dead connection.
