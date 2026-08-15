@@ -79,7 +79,6 @@ const ja: Messages = {
 
   // ---- post-login shell --------------------------------------------------
   'shell.nav.options': 'オプション',
-  'shell.nav.seek': 'シーク',
   'shell.nav.help': 'ヘルプ',
   'shell.signedIn': '<b>{who}</b> としてサインイン中 · {server}:{port} · プロファイル {profile}',
   'shell.who.anonGuest': '匿名ゲスト',

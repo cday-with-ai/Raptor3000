@@ -93,7 +93,6 @@ export const en = {
 
   // ---- post-login shell --------------------------------------------------
   'shell.nav.options': 'Options',
-  'shell.nav.seek': 'Seek',
   'shell.nav.help': 'Help',
   'shell.signedIn': 'Signed in as <b>{who}</b> · {server}:{port} · profile {profile}',
   'shell.who.anonGuest': 'anonymous guest',

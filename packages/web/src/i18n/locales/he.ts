@@ -77,7 +77,6 @@ const he: Messages = {
 
   // ---- המעטפת שאחרי ההתחברות ---------------------------------------------
   'shell.nav.options': 'אפשרויות',
-  'shell.nav.seek': 'חיפוש משחק',
   'shell.nav.help': 'עזרה',
   'shell.signedIn': 'מחובר בתור <b>⁦{who}⁩</b> · ⁦{server}:{port}⁩ · פרופיל ⁦{profile}⁩',
   'shell.who.anonGuest': 'אורח אלמוני',

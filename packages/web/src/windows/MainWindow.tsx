@@ -4,7 +4,6 @@ import type { RaptorContext } from './appContext.js';
 import { loginWithContext } from './appContext.js';
 import { getWindowManager } from './WindowManager.js';
 import { LoginScreen, type LoginSubmission } from './LoginScreen.js';
-import { SeekGraphTab } from './SeekGraphTab.js';
 import {
   pageShell,
   pageHeader,
@@ -109,7 +108,10 @@ function connectorCreds(session: LoginSubmission) {
   };
 }
 
-type NavTab = 'options' | 'seek' | 'help';
+// Seek left this nav on 2026-08-15 — it is a chat-window layout now
+// (Carson: "next to (plain, tabs, split)"), which is where you are when
+// you go looking for a game.
+type NavTab = 'options' | 'help';
 
 /**
  * Post-login shell. `/` is not a window launcher — it's a settings +
@@ -201,9 +203,6 @@ function PostLoginShell({
             <NavButton active={tab === 'options'} onClick={() => setTab('options')}>
               {t('shell.nav.options')}
             </NavButton>
-            <NavButton active={tab === 'seek'} onClick={() => setTab('seek')}>
-              {t('shell.nav.seek')}
-            </NavButton>
             <NavButton active={tab === 'help'} onClick={() => setTab('help')}>
               {t('shell.nav.help')}
             </NavButton>
@@ -248,7 +247,6 @@ function PostLoginShell({
       )}
 
       {tab === 'options' && <OptionsPage reopenChat={reopenChat} reconnect={reconnect} relaunch={relaunch} />}
-      {tab === 'seek' && <SeekGraphTab context={context} />}
       {tab === 'help' && <HelpPage />}
 
       <footer style={{ ...footer, display: 'flex', justifyContent: 'space-between' }}>

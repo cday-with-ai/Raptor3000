@@ -77,7 +77,6 @@ const nb: Messages = {
 
   // ---- skallet etter innlogging -------------------------------------------
   'shell.nav.options': 'Alternativer',
-  'shell.nav.seek': 'Seek',
   'shell.nav.help': 'Hjelp',
   'shell.signedIn': 'Innlogget som <b>{who}</b> · {server}:{port} · profil {profile}',
   'shell.who.anonGuest': 'anonym gjest',

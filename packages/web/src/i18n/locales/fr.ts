@@ -82,7 +82,6 @@ const fr: Messages = {
 
   // ---- post-login shell --------------------------------------------------
   'shell.nav.options': 'Options',
-  'shell.nav.seek': 'Seek',
   'shell.nav.help': 'Aide',
   'shell.signedIn': 'Connecté en tant que <b>{who}</b> · {server}:{port} · profil {profile}',
   'shell.who.anonGuest': 'invité anonyme',

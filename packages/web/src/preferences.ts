@@ -45,8 +45,16 @@ export const PIECE_SETS: readonly PieceSet[] = [
  */
 export type ClockColor = 'auto' | string;
 
-export type ChatLayout = 'plain' | 'tabs' | 'split';
-export const CHAT_LAYOUTS: readonly ChatLayout[] = ['plain', 'tabs', 'split'];
+/**
+ * `seek` joined the three console layouts on 2026-08-15 (Carson: "seek
+ * graph should move into the tabs area as an option next to (plain,
+ * tabs, split)"). It is a layout rather than a tab because it is a
+ * whole-pane view like the others — and because the chat window is
+ * where you are when you go looking for a game, not the settings page
+ * it used to live on.
+ */
+export type ChatLayout = 'plain' | 'tabs' | 'split' | 'seek';
+export const CHAT_LAYOUTS: readonly ChatLayout[] = ['plain', 'tabs', 'split', 'seek'];
 
 export interface AppPreferences {
   boardTheme: BoardTheme;

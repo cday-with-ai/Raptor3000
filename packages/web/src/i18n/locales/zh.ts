@@ -72,7 +72,6 @@ const zh: Messages = {
 
   // ---- post-login shell --------------------------------------------------
   'shell.nav.options': '选项',
-  'shell.nav.seek': '求战',
   'shell.nav.help': '帮助',
   'shell.signedIn': '已登录为 <b>{who}</b> · {server}:{port} · 配置 {profile}',
   'shell.who.anonGuest': '匿名访客',

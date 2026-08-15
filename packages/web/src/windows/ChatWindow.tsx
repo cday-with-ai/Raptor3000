@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { ChatEventType, tokenize, type ChatEvent } from '@raptor3000/shared';
 import type { RaptorContext } from './appContext.js';
+import { SeekGraphTab } from './SeekGraphTab.js';
 import { installPositionTracker, windowStorageKey } from './windowPosition.js';
 import {
   fetchChannelHistory,
@@ -255,9 +256,9 @@ export const ChatWindow = function ChatWindow({
     <div style={shell}>
       <div style={headerRow}>
         <div style={{ flex: 1, minWidth: 0, overflow: 'hidden' }}>
-          {layout === 'plain' ? (
+          {layout === 'plain' || layout === 'seek' ? (
             <span style={{ fontSize: 12, opacity: 0.6, padding: '6px 14px', display: 'inline-block' }}>
-              console
+              {layout === 'seek' ? 'seek graph' : 'console'}
             </span>
           ) : (
             <TabBar
@@ -272,7 +273,13 @@ export const ChatWindow = function ChatWindow({
         </div>
         <LayoutSwitcher layout={layout} onChange={setLayout} />
       </div>
-      {layout !== 'split' || activeTab.kind === 'main' ? (
+      {layout === 'seek' ? (
+        // The graph takes the log's place, not the window's: the input
+        // row below stays live, so you can still type while you shop
+        // for a game — which is the point of it being here rather than
+        // on the options page.
+        <SeekGraphTab context={context} />
+      ) : layout !== 'split' || activeTab.kind === 'main' ? (
         <TabLog
           tab={layout === 'plain' ? MAIN_TAB : activeTab}
           events={
@@ -384,6 +391,7 @@ function LayoutSwitcher({
     ['plain', 'plain'],
     ['tabs', 'tabs'],
     ['split', 'split'],
+    ['seek', 'seek'],
   ];
   return (
     <span style={{ display: 'inline-flex', gap: 2, padding: '0 8px', flexShrink: 0 }}>
@@ -396,7 +404,9 @@ function LayoutSwitcher({
               ? 'one stream, no tabs'
               : mode === 'tabs'
                 ? 'classic tabs, one pane'
-                : 'tabs above, main console always visible'
+                : mode === 'split'
+                  ? 'tabs above, main console always visible'
+                  : 'the live seek graph — click a dot to play'
           }
           style={{
             background: 'none',

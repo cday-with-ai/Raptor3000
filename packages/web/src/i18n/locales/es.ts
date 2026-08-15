@@ -79,7 +79,6 @@ const es: Messages = {
 
   // ---- post-login shell --------------------------------------------------
   'shell.nav.options': 'Opciones',
-  'shell.nav.seek': 'Seek',
   'shell.nav.help': 'Ayuda',
   'shell.signedIn': 'Sesión iniciada como <b>{who}</b> · {server}:{port} · perfil {profile}',
   'shell.who.anonGuest': 'invitado anónimo',

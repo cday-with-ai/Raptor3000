@@ -79,7 +79,6 @@ const ko: Messages = {
 
   // ---- post-login shell --------------------------------------------------
   'shell.nav.options': '옵션',
-  'shell.nav.seek': '시크',
   'shell.nav.help': '도움말',
   'shell.signedIn': '<b>{who}</b>(으)로 로그인 중 · {server}:{port} · 프로필 {profile}',
   'shell.who.anonGuest': '익명 게스트',

@@ -77,7 +77,6 @@ const ru: Messages = {
 
   // ---- post-login shell --------------------------------------------------
   'shell.nav.options': 'Настройки',
-  'shell.nav.seek': 'Заявки',
   'shell.nav.help': 'Справка',
   'shell.signedIn': 'Вы вошли как <b>{who}</b> · {server}:{port} · профиль {profile}',
   'shell.who.anonGuest': 'анонимный гость',
