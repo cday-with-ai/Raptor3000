@@ -335,6 +335,11 @@ export class FicsConnector extends BaseConnector implements Connector {
       // someone's broken encoding and worth seeing, whereas this exact
       // run is unambiguously the protocol half of telnet — which this
       // client does not speak and nothing downstream wants.
+      //
+      // The rule below objects to the control character in the pattern.
+      // That character is the telnet option byte, and matching it is the
+      // whole point of the line.
+      // eslint-disable-next-line no-control-regex
       .replace(/\uFFFD{1,2}\u0001/g, '');
 
     // Login-stage detection before handing bytes to FicsParser.
