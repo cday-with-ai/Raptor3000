@@ -1992,37 +1992,45 @@ function MovesSection({
                The old rule existed because the name WRAPPED badly — it
                reflowed under the ECO code and back out again. So the
                fix is a deliberate second line rather than just deleting
-               the ellipsis: the variation gets its own row, indented
-               under the family, and can wrap there without dragging the
-               code or the panel width around with it. */
-            <div style={openingLine}>
-              <a
-                href={`https://www.365chess.com/eco/${encodeURIComponent(opening.eco)}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                title={`ECO ${opening.eco} — other openings filed under this code`}
-                style={openingEco}
-              >
-                {opening.eco}
-              </a>
-              <a
-                href={
-                  openingFen
-                    ? `https://lichess.org/analysis/${openingFen.replace(/ /g, '_')}`
-                    : `https://lichess.org/analysis`
-                }
-                target="_blank"
-                rel="noopener noreferrer"
-                title={`${opening.name} — study on lichess (book through ply ${opening.plies})`}
-                style={openingName}
-              >
-                <span>{splitOpeningName(opening.name).main}</span>
-                {splitOpeningName(opening.name).sub && (
-                  <span style={openingSub}>
-                    · {splitOpeningName(opening.name).sub}
-                  </span>
-                )}
-              </a>
+               the ellipsis: the variation gets its own row and can wrap
+               there without dragging the code or the panel width around
+               with it.
+
+               Both rows centre, over a move list that is itself centred
+               — a left-aligned caption was the one thing in the column
+               with a different edge. The bullet that used to mark the
+               second row is gone, and so is the dimming, which read as a
+               grey band rather than as softer text. */
+            <div style={openingBlock}>
+              <div style={openingLine}>
+                <a
+                  href={`https://www.365chess.com/eco/${encodeURIComponent(opening.eco)}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  title={`ECO ${opening.eco} — other openings filed under this code`}
+                  style={openingEco}
+                >
+                  ({opening.eco})
+                </a>
+                <a
+                  href={
+                    openingFen
+                      ? `https://lichess.org/analysis/${openingFen.replace(/ /g, '_')}`
+                      : `https://lichess.org/analysis`
+                  }
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  title={`${opening.name} — study on lichess (book through ply ${opening.plies})`}
+                  style={openingName}
+                >
+                  {splitOpeningName(opening.name).main}
+                </a>
+              </div>
+              {splitOpeningName(opening.name).sub && (
+                <div style={openingSub}>
+                  {splitOpeningName(opening.name).sub}
+                </div>
+              )}
             </div>
           )}
           {/* The list proper, centred in the panel (Carson, 2026-08-15:
@@ -2080,40 +2088,76 @@ const movesRows = {
 // line: `minWidth: 0` on both the flex container and the name is what
 // actually lets the name shrink, since a flex item defaults to its
 // content's min width and would otherwise push the panel wider.
-const openingLine = {
+// The app's link idiom, declared before the opening styles that
+// borrow it — module consts evaluate in source order, and a spread of
+// a later const is a temporal-dead-zone crash at import, not a
+// warning.
+const movelistLink = {
+  background: 'none',
+  border: 'none',
+  color: 'var(--accent)',
+  cursor: 'pointer',
+  fontSize: 12,
+  padding: 0,
+} as const;
+
+// The opening caption, both lines centred (Carson, 2026-08-15). It sits
+// over a centred move list, so a left-aligned caption was the one thing
+// in the column with a different edge.
+const openingBlock = {
   display: 'flex',
-  alignItems: 'baseline',
-  gap: 5,
+  flexDirection: 'column',
+  alignItems: 'center',
+  gap: 1,
   minWidth: 0,
-  opacity: 0.85,
   fontSize: 11,
   marginBottom: 3,
 } as const;
 
+const openingLine = {
+  display: 'flex',
+  alignItems: 'baseline',
+  justifyContent: 'center',
+  gap: 5,
+  minWidth: 0,
+} as const;
+
+// Blue, because the whole first line is a link (Carson: "also make the
+// first line a blue link"). `--accent` rather than a literal blue, so it
+// stays legible in both themes — the palette test would reject a hex
+// here anyway.
+// `(C00)` — the app's own link idiom, the same one `(movelist)`,
+// `(hide)` and `(best line)` already wear, so the ECO code reads as a
+// link at a glance instead of as bold text that happens to be blue
+// (Carson: "maybe (C00) like our other links ... i like that style").
+// It borrows `movelistLink` rather than restating it, so the next change
+// to the house style reaches this too.
 const openingEco = {
+  ...movelistLink,
   flexShrink: 0,
-  fontWeight: 700,
-  color: 'inherit',
+  fontSize: 11,
   textDecoration: 'none',
 } as const;
 
 const openingName = {
   minWidth: 0,
-  display: 'flex',
-  flexDirection: 'column',
-  gap: 1,
   color: 'inherit',
   textDecoration: 'none',
 } as const;
 
-// The variation, on its own row under the family. Dimmed a shade so the
-// two read as caption-and-detail rather than as two equal names, and
-// free to wrap — this is the row that exists to hold the long half, so
-// clipping it here would put back the bug it was added to fix.
+// The variation, centred under the family. No bullet and no dimming
+// (Carson: "second line should just be centered remove the bullet" and
+// "second line shouldnt have a gray backgard that looks strange") — the
+// opacity that used to de-emphasise it read as a grey band across the
+// panel rather than as softer text. Background stated explicitly rather
+// than left to inherit, so nothing paints behind it. Still free to wrap:
+// this is the row that exists to hold the long half of the name.
 const openingSub = {
-  opacity: 0.8,
   minWidth: 0,
   overflowWrap: 'anywhere',
+  textAlign: 'center',
+  background: 'none',
+  color: 'var(--fg-muted)',
 } as const;
 
 /** ⏮ ◀ ▶ ⏭ — Moves-control navigation, all modes (server-side walk in
@@ -2191,14 +2235,6 @@ function PlyButton({
   );
 }
 
-const movelistLink = {
-  background: 'none',
-  border: 'none',
-  color: 'var(--accent)',
-  cursor: 'pointer',
-  fontSize: 12,
-  padding: 0,
-} as const;
 
 /**
  * Engine analysis section. Shows live depth/eval/PV from EngineService.
