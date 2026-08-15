@@ -111,10 +111,10 @@ export async function playAGame(
     waitForBoard(ctxBlack, 'black'),
   ]);
   await Promise.all([
-    expect(boardWhite.locator('body')).toContainText(/Status: Playing/, {
+    expect(boardWhite.locator('body')).toContainText(/Status:\s*Playing/, {
       timeout: 30_000,
     }),
-    expect(boardBlack.locator('body')).toContainText(/Status: Playing/, {
+    expect(boardBlack.locator('body')).toContainText(/Status:\s*Playing/, {
       timeout: 30_000,
     }),
   ]);

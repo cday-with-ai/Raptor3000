@@ -27,7 +27,12 @@ import {
   repetitionCount,
   whiteToMoveFromFen,
 } from '../game/chessBridge.js';
-import { detectOpening, loadOpenings, type Opening } from '../game/openings.js';
+import {
+  detectOpening,
+  loadOpenings,
+  splitOpeningName,
+  type Opening,
+} from '../game/openings.js';
 import type { RaptorContext } from './appContext.js';
 import { BoardLayout } from '../layout/BoardLayout.js';
 import {
@@ -1672,14 +1677,21 @@ function SidePanel({
         list.scrollTop += e.deltaY;
       }}
     >
-      <div style={{ flexShrink: 0, borderBottom: '1px solid var(--border-soft)', paddingBottom: 6, fontSize: 12 }}>
-        <span style={{ fontWeight: 700, opacity: 0.75 }}>Status:</span>{' '}
-        <span style={{ opacity: 0.85 }}>
-          {modeLabel(mode)}
-          {gameFlavor(context, gameId) && (
-            <span style={{ opacity: 0.8 }}> · {gameFlavor(context, gameId)}</span>
-          )}
-        </span>
+      {/* Three lines, not one (Carson, 2026-08-15): "Status: (left
+          justified) / Inactive Center justified / Lighting 2 1 u center
+          justified". The label keeps the left edge because it is a
+          label — it names the block, the way "Moves:" does — while the
+          two values it introduces are the content and centre under it.
+          At 220px the old single line was the thing most likely to run
+          out of room, and it ran out on the half you actually read. */}
+      <div style={statusBlock}>
+        <span style={{ fontWeight: 700, opacity: 0.75 }}>Status:</span>
+        <span style={{ opacity: 0.85, alignSelf: 'center' }}>{modeLabel(mode)}</span>
+        {gameFlavor(context, gameId) && (
+          <span style={{ opacity: 0.8, alignSelf: 'center' }}>
+            {gameFlavor(context, gameId)}
+          </span>
+        )}
       </div>
       {/* Named so a test can ask whether the thing that is supposed to
           scroll actually scrolled; the pane is otherwise anonymous
@@ -1904,12 +1916,21 @@ function MovesSection({
                is filed under B90 — and the name goes on to lichess with
                the position, as it always did.
 
-               One line, always. The name is the only part allowed to
-               grow, so it is the part that ellipsizes; the ECO code and
-               the panel's width both stay put no matter how long
-               "Sicilian Defense: Najdorf Variation, Poisoned Pawn" gets.
-               (Carson: "i still don't like how big the opening font is
-               and how it wraps.") */
+               TWO lines since 2026-08-15, which reverses the one-line
+               rule this comment used to state. Carson: "the opening and
+               sub name can be 2 lines as well with a bullet or
+               underneath or something." The family sits beside the ECO
+               code and the variation goes underneath it behind a
+               bullet, so "Sicilian Defense: Najdorf Variation, Poisoned
+               Pawn" is readable in full instead of ellipsized to
+               "Sicilian Defense: Najdorf Vari…".
+
+               The old rule existed because the name WRAPPED badly — it
+               reflowed under the ECO code and back out again. So the
+               fix is a deliberate second line rather than just deleting
+               the ellipsis: the variation gets its own row, indented
+               under the family, and can wrap there without dragging the
+               code or the panel width around with it. */
             <div style={openingLine}>
               <a
                 href={`https://www.365chess.com/eco/${encodeURIComponent(opening.eco)}`}
@@ -1931,7 +1952,12 @@ function MovesSection({
                 title={`${opening.name} — study on lichess (book through ply ${opening.plies})`}
                 style={openingName}
               >
-                {opening.name}
+                <span>{splitOpeningName(opening.name).main}</span>
+                {splitOpeningName(opening.name).sub && (
+                  <span style={openingSub}>
+                    · {splitOpeningName(opening.name).sub}
+                  </span>
+                )}
               </a>
             </div>
           )}
@@ -1959,6 +1985,21 @@ function MovesSection({
     </div>
   );
 }
+
+// The status block: a left-aligned label with its values centred under
+// it. A column with `alignSelf: center` on the value rows rather than
+// `textAlign: center` — same choice as the move list, and for the same
+// reason: each value centres as a whole, so a long game description
+// cannot sit ragged against a short mode name.
+const statusBlock = {
+  flexShrink: 0,
+  display: 'flex',
+  flexDirection: 'column',
+  gap: 1,
+  borderBottom: '1px solid var(--border-soft)',
+  paddingBottom: 6,
+  fontSize: 12,
+} as const;
 
 // The move rows as one centred block. `alignSelf` (not `textAlign`) is
 // what does it: the wrapper shrinks to its widest row and centres itself
@@ -1994,11 +2035,21 @@ const openingEco = {
 
 const openingName = {
   minWidth: 0,
-  overflow: 'hidden',
-  textOverflow: 'ellipsis',
-  whiteSpace: 'nowrap',
+  display: 'flex',
+  flexDirection: 'column',
+  gap: 1,
   color: 'inherit',
   textDecoration: 'none',
+} as const;
+
+// The variation, on its own row under the family. Dimmed a shade so the
+// two read as caption-and-detail rather than as two equal names, and
+// free to wrap — this is the row that exists to hold the long half, so
+// clipping it here would put back the bug it was added to fix.
+const openingSub = {
+  opacity: 0.8,
+  minWidth: 0,
+  overflowWrap: 'anywhere',
 } as const;
 
 /** ⏮ ◀ ▶ ⏭ — Moves-control navigation, all modes (server-side walk in

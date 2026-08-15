@@ -110,3 +110,26 @@ export function tableFromTsv(text: string): OpeningTable {
   const maxPlies = parseTsv(text, openings);
   return { maxPlies, openings };
 }
+
+/**
+ * An opening's name split into the family and its variation — "Sicilian
+ * Defense: Najdorf Variation, Poisoned Pawn" becomes
+ * `{ main: 'Sicilian Defense', sub: 'Najdorf Variation, Poisoned Pawn' }`.
+ *
+ * The lichess catalogue puts the family before the first colon and
+ * everything more specific after it, so the colon is the split and the
+ * commas inside the variation are not (Carson, 2026-08-15: "the opening
+ * and sub name can be 2 lines"). Splitting on the FIRST colon only —
+ * a handful of names carry two, and the rest of the string belongs to
+ * the variation rather than starting a third line.
+ *
+ * A name with no colon has no sub, which is the common case and must
+ * stay a single line rather than growing an empty second one.
+ */
+export function splitOpeningName(name: string): { main: string; sub: string | null } {
+  const at = name.indexOf(':');
+  if (at === -1) return { main: name.trim(), sub: null };
+  const main = name.slice(0, at).trim();
+  const sub = name.slice(at + 1).trim();
+  return { main, sub: sub.length > 0 ? sub : null };
+}

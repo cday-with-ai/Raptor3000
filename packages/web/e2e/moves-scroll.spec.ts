@@ -28,7 +28,7 @@ test('the wheel scrolls the move list from anywhere in the panel', async () => {
     await typeInChat(me.chat, 'observe /b');
 
     const board = await waitForBoard(ctx, 'watcher');
-    await expect(board.locator('body')).toContainText(/Status: Observing/, {
+    await expect(board.locator('body')).toContainText(/Status:\s*Observing/, {
       timeout: 30_000,
     });
     // The movelist seed has to land before there is anything to scroll.

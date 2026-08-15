@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { detectOpening, tableFromTsv } from '../game/openings.js';
+import { detectOpening, tableFromTsv, splitOpeningName } from '../game/openings.js';
 
 /**
  * Opening detection (2026-08-12): longest-prefix match on the SAN
@@ -62,5 +62,47 @@ describe('the baked fallback', () => {
     expect(raw.maxPlies).toBeGreaterThan(20);
     expect(Object.keys(raw.openings).length).toBeGreaterThan(3000);
     expect(raw.openings['e4 c5']).toEqual(['B20', 'Sicilian Defense']);
+  });
+});
+
+/**
+ * Splitting a name into family and variation, for the two-line opening
+ * caption (Carson, 2026-08-15). The rule is one line of code and still
+ * worth pinning: the catalogue's names carry commas inside the
+ * variation, so anything that split on the wrong character would break
+ * the long names — which are exactly the ones the second line exists
+ * for, and the ones nobody checks because the short ones look fine.
+ */
+describe('splitOpeningName', () => {
+  it('splits family from variation at the first colon', () => {
+    expect(splitOpeningName('Sicilian Defense: Najdorf Variation')).toEqual({
+      main: 'Sicilian Defense',
+      sub: 'Najdorf Variation',
+    });
+  });
+
+  it('keeps commas inside the variation rather than splitting on them', () => {
+    expect(
+      splitOpeningName('Sicilian Defense: Najdorf Variation, Poisoned Pawn'),
+    ).toEqual({
+      main: 'Sicilian Defense',
+      sub: 'Najdorf Variation, Poisoned Pawn',
+    });
+  });
+
+  it('splits only on the FIRST colon, so a third line never appears', () => {
+    expect(splitOpeningName('A: B: C')).toEqual({ main: 'A', sub: 'B: C' });
+  });
+
+  it('leaves a plain name on one line', () => {
+    expect(splitOpeningName('Queens Gambit')).toEqual({
+      main: 'Queens Gambit',
+      sub: null,
+    });
+  });
+
+  it('treats a trailing colon as no variation, not an empty line', () => {
+    expect(splitOpeningName('Ruy Lopez:')).toEqual({ main: 'Ruy Lopez', sub: null });
+    expect(splitOpeningName('Ruy Lopez:   ')).toEqual({ main: 'Ruy Lopez', sub: null });
   });
 });
