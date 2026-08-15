@@ -186,3 +186,156 @@ describe('installAlertSounds', () => {
     expect(h.played).toEqual([]);
   });
 });
+
+/**
+ * The silence bug of 2026-08-14, reported four times ("i told myself
+ * something and didnt hear a sound"). The subscriber was never at fault
+ * — every test above passed while the app made no sound — because the
+ * failure was one layer down, in whether the AudioContext could run at
+ * all. These pin the two mechanisms that fix it.
+ */
+describe('alert audio unlocking', () => {
+  type FakeCtx = { state: string; resume: () => Promise<void> };
+
+  function withFakeAudio(initial: string) {
+    const made: FakeCtx[] = [];
+    const listeners = new Map<string, Set<(e?: unknown) => void>>();
+    const ctor = function () {
+      const c: FakeCtx = {
+        state: initial,
+        resume: () => {
+          c.state = 'running';
+          return Promise.resolve();
+        },
+      };
+      made.push(c);
+      return c;
+    };
+    const doc = {
+      addEventListener: (t: string, fn: (e?: unknown) => void) => {
+        (listeners.get(t) ?? listeners.set(t, new Set()).get(t)!).add(fn);
+      },
+      removeEventListener: (t: string, fn: (e?: unknown) => void) => {
+        listeners.get(t)?.delete(fn);
+      },
+    };
+    return {
+      made,
+      doc,
+      ctor,
+      gesture: (t = 'pointerdown') => {
+        for (const fn of [...(listeners.get(t) ?? [])]) fn();
+      },
+      armed: () =>
+        (listeners.get('pointerdown')?.size ?? 0) +
+        (listeners.get('keydown')?.size ?? 0),
+    };
+  }
+
+  it('a gesture is what creates and resumes the context', async () => {
+    const fake = withFakeAudio('suspended');
+    const g = globalThis as Record<string, unknown>;
+    const prevCtx = g.AudioContext;
+    const prevDoc = g.document;
+    g.AudioContext = fake.ctor;
+    g.document = fake.doc;
+    try {
+      const { unlockAlertAudio } = await import('../alertSounds.js?unlock1');
+      unlockAlertAudio();
+      // Armed but nothing built: a context created outside a gesture is
+      // the whole bug, so it must not be built on install.
+      expect(fake.made).toHaveLength(0);
+      expect(fake.armed()).toBe(2);
+
+      fake.gesture();
+      expect(fake.made).toHaveLength(1);
+      await Promise.resolve();
+      await Promise.resolve();
+      expect(fake.made[0].state).toBe('running');
+    } finally {
+      g.AudioContext = prevCtx;
+      g.document = prevDoc;
+    }
+  });
+
+  it('stays armed while the context refuses to run', async () => {
+    const fake = withFakeAudio('suspended');
+    const g = globalThis as Record<string, unknown>;
+    const prevCtx = g.AudioContext;
+    const prevDoc = g.document;
+    // A resume that never takes: the listeners must not disarm, or one
+    // refused gesture would silence the session permanently — which is
+    // exactly how the original bug behaved.
+    g.AudioContext = function () {
+      return { state: 'suspended', resume: () => Promise.resolve() };
+    };
+    g.document = fake.doc;
+    try {
+      const { unlockAlertAudio } = await import('../alertSounds.js?unlock2');
+      unlockAlertAudio();
+      fake.gesture();
+      await Promise.resolve();
+      await Promise.resolve();
+      expect(fake.armed()).toBe(2);
+    } finally {
+      g.AudioContext = prevCtx;
+      g.document = prevDoc;
+    }
+  });
+
+  it('a peer plays for a window that has no gesture of its own', async () => {
+    const g = globalThis as Record<string, unknown>;
+    const prevCtx = g.AudioContext;
+    const prevWin = g.window;
+    // Main's context can never run (nobody ever clicks the launcher).
+    g.AudioContext = function () {
+      return { state: 'suspended', resume: () => new Promise(() => {}) };
+    };
+    g.window = { };
+    try {
+      const mod = await import('../alertSounds.js?peer1');
+      const heard: string[] = [];
+      const peer = {
+        closed: false,
+        raptorPlayAlertHere: (kind: string) => {
+          heard.push(kind);
+          return true;
+        },
+      } as unknown as Window;
+      mod.registerAlertPeer(peer);
+      mod.playAlert('tell');
+      expect(heard).toEqual(['tell']);
+    } finally {
+      g.AudioContext = prevCtx;
+      g.window = prevWin;
+    }
+  });
+
+  it('forgets a peer whose window has closed', async () => {
+    const g = globalThis as Record<string, unknown>;
+    const prevCtx = g.AudioContext;
+    const prevWin = g.window;
+    g.AudioContext = function () {
+      return { state: 'suspended', resume: () => new Promise(() => {}) };
+    };
+    g.window = { };
+    try {
+      const mod = await import('../alertSounds.js?peer2');
+      const dead = { closed: true } as unknown as Window;
+      const alive: string[] = [];
+      mod.registerAlertPeer(dead);
+      mod.registerAlertPeer({
+        closed: false,
+        raptorPlayAlertHere: (k: string) => {
+          alive.push(k);
+          return true;
+        },
+      } as unknown as Window);
+      mod.playAlert('arrive');
+      expect(alive).toEqual(['arrive']);
+    } finally {
+      g.AudioContext = prevCtx;
+      g.window = prevWin;
+    }
+  });
+});

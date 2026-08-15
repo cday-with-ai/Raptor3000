@@ -283,6 +283,28 @@ describe('FicsParser (priority ordering + chunking)', () => {
     expect(events[0].message).toBe('hi');
   });
 
+  it('finds a tell that shares its chunk with the (told X) receipt', () => {
+    // The silent-tell bug of 2026-08-14. Telling someone comes back as
+    // the tell AND its receipt in one server write; the chat parsers are
+    // anchored per line, so the receipt defeated all of them and the
+    // whole block — real tell included — fell out as one UNKNOWN. No
+    // TELL event meant no alert sound and no color.
+    const events = parser.parse('\nGuestJLGN(U) tells you: selftest\n(told GuestJLGN)');
+    const tell = events.find(e => e.type === ChatEventType.TELL);
+    expect(tell).toBeDefined();
+    expect(tell!.message).toBe('selftest');
+    expect(tell!.source).toBe('GuestJLGN');
+  });
+
+  it('leaves a block nothing recognizes as one UNKNOWN, not confetti', () => {
+    // The per-line retry only commits when at least one line parses, so
+    // multi-line output that is genuinely one thing (finger, MOTD) keeps
+    // arriving as a single event exactly as it always did.
+    const events = parser.parse('some server preamble\nnothing here parses at all');
+    expect(events).toHaveLength(1);
+    expect(events[0].type).toBe(ChatEventType.UNKNOWN);
+  });
+
   it('suppresses prompt-only chunks', () => {
     const events = parser.parse('fics% ');
     expect(events).toHaveLength(0);

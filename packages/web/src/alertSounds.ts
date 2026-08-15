@@ -181,11 +181,118 @@ export function alertKindFor(type: ChatEventType): AlertKind | null {
   }
 }
 
-// One AudioContext per window, created on first play. Alerts fire only
-// in the MAIN window (see installAlertSounds), which is where the user's
-// gestures land — but they may fire BEFORE the first gesture (auto-login,
-// tells on connect), which is what the suspended branch below handles.
+// One AudioContext per window, created on first play — or, better, on
+// this document's first real gesture (see unlockAlertAudio).
+//
+// The old comment here claimed the main window "is where the user's
+// gestures land". That was the bug (Carson, four reports on 2026-08-14:
+// "i told myself something and didnt hear a sound"). After login the main
+// window is an options/help page nobody touches again — the playing and
+// chatting happen in popups, which are separate documents whose gestures
+// do this one no good. So the context was built lazily from a network
+// event, started `suspended`, and `resume()` sat unresolved forever
+// because Chrome wants CURRENT activation, not the click made at login.
+// The 1500ms freshness guard below then discarded the alert. Silence, by
+// construction, for the whole session.
+//
+// Move sounds escaped it twice over: they use <audio>, which one gesture
+// unlocks for the document's lifetime, and sounds.ts relays to the opener
+// when a popup has none. Options → Preview worked because pressing it IS
+// the gesture. Every symptom in the reports follows from that one line.
 let ctx: AudioContext | null = null;
+
+/**
+ * Build (or resume) this document's AudioContext on its first real user
+ * gesture, which is the only moment a browser will let one start.
+ *
+ * Idempotent, and it stays armed until the context is actually running:
+ * `resume()` can be refused, and there is no signal for that beyond the
+ * state. Capture-phase listeners so a stopPropagation somewhere in the
+ * tree cannot starve it. `main.tsx` calls this once per document.
+ */
+export function unlockAlertAudio(): () => void {
+  if (typeof AudioContext === 'undefined' || typeof document === 'undefined') {
+    return () => {};
+  }
+  const attempt = () => {
+    try {
+      ctx ??= new AudioContext();
+      if (ctx.state === 'running') {
+        off();
+        return;
+      }
+      // We are inside a gesture here, so this resume is the one that works.
+      void ctx.resume().then(() => {
+        if (ctx?.state === 'running') off();
+      }).catch(() => {});
+    } catch {
+      // No audio in this environment; nothing to arm.
+    }
+  };
+  const off = () => {
+    document.removeEventListener('pointerdown', attempt, true);
+    document.removeEventListener('keydown', attempt, true);
+  };
+  document.addEventListener('pointerdown', attempt, true);
+  document.addEventListener('keydown', attempt, true);
+  return off;
+}
+
+/**
+ * Windows that can speak for this one. A popup registers itself with its
+ * opener on load, so the main window — which owns the alert subscription
+ * but may never be clicked when auto-login is on — can hand a sound to
+ * the chat window, where the user's fingers actually are. The mirror
+ * image of sounds.ts's opener relay, pointing the other way.
+ */
+const peers = new Set<Window>();
+
+export function registerAlertPeer(w: Window): () => void {
+  peers.add(w);
+  return () => peers.delete(w);
+}
+
+/** Ask a window that has activation to play this for us. */
+function relayToPeer(kind: AlertKind, set?: MoveSoundSet): boolean {
+  for (const w of [...peers]) {
+    try {
+      if (w.closed) {
+        peers.delete(w);
+        continue;
+      }
+      if (w.raptorPlayAlertHere?.(kind, set)) return true;
+    } catch {
+      // Cross-origin or half-dead peer: drop it and try the next.
+      peers.delete(w);
+    }
+  }
+  return false;
+}
+
+/**
+ * Play here if this document's context is running. Returns whether it
+ * did, so a caller can try somewhere else. Exposed on `window` so the
+ * opener can reach into a popup.
+ */
+function playAlertHere(kind: AlertKind, set?: MoveSoundSet): boolean {
+  if (typeof AudioContext === 'undefined') return false;
+  try {
+    if (!ctx || ctx.state !== 'running') return false;
+    schedule(ctx, ALERT_RECIPES[set ?? loadPreferences().moveSoundSet][kind]);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+declare global {
+  interface Window {
+    /** Cross-window alert relay; every window running the bundle registers
+     *  its own. Returns false when this document's context can't sound. */
+    raptorPlayAlertHere?: (kind: AlertKind, set?: MoveSoundSet) => boolean;
+  }
+}
+if (typeof window !== 'undefined') window.raptorPlayAlertHere = playAlertHere;
 
 /** Render a recipe in this window. Safe to call anywhere; silently a
  *  no-op where WebAudio is missing (node) or the context can't run. */
@@ -199,6 +306,10 @@ export function playAlert(kind: AlertKind, set?: MoveSoundSet): void {
       schedule(audio, recipe);
       return;
     }
+    // Suspended here and no gesture to lean on. A popup may have one —
+    // with auto-login the main window can go a whole session untouched
+    // while the user types happily in the chat window.
+    if (relayToPeer(kind, set)) return;
     // Suspended = no user activation yet (alerts fire from network
     // events, which carry no gesture). Never schedule against a
     // suspended context: currentTime is frozen, so queued notes would

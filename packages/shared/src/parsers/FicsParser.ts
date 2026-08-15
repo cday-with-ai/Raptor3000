@@ -199,6 +199,53 @@ export class FicsParser {
       }
     }
 
+    // 6b. Nothing claimed the chunk as a whole — try it line by line
+    // before giving up on it.
+    //
+    // FICS batches, and some replies are inherently two lines. Telling
+    // someone arrives back as the tell AND its receipt in one write:
+    //
+    //     \nGuestJLGN(U) tells you: selftest\n(told GuestJLGN)
+    //
+    // The chat parsers are anchored per line, so the receipt on the end
+    // defeats every one of them and the entire block — the real tell
+    // included — fell out as a single UNKNOWN. That is why a tell made no
+    // sound and showed no color: alertKindFor never saw a TELL, because
+    // no TELL was ever built. (Carson, 2026-08-14, four reports: "i told
+    // myself something and didnt hear a sound".)
+    //
+    // Deliberately conservative: only when the chunk is multi-line, and
+    // only if at least one line actually parses. A block nothing
+    // recognizes — `finger` output, a MOTD — stays one UNKNOWN event
+    // exactly as before, so this can only add recognition, never
+    // fragment what already worked.
+    if (events.length === 0 && joined.includes('\n')) {
+      const lines = joined.split('\n').filter(l => l.trim() !== '');
+      if (lines.length > 1) {
+        const perLine: ChatEvent[] = [];
+        let matchedAny = false;
+        for (const line of lines) {
+          let matched: ChatEvent | null = null;
+          for (const parser of this.chatParsers) {
+            matched = parser.parse(line);
+            if (matched) break;
+          }
+          if (matched) {
+            matchedAny = true;
+            perLine.push(matched);
+          } else {
+            perLine.push(
+              makeChatEvent(ChatEventType.UNKNOWN, line, { message: line }),
+            );
+          }
+        }
+        if (matchedAny) {
+          events.push(...perLine);
+          return events;
+        }
+      }
+    }
+
     // 7. UNKNOWN fallback for the whole chunk.
     if (events.length === 0) {
       events.push(
