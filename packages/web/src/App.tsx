@@ -5,6 +5,8 @@ import {
   resolveContext,
   type RaptorContext,
 } from './windows/appContext.js';
+import { getWindowManager } from './windows/WindowManager.js';
+import { installOpenerWatch } from './windows/openerWatch.js';
 import { MainWindow } from './windows/MainWindow.js';
 import { ChatWindow } from './windows/ChatWindow.js';
 import { BoardWindow } from './windows/BoardWindow.js';
@@ -37,6 +39,28 @@ export function App() {
   if (!ctx) {
     return <Orphaned kind={kind} inPopup={isPopup()} />;
   }
+
+  return <PopupRoot kind={kind} id={id} ctx={ctx} />;
+}
+
+/**
+ * A popup's root. Exists so the opener watch can be a hook without App
+ * calling hooks conditionally — App renders the main window and the
+ * Orphaned screen down other branches.
+ */
+function PopupRoot({
+  kind,
+  id,
+  ctx,
+}: {
+  kind: string;
+  id: string | null;
+  ctx: RaptorContext;
+}) {
+  // Close ourselves when the window that owns the FICS session goes
+  // away. Covers what the opener's own unload handler cannot: a crashed
+  // or discarded tab, where no handler runs there at all.
+  useEffect(() => installOpenerWatch(), []);
 
   switch (kind) {
     case 'chat':
@@ -73,6 +97,20 @@ function MainWindowRoot() {
   // have to kick on our next login.
   useEffect(() => {
     const onUnload = () => {
+      // Take the popups with us. The FICS session dies with this window
+      // either way, so leaving boards and chat on screen only leaves
+      // something that LOOKS connected — the state Carson spent an
+      // evening misreading as a server-side drop (2026-08-14: "i think i
+      // am a dumbass, it was me closing the raptor3000 tab which
+      // disconnected"). His ruling when in doubt: "just kill it all …
+      // i mean its dead anyway". Popups also watch us from their side
+      // (openerWatch), which is what covers a crash or a discarded tab,
+      // where no handler here runs at all.
+      try {
+        getWindowManager().closeAll();
+      } catch {
+        // a popup already gone or refusing to close; carry on
+      }
       try {
         window.raptor?.connector.disconnect();
       } catch {
@@ -83,6 +121,22 @@ function MainWindowRoot() {
     window.addEventListener('beforeunload', onUnload);
     return () => window.removeEventListener('beforeunload', onUnload);
   }, []);
+
+  // Guard the close only while a game is live (Carson: "do it Raptor
+  // style — if the user is playing a game when the main tab is closing,
+  // prompt an 'are you sure?'"). Browsers allow no custom text, so this
+  // is their generic Leave-site dialog; the point is that it is armed
+  // ONLY when there is something to lose. Observing and examining close
+  // silently, which is his "if not playing just close it".
+  useEffect(() => {
+    const confirmIfPlaying = (e: BeforeUnloadEvent) => {
+      if (!ctx.gameService.isPlayingAny()) return;
+      e.preventDefault();
+      e.returnValue = '';
+    };
+    window.addEventListener('beforeunload', confirmIfPlaying);
+    return () => window.removeEventListener('beforeunload', confirmIfPlaying);
+  }, [ctx]);
   return <MainWindow context={ctx} />;
 }
 

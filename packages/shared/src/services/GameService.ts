@@ -128,6 +128,18 @@ export class GameService {
   }
 
   /**
+   * Is the user playing anything right now? Observing and examining do
+   * not count — losing those to a closed tab costs nothing, whereas
+   * losing a live game costs a forfeit. The unload guard is the caller.
+   */
+  isPlayingAny(): boolean {
+    for (const mode of this.modes.values()) {
+      if (mode === BoardMode.PLAYING) return true;
+    }
+    return false;
+  }
+
+  /**
    * Called by FicsParser before fireGameStateChanged. Derives mode from
    * Style12 relation and, if it differs from the prior mode, fires the
    * appropriate end-then-start transition hooks (e.g. obs→ex when
