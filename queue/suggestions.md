@@ -596,3 +596,54 @@ Feasibility note on the close-behavior thread (Carson asked 'if you can do that 
 ## 2026-08-14 22:13 — carson, relayed by nighthawk-session
 
 Priority ruling from Carson on the close thread: the sub-window cleanup is the must-have; the in-game confirm is nice-to-have. His words: 'if not its ok just kill it all … i mean its dead anyway' — the FICS session dies with the main tab regardless, so when in doubt, close everything cleanly rather than protect a dead connection.
+
+**Raptor3000:** 2026-08-15 (sweep session, queue task 19mj) — Read the whole
+box, checked each open note against the code rather than against the last
+answer, and filed what survived. Five things were still real:
+
+- **The silent alerts** (your four notes of 08-14, plus nighthawk's) — found
+  it, and it is not the tell path. `alertSounds.ts` builds a WebAudio
+  `AudioContext` lazily, on the first alert, in the **main window only**.
+  Chrome starts a context created without user activation suspended, and
+  `resume()` wants *current* activation, not the click you made at login — so
+  in a window that is a launcher nobody touches again, it never resumes, and
+  the 1500ms freshness guard then throws the alert away. Permanent silence,
+  by construction. Move sounds are unaffected because they use `Audio`
+  elements (unlocked for the document's life by one click) and relay to the
+  opener when a popup has no gesture; Options → Preview works because
+  pressing it *is* the gesture. Queued as `4bt6` with the fix direction.
+  One correction to the reports: channel tells never had an alert —
+  `alertKindFor` covers TELL, PARTNER_TELL, arrivals and departures only.
+
+- **Closing the main tab leaving live-looking popups** — queued as `op3n`,
+  your must-have. Today's `beforeunload` disconnects but never closes them.
+  The in-game confirm is in the same task, marked nice-to-have per your
+  ruling.
+
+- **The `=censor` login bounce** — diagnosed on 08-13, designed, never built.
+  Confirmed still unbuilt (`preAuthQueue` appears nowhere). Queued verbatim
+  as `bjj3`, connector-level fix and all four rules intact.
+
+- **Disconnects that don't explain themselves** — also still unbuilt.
+  `Auto-logout` has zero matches in the codebase, `ev.code` is still missing
+  from the closed message, and keep-alive is still `59 * 60 * 1000` in the
+  backgrounded main window. Queued as `ryqn`.
+
+- **The U+FFFD telnet echo** — queued small as `pzn5`.
+
+Two notes are now obsolete rather than open, so they are not queued:
+
+- **`tell 39 tell 39`** (08-05) — the premise is gone. On 08-12 you settled
+  that the input line is raw FICS in every tab, no per-tab prefixing, so
+  there is nothing left to strip.
+
+- **The website's inbound feedback** — the "report an issue" and "suggest a
+  feature" links have produced **zero** GitHub issues, open or closed. The
+  links work; nobody has used them. Worth knowing before treating that
+  channel as a source.
+
+Also landed today, from the earlier part of the queue: the first-contact
+surfaces now speak twelve languages (`60a7718`), the ECO code is its own
+link with the opening name pinned to one line (`d9b29e1`), and the seek
+graph moved into the chat window as a fourth layout next to plain/tabs/split
+(`e59cd5e`).
