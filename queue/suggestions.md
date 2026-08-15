@@ -647,3 +647,85 @@ surfaces now speak twelve languages (`60a7718`), the ECO code is its own
 link with the opening name pinned to one line (`d9b29e1`), and the seek
 graph moved into the chat window as a fourth layout next to plain/tabs/split
 (`e59cd5e`).
+
+## 2026-08-15 11:47 — carson, relayed by nighthawk-session
+
+FEATURE — auto-promote and auto-draw on the playing buttons. Carson, 2026-08-15: 'we need to add in auto promote and auto draw feature to the playing buttons. auto promote should be checkboxes with pieces. we did this in raptor. It bypasses the popup if selected. Default is on queen.'
+
+Auto-promote: a row of piece checkboxes (Q R B N) alongside the existing playing buttons; whichever is checked becomes the promotion piece and the PromotionPicker popup is skipped entirely. Default checked = queen, so out of the box a promotion just plays a queen with no dialog. Only one piece checked at a time (checkbox look, radio behaviour — that is how the original Raptor did it, and Raptor is the authority per README where the two differ: raw.githubusercontent.com/fbergo/Raptor/master/raptor/src/raptor/ ). Presumably persisted like other UI prefs rather than reset each game — worth confirming with Carson.
+
+Where it lands, from a read tonight: packages/web/src/windows/BoardWindow.tsx holds both halves already — the promotion state and picker at lines ~825 (useState promotion), ~962 (setPromotion opens it), ~1096 (onPromotionPick -> sendMove with the piece), ~1332 (renders PromotionPicker), and the playing-button command handlers at ~365-368 (draw/abort/adjourn/resign, each sendMessageHidden). So the bypass is: where line ~962 currently opens the picker, if an auto-promote piece is set, call sendMove directly with it instead.
+
+Auto-draw: Carson did not spell out the semantics and the original Raptor should settle it rather than a guess — in Raptor it is a toggle that keeps a draw offer standing (sends 'draw' alongside each of your moves) so a repetition or 50-move claim gets taken automatically. Check Raptor's source before implementing, and if it turns out ambiguous, ask him rather than picking.
+
+Filed from the nighthawk session; he asked for it in conversation there.
+
+## 2026-08-15 11:48 — carson, relayed by nighthawk-session
+
+AUTO-DRAW semantics, settled by Carson 2026-08-15 (supersedes the 'check Raptor's source' note in the auto-promote/auto-draw item above): 'auto draw mode will first offer the opponent a draw. If the opponent declines it looks for 3 position repeats after every move made and if found sends draw (forcing a draw).' And the why, which shapes the whole design: 'it is for time scrambles.'
+
+So the mode is a two-stage machine, armed by the toggle:
+(1) On arming, send 'draw' once — the offer.
+(2) If declined (or simply not accepted), watch the game position after EVERY move made and, the moment the current position has occurred three times, send 'draw' again — which FICS honours as a threefold claim rather than an offer, forcing the result.
+
+Time-scramble use is the requirement that matters most: this fires while Carson is moving as fast as he can with seconds on the clock, so it has to be automatic, instant, and cost him zero clicks or attention once armed. Latency in the detector is a bug, not a nit — a claim that arrives a move late is worthless. It also means the arming control must be reachable without hunting: it belongs on the playing-button row with the auto-promote checkboxes, not behind a menu.
+
+Implementation hooks, from a read tonight: packages/web/src/game/chessBridge.ts already runs chessops (Chess from 'chessops/chess', makeFen/parseFen from 'chessops/fen'), so the position history for repetition detection can be built from FENs it already computes — compare position-only FEN fields (piece placement + side to move + castling + en passant), never the halfmove/fullmove counters, or repetitions will never match. Worth confirming whether chessops exposes a repetition helper before hand-rolling one. Playing-button handlers sit at BoardWindow.tsx ~365-368 where 'draw' is already a sendMessageHidden call.
+
+Open, for Carson rather than a guess: whether the mode disarms itself after a declined offer plus a successful claim, at game end, or stays armed across games.
+
+**Raptor3000:** 2026-08-15 (live session, queue task v55x) — Auto-promote is
+built, and verified in a real game rather than only in tests.
+
+Four piece boxes at the left of the playing toolbar, queen armed out of the
+box. A promotion now goes straight to FICS with no dialog. They draw the
+pieces themselves rather than the letters Q R B N — the toolbar sits under a
+board wearing whichever set you chose, and a picture of what you will get
+needs no translating, which the letters would in the other eleven languages.
+
+Three judgement calls, all reversible if you disagree:
+
+- **Clicking the armed piece clears it**, leaving the picker. You asked for
+  checkbox look and radio behaviour, and radio behaviour normally means you
+  can never get back to nothing — but then there would be no way to ask for
+  a rook once in a blue moon. `off` is a state you choose, never one you
+  arrive at.
+- **Only while playing.** Examining moves pieces for you and observing has no
+  move of yours to promote, so the control would be a setting with nothing to
+  act on.
+- **Only on your own turn.** A promotion you start while it is your
+  opponent's move still opens the picker, because the premove path has
+  nowhere to carry a promotion piece. That path then sends immediately and
+  FICS rejects it — which is a real bug that predates this, and I left it
+  alone rather than fix it quietly inside a feature commit. Say the word and
+  it is its own task.
+
+The bypass exposed something the picker had been hiding: a promotion never
+suppressed its own server echo, and the dialog's human pause was covering the
+flicker. Both paths now hold the promoted piece — not the pawn — on the
+destination square until FICS speaks.
+
+Verified against live FICS in `e2e/auto-promote.spec.ts`, because "no dialog
+appears" is a claim about a render and no offline test can make it. Two
+guests, a white pawn walked up the a-file, and the promotion made BY CLICKING
+THE BOARD — typing `a7a8=Q` would prove nothing about the control. It checks
+that no picker overlay appears and that a white queen lands on a8 on *both*
+boards, so the piece reached the server and not just our own optimism.
+
+Worth knowing, since it explains why this took a while: **all four live-FICS
+e2e specs had been broken for some time.** They addressed the console input
+by a placeholder that no longer exists anywhere in the app, so `fill()` waited
+on an element that could never resolve and each spec hung for five minutes
+before failing somewhere unrelated. The input now has a real accessible name
+(a screen reader had nothing to announce either), and the specs ask for it by
+label. Two more traps are written down in that commit: a popup fires its page
+event while still on `about:blank`, and `waitForFunction` polls with
+requestAnimationFrame *inside* the page — which a backgrounded board window
+never fires.
+
+Auto-draw (your 11:48 note) is next and is queued as `6gnk`. One thing there
+is still yours to answer, and I would rather ask than guess: **does the mode
+disarm itself after a successful claim, at game end, or stay armed across
+games?** For a time-scramble tool I would guess "stays armed until you turn it
+off", but the cost of guessing wrong is a draw offer going out in a game you
+wanted to win.
