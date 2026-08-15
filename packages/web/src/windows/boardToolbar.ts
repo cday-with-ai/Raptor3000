@@ -168,6 +168,12 @@ const baseButtonStyle = {
   border: '1px solid var(--border-strong)',
   borderRadius: 4,
   fontSize: 12,
+  // Never squeeze a label. The toolbar is a flex row, and flex children
+  // shrink before they wrap — so once the automation controls joined the
+  // row it stopped fitting the board window's default width and rendered
+  // "Adjourn" as "Adjou…". A clipped verb on a button that resigns your
+  // game is not a cosmetic problem. The row wraps instead (ToolbarShell).
+  flexShrink: 0,
 } as const;
 
 export type ToolbarButtonProps = {

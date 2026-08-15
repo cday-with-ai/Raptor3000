@@ -80,11 +80,13 @@ test('arming auto-draw claims the threefold by itself', async () => {
       console.log(`[${label}] game drawn by repetition`);
     }
 
-    // And the control stands down with the game, so it cannot follow you
-    // into the next one.
-    await expect(boardWhite.locator('body')).not.toContainText('Auto-draw ●', {
-      timeout: 20_000,
-    });
+    // And the control stands down with the game. Not "unarmed" — GONE:
+    // the toolbar only offers auto-draw while playing, so a finished
+    // game has no toggle at all and the mode cannot follow you into the
+    // next one. Asserted on the control's existence rather than its
+    // label, since the armed dot is always in the DOM (only sometimes
+    // visible, so that arming cannot resize the buttons beside it).
+    await expect(toggle).toHaveCount(0, { timeout: 20_000 });
     console.log('[alice] auto-draw disarmed at game end');
     await expect(boardBlack.locator('body')).toContainText(/Status:/);
 

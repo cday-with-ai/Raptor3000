@@ -2398,9 +2398,18 @@ function AutoDrawToggle({
         cursor: 'pointer',
         opacity: armed ? 1 : 0.65,
         whiteSpace: 'nowrap',
+        flexShrink: 0,
       }}
     >
-      {armed ? 'Auto-draw ●' : 'Auto-draw'}
+      Auto-draw{' '}
+      {/* The dot is always here and only sometimes visible. Swapping the
+          label text instead made the button wider when armed, and the
+          toolbar is a flex row whose buttons shrink to fit — so arming
+          auto-draw pushed the row over its width and clipped "Adjourn"
+          to "Adjou…". A control must not resize the ones beside it. */}
+      <span style={{ opacity: armed ? 1 : 0 }} aria-hidden={!armed}>
+        ●
+      </span>
     </button>
   );
 }
@@ -2417,6 +2426,8 @@ function ToolbarShell({ children }: { children: React.ReactNode }) {
     <div
       style={{
         display: 'flex',
+        flexWrap: 'wrap',
+        rowGap: 6,
         gap: 6,
         padding: 6,
         borderTop: '1px solid var(--border-soft)',
