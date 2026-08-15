@@ -67,12 +67,21 @@ export function ActionsTab({
       </h2>
 
       <section style={section}>
-        <h3 style={sectionTitle}>Watch the best game</h3>
+        {/* "Human" is Carson's word for what these actually get you
+            (2026-08-15: "its watch the best human game btw ... follow
+            best human game"). Worth knowing it is his from experience
+            rather than the server's: FICS's own help documents each flag
+            only as "Observe the highest rated <type> game" and says
+            nothing about humans or computers. So if a bot game ever
+            turns up under one of these buttons, the label is what is
+            wrong here, not the command. */}
+        <h3 style={sectionTitle}>Watch the best human game</h3>
         <p style={note}>
-          FICS picks the highest-rated game in progress of that type.{' '}
-          <b>Observe</b> is one shot — that game, and when it ends you are
-          done. <b>Follow</b> is a subscription to the player: FICS opens
-          their next game by itself, and keeps doing it until you stop.
+          FICS picks the highest-rated human game in progress of that
+          type. <b>Observe</b> is one shot — that game, and when it ends
+          you are done. <b>Follow</b> is a subscription to the player:
+          FICS opens their next game by itself, and keeps doing it until
+          you stop.
         </p>
         <div style={row}>
           {BEST_GAMES.map(g => (
