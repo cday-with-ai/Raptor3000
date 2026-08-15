@@ -1788,20 +1788,40 @@ function MovesSection({
               </a>
             </div>
           )}
-          {rows.length === 0 ? (
-            <span style={{ opacity: 0.5 }}>(waiting for movelist…)</span>
-          ) : (
-            rows
-          )}
-          {resultLine && (
-            <div style={{ marginTop: 3, fontWeight: 700 }}>{resultLine}</div>
-          )}
+          {/* The list proper, centred in the panel (Carson, 2026-08-15:
+              "horizontally center move list in the right panel … not the
+              opening name and the last move, just the move list itself
+              with the controls"). Centred as ONE block rather than row
+              by row: the rows keep a shared left edge, so the move
+              numbers still line up in a column and a long SAN cannot
+              shove its row sideways out of step with its neighbours.
+              The caption above it stays left — it is a caption. */}
+          <div style={movesRows}>
+            {rows.length === 0 ? (
+              <span style={{ opacity: 0.5 }}>(waiting for movelist…)</span>
+            ) : (
+              rows
+            )}
+            {resultLine && (
+              <div style={{ marginTop: 3, fontWeight: 700 }}>{resultLine}</div>
+            )}
+          </div>
         </div>
       )}
       {expanded && <NavArrows onNav={onNav} />}
     </div>
   );
 }
+
+// The move rows as one centred block. `alignSelf` (not `textAlign`) is
+// what does it: the wrapper shrinks to its widest row and centres itself
+// in the column, which keeps every row's left edge on the same line.
+const movesRows = {
+  display: 'flex',
+  flexDirection: 'column',
+  gap: 1,
+  alignSelf: 'center',
+} as const;
 
 // The opening line above the move list. Smaller than the moves it sits
 // over — it is a caption, not a row of the list — and pinned to a single
@@ -1855,7 +1875,10 @@ function NavArrows({ onNav }: { onNav: (w: 'first' | 'back' | 'forward' | 'last'
     </button>
   );
   return (
-    <div style={{ display: 'flex', gap: 4, marginTop: 4 }}>
+    // Centred with the list it drives (Carson, 2026-08-15) — in both
+    // states, since collapsing the list does not turn the arrows into a
+    // different control.
+    <div style={{ display: 'flex', gap: 4, marginTop: 4, justifyContent: 'center' }}>
       {btn('first', '⏮')}
       {btn('back', '◀')}
       {btn('forward', '▶')}

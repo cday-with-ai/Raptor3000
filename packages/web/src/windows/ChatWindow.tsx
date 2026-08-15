@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { ChatEventType, tokenize, type ChatEvent } from '@raptor3000/shared';
 import type { RaptorContext } from './appContext.js';
+import { ActionsTab } from './ActionsTab.js';
 import { SeekGraphTab } from './SeekGraphTab.js';
 import { installPositionTracker, windowStorageKey } from './windowPosition.js';
 import {
@@ -10,6 +11,8 @@ import {
 } from '../channelHistory.js';
 import { censorEditIn, makeListCollector, runClientCommand } from '../clientCommands.js';
 import {
+  CHAT_TYPES,
+  CHAT_VIEWS,
   loadPreferences,
   type AppPreferences,
   type ChatLayout,
@@ -180,18 +183,19 @@ export const ChatWindow = function ChatWindow({
   const ownHandle = context.connector.getLoggedInAs?.() ?? null;
 
   // Layout mode, switchable inline (the movelist-control concept applied
-  // to the window itself): plain stream / one-line tabs / Decaf split.
+  // to the window itself): single stream / one-line tabs / Decaf split,
+  // plus the two non-console views on the row below.
   const layout = prefs.chatLayout;
   const setLayout = (l: ChatLayout) => saveLivePreference('chatLayout', l);
   // The main console's stream. When tabs are visible (tabs/split
   // layouts), content CLAIMED by an open tab leaves main — Decaf's
   // rule, Carson's ask ("remove tabbed content from the console and
-  // move it into tabs if a tab is open"). Plain mode renders no tabs,
+  // move it into tabs if a tab is open"). Single mode renders no tabs,
   // so the one stream keeps everything. Closing a tab returns its
   // traffic to main, because the claim check runs against LIVE tabs.
   const mainEvents = useMemo(() => {
     const claimants = tabs.filter(t => t.kind !== 'main');
-    const dedup = layout !== 'plain';
+    const dedup = layout !== 'single';
     return events.filter(e => {
       if (!tabAccepts(MAIN_TAB, e)) return false;
       if (e.source && censored.has(e.source.toLowerCase())) return false;
@@ -208,6 +212,26 @@ export const ChatWindow = function ChatWindow({
     const first = tabs.find(t => t.kind !== 'main');
     if (first) setActiveTabId(first.id);
   }, [layout, activeTab, tabs]);
+
+  // Opening a tab by name: `+tab <target>` from the input line, and the
+  // actions pane when you start talking to a bot.
+  const openTab = (target: string) => {
+    setManualTabs(prev => (prev.includes(target) ? prev : prev.concat(target)));
+    setActiveTabId(
+      /^\d+$/.test(target) ? 'channel:' + target : 'person:' + target.toLowerCase(),
+    );
+  };
+
+  // The console type to come back to when a view hands the floor back.
+  // Remembering it (rather than always landing on 'tabs') means the
+  // actions pane cannot quietly rewrite a split-view user's preference.
+  const lastConsoleTypeRef = useRef<ChatLayout>('tabs');
+  useEffect(() => {
+    if ((CHAT_TYPES as readonly string[]).includes(layout)) {
+      lastConsoleTypeRef.current = layout;
+    }
+  }, [layout]);
+  const showConsole = () => setLayout(lastConsoleTypeRef.current);
 
   const submit = (line: string) => {
     if (line.length === 0) return;
@@ -232,12 +256,7 @@ export const ChatWindow = function ChatWindow({
     const handled = runClientCommand(line, {
       send: cmd => void context.connector.sendMessage(cmd),
       announce,
-      addTab: target => {
-        setManualTabs(prev => (prev.includes(target) ? prev : prev.concat(target)));
-        setActiveTabId(
-          /^\d+$/.test(target) ? 'channel:' + target : 'person:' + target.toLowerCase(),
-        );
-      },
+      addTab: openTab,
       startHarvest: feed => {
         harvestRef.current = feed;
       },
@@ -271,11 +290,7 @@ export const ChatWindow = function ChatWindow({
     <div style={shell}>
       <div style={headerRow}>
         <div style={{ flex: 1, minWidth: 0, overflow: 'hidden' }}>
-          {layout === 'plain' || layout === 'seek' ? (
-            <span style={{ fontSize: 12, opacity: 0.6, padding: '6px 14px', display: 'inline-block' }}>
-              {layout === 'seek' ? 'seek graph' : 'console'}
-            </span>
-          ) : (
+          {layout === 'tabs' || layout === 'split' ? (
             <TabBar
               // In split mode the main console is always visible below —
               // a main tab up top would be redundant (Carson).
@@ -284,21 +299,44 @@ export const ChatWindow = function ChatWindow({
               onSelect={setActiveTabId}
               onClose={closeTab}
             />
+          ) : (
+            <span style={paneLabel}>{PANE_LABELS[layout]}</span>
           )}
         </div>
         <LayoutSwitcher layout={layout} onChange={setLayout} />
       </div>
-      {layout === 'seek' ? (
+      {layout === 'seeks' ? (
         // The graph takes the log's place, not the window's: the input
         // row below stays live, so you can still type while you shop
         // for a game — which is the point of it being here rather than
         // on the options page.
         <SeekGraphTab context={context} />
+      ) : layout === 'actions' ? (
+        // Same bargain as the graph: it takes the log's place and the
+        // input row stays live, which is what lets "talk to" hand you a
+        // half-typed `tell` instead of a dialog.
+        <ActionsTab
+          onSend={cmd => context.connector.sendMessage(cmd)}
+          onAsk={cmd => {
+            context.connector.sendMessage(cmd);
+            showConsole();
+          }}
+          onType={text => {
+            showConsole();
+            setInput(text);
+            historyPosRef.current = -1;
+            requestAnimationFrame(() => {
+              inputRef.current?.focus();
+              inputRef.current?.setSelectionRange(text.length, text.length);
+            });
+          }}
+          onOpenTab={openTab}
+        />
       ) : layout !== 'split' || activeTab.kind === 'main' ? (
         <TabLog
-          tab={layout === 'plain' ? MAIN_TAB : activeTab}
+          tab={layout === 'single' ? MAIN_TAB : activeTab}
           events={
-            layout === 'plain' || activeTab.kind === 'main' ? mainEvents : tabEvents
+            layout === 'single' || activeTab.kind === 'main' ? mainEvents : tabEvents
           }
           prefs={prefs}
           ownHandle={ownHandle}
@@ -393,7 +431,16 @@ const MAX_EVENTS = 5000;
 
 /**
  * Inline layout switcher — the movelist-control concept applied to the
- * window: three small links, active one bold, remembered as a preference.
+ * window: small links, the active one bold, remembered as a preference.
+ *
+ * Two rows since 2026-08-15, Carson: "chat type (single) (tabs) (split),
+ * line one below (seeks) (actions), for tabs." The four modes had grown
+ * to five in one line and the line had stopped meaning anything — three
+ * of them answer "how should the console look" and two replace the
+ * console outright, so they are not the same question and no longer sit
+ * in the same row. Stacking them here rather than spending a second
+ * header strip is the "for tabs" half: the tab bar keeps the full width
+ * of the line it is on, and the switcher costs the tabs nothing.
  */
 function LayoutSwitcher({
   layout,
@@ -402,43 +449,76 @@ function LayoutSwitcher({
   layout: ChatLayout;
   onChange: (l: ChatLayout) => void;
 }) {
-  const modes: [ChatLayout, string][] = [
-    ['plain', 'plain'],
-    ['tabs', 'tabs'],
-    ['split', 'split'],
-    ['seek', 'seek'],
-  ];
   return (
-    <span style={{ display: 'inline-flex', gap: 2, padding: '0 8px', flexShrink: 0 }}>
-      {modes.map(([mode, label]) => (
-        <button
-          key={mode}
-          onClick={() => onChange(mode)}
-          title={
-            mode === 'plain'
-              ? 'one stream, no tabs'
-              : mode === 'tabs'
-                ? 'classic tabs, one pane'
-                : mode === 'split'
-                  ? 'tabs above, main console always visible'
-                  : 'the live seek graph — click a dot to play'
-          }
-          style={{
-            background: 'none',
-            border: 'none',
-            color: layout === mode ? 'var(--accent)' : 'var(--fg-dim)',
-            fontWeight: layout === mode ? 700 : 400,
-            cursor: 'pointer',
-            fontSize: 11,
-            padding: '2px 4px',
-          }}
-        >
-          ({label})
-        </button>
-      ))}
+    <span style={switcher}>
+      <span style={switcherRow}>
+        {CHAT_TYPES.map(mode => (
+          <SwitcherButton
+            key={mode}
+            mode={mode}
+            active={layout === mode}
+            onChange={onChange}
+          />
+        ))}
+      </span>
+      <span style={switcherRow}>
+        {CHAT_VIEWS.map(mode => (
+          <SwitcherButton
+            key={mode}
+            mode={mode}
+            active={layout === mode}
+            onChange={onChange}
+          />
+        ))}
+      </span>
     </span>
   );
 }
+
+function SwitcherButton({
+  mode,
+  active,
+  onChange,
+}: {
+  mode: ChatLayout;
+  active: boolean;
+  onChange: (l: ChatLayout) => void;
+}) {
+  return (
+    <button
+      onClick={() => onChange(mode)}
+      title={LAYOUT_TITLES[mode]}
+      style={{
+        background: 'none',
+        border: 'none',
+        color: active ? 'var(--accent)' : 'var(--fg-dim)',
+        fontWeight: active ? 700 : 400,
+        cursor: 'pointer',
+        fontSize: 11,
+        padding: '1px 4px',
+      }}
+    >
+      ({mode})
+    </button>
+  );
+}
+
+const LAYOUT_TITLES: Record<ChatLayout, string> = {
+  single: 'one stream, no tabs',
+  tabs: 'classic tabs, one pane',
+  split: 'tabs above, main console always visible',
+  seeks: 'the live seek graph — click a dot to play',
+  actions: 'watch the best game, talk to the bots',
+};
+
+/** What the tab bar's place says when the pane is not a console. */
+const PANE_LABELS: Record<ChatLayout, string> = {
+  single: 'console',
+  tabs: '',
+  split: '',
+  seeks: 'seek graph',
+  actions: 'actions',
+};
 
 interface Tab {
   id: string;
@@ -883,14 +963,40 @@ const tabBar = {
   overflowX: 'auto',
 } as const;
 
-// Header row: tab bar (or the plain-mode label) + the layout switcher.
-// Carries the border/background the tab bar used to own, so the switcher
-// sits inside the same strip.
+// Header row: tab bar (or the pane's name) + the two-row layout
+// switcher. Carries the border/background the tab bar used to own, so
+// the switcher sits inside the same strip. `stretch` rather than
+// `center` so the tab bar still fills the strip's full height now that
+// the switcher beside it is two lines tall.
 const headerRow = {
   display: 'flex',
-  alignItems: 'center',
+  alignItems: 'stretch',
   borderBottom: '1px solid var(--border-soft)',
   background: 'var(--bg-raised)',
+} as const;
+
+// The switcher's two rows, right-aligned so (single) and (seeks) line up
+// on their left edge and the block reads as one control, not two.
+const switcher = {
+  display: 'flex',
+  flexDirection: 'column',
+  justifyContent: 'center',
+  gap: 1,
+  padding: '3px 8px',
+  flexShrink: 0,
+} as const;
+
+const switcherRow = {
+  display: 'inline-flex',
+  gap: 2,
+  justifyContent: 'flex-start',
+} as const;
+
+const paneLabel = {
+  fontSize: 12,
+  opacity: 0.6,
+  padding: '6px 14px',
+  display: 'inline-block',
 } as const;
 
 const closeBtn = {

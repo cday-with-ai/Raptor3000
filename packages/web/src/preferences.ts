@@ -52,9 +52,42 @@ export type ClockColor = 'auto' | string;
  * whole-pane view like the others — and because the chat window is
  * where you are when you go looking for a game, not the settings page
  * it used to live on.
+ *
+ * Later the same day it stopped being one list. Five things sat in a
+ * row where only three answered the same question, so they split
+ * (Carson: "chat type (single) (tabs) (split), line one below (seeks)
+ * (actions)"). The **types** say how the console is drawn; the
+ * **views** replace it with something that is not a console at all.
+ * Both still live in this one preference, because only one of the five
+ * can be on screen at a time — the split is in the control, not the
+ * state. `plain` was renamed `single` in the same move: it is one
+ * stream, and "single" says that where "plain" only said "not fancy".
  */
-export type ChatLayout = 'plain' | 'tabs' | 'split' | 'seek';
-export const CHAT_LAYOUTS: readonly ChatLayout[] = ['plain', 'tabs', 'split', 'seek'];
+/** How the console is drawn — the top row of the switcher. */
+export const CHAT_TYPES = ['single', 'tabs', 'split'] as const;
+/** What replaces the console — the row below it. */
+export const CHAT_VIEWS = ['seeks', 'actions'] as const;
+export const CHAT_LAYOUTS = [...CHAT_TYPES, ...CHAT_VIEWS] as const;
+/**
+ * Derived from the two rows rather than declared alongside them, so a
+ * layout cannot exist as a type and be missing from a row. `ChatWindow`
+ * decides what a mode *is* by asking whether `CHAT_TYPES` contains it —
+ * a mode absent from both rows would compile, render as a view, and
+ * then refuse to be the console to come back to. Deriving makes that
+ * unspellable instead of merely untested.
+ */
+export type ChatLayout = (typeof CHAT_LAYOUTS)[number];
+
+/**
+ * The two layouts that were renamed rather than removed. The house rule
+ * is that an unknown stored value falls back to the default (see
+ * `loadPreferences`) — correct for a dropped option, wrong for a
+ * renamed one, which would silently move a `plain` user to `split`.
+ */
+const RENAMED_LAYOUTS: Readonly<Record<string, ChatLayout>> = {
+  plain: 'single',
+  seek: 'seeks',
+};
 
 export interface AppPreferences {
   boardTheme: BoardTheme;
@@ -71,9 +104,11 @@ export interface AppPreferences {
   clockIdleBg: ClockColor;
   clockIdleText: ClockColor;
   /**
-   * Console layout: 'plain' = one stream, no tabs; 'tabs' = classic
+   * Console layout: 'single' = one stream, no tabs; 'tabs' = classic
    * single pane with a tab bar; 'split' = Decaf style, active tab above
-   * a pinned main console. Switchable inline from the chat window.
+   * a pinned main console. 'seeks' and 'actions' are not console types
+   * at all — they put the seek graph or the actions pane in the log's
+   * place. Switchable inline from the chat window.
    */
   chatLayout: ChatLayout;
   /** Split layout: the top (tab) pane's share of the height, 0.15–0.85.
@@ -299,6 +334,16 @@ function cap(s: ClockState): 'Active' | 'Low' | 'Idle' {
   return (s[0].toUpperCase() + s.slice(1)) as 'Active' | 'Low' | 'Idle';
 }
 
+/** The stored layout, carrying the two renames across (plain → single,
+ *  seek → seeks) before the allowed-list check that would otherwise
+ *  drop them back to the default. */
+function readChatLayout(): ChatLayout {
+  const raw = getRaw('chatLayout');
+  const renamed = raw != null ? RENAMED_LAYOUTS[raw] : undefined;
+  if (renamed) return renamed;
+  return readString('chatLayout', DEFAULT_PREFERENCES.chatLayout, CHAT_LAYOUTS);
+}
+
 export function loadPreferences(): AppPreferences {
   return {
     // Stored values from the pre-port themes ('slate', 'wood') and piece
@@ -321,7 +366,7 @@ export function loadPreferences(): AppPreferences {
     clockLowText: readClockColor('clockLowText'),
     clockIdleBg: readClockColor('clockIdleBg'),
     clockIdleText: readClockColor('clockIdleText'),
-    chatLayout: readString('chatLayout', DEFAULT_PREFERENCES.chatLayout, CHAT_LAYOUTS),
+    chatLayout: readChatLayout(),
     chatSplitRatio: readRatio('chatSplitRatio', DEFAULT_PREFERENCES.chatSplitRatio),
     boardPanelRatio: readBoardPanelRatio('boardPanelRatio', DEFAULT_PREFERENCES.boardPanelRatio),
     engineSplitRatio: readEngineRatio('engineSplitRatio', DEFAULT_PREFERENCES.engineSplitRatio),

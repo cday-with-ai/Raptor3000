@@ -1,6 +1,9 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import {
   BOARD_THEMES,
+  CHAT_LAYOUTS,
+  CHAT_TYPES,
+  CHAT_VIEWS,
   CLOCK_AUTO,
   DEFAULT_PREFERENCES,
   PIECE_SETS,
@@ -180,6 +183,52 @@ describe('clock chip colors', () => {
     expect(p.clockLowText).toBe('#ffffff');
     expect(p.clockIdleBg).toBe('#0e1116');
     expect(p.clockActiveBg).toBe('auto');
+  });
+});
+
+/**
+ * The chat layout roster, split in two on 2026-08-15 (single/tabs/split
+ * are console *types*; seeks/actions are *views* that replace the
+ * console). Two things here can only fail silently, which is why they
+ * get tests rather than a reading:
+ *
+ *   - The rename is a data migration. Every other unknown stored value
+ *     is meant to fall back to the default, and the default is 'split' —
+ *     so without the rename map, a 'plain' user gets silently moved to a
+ *     layout they never chose, with nothing anywhere reporting it.
+ *   - The two rows must not overlap. A mode missing from both is now a
+ *     compile error rather than anything a test could catch, since
+ *     `ChatLayout` is derived from them — but a mode listed in *both*
+ *     still compiles, and quietly earns two buttons in the switcher.
+ */
+describe('chat layout roster', () => {
+  it("carries the renames across: 'plain' → single, 'seek' → seeks", () => {
+    localStorage.setItem('pref.chatLayout', 'plain');
+    expect(loadPreferences().chatLayout).toBe('single');
+    localStorage.setItem('pref.chatLayout', 'seek');
+    expect(loadPreferences().chatLayout).toBe('seeks');
+  });
+
+  it('still drops a value that was never a layout', () => {
+    localStorage.setItem('pref.chatLayout', 'trebuchet');
+    expect(loadPreferences().chatLayout).toBe(DEFAULT_PREFERENCES.chatLayout);
+  });
+
+  it('round-trips every current name untouched', () => {
+    for (const layout of CHAT_LAYOUTS) {
+      savePreferences({ ...DEFAULT_PREFERENCES, chatLayout: layout });
+      expect(loadPreferences().chatLayout).toBe(layout);
+    }
+  });
+
+  it('keeps the two rows disjoint', () => {
+    const views = CHAT_VIEWS as readonly string[];
+    expect(CHAT_TYPES.filter(t => views.includes(t))).toEqual([]);
+    expect(new Set(CHAT_LAYOUTS).size).toBe(CHAT_LAYOUTS.length);
+  });
+
+  it('defaults to a console type, never a view', () => {
+    expect(CHAT_TYPES).toContain(DEFAULT_PREFERENCES.chatLayout);
   });
 });
 
