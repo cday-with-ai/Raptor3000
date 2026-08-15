@@ -180,6 +180,9 @@ export class FicsConnector extends BaseConnector implements Connector {
       this.ws = null;
       this.loginStage = 'pre';
       this.pendingCreds = null;
+      // A command queued during a login that never completed must not
+      // fire into whatever session comes next.
+      this.preAuthQueue = [];
       this.publishInternal(
         wasKicked
           ? 'Connection closed — this session was kicked by a newer login as the same account. Reconnect to take it back.'
@@ -208,6 +211,7 @@ export class FicsConnector extends BaseConnector implements Connector {
     this.connected = false;
     this.loginStage = 'pre';
     this.pendingCreds = null;
+    this.preAuthQueue = [];
     // Guarded, unlike onclose: teardown paths (beforeunload, relaunch)
     // call disconnect() when the link may already be down, and an
     // already-dead link going "down" again is not news.
@@ -234,10 +238,55 @@ export class FicsConnector extends BaseConnector implements Connector {
     return true;
   }
 
+  /**
+   * Robot traffic. Held back until the account is authenticated, then
+   * flushed in order.
+   *
+   * The bug this exists for (diagnosed 2026-08-13, built 2026-08-15):
+   * the first login prompt used to bounce with "Sorry, names can only
+   * consist of lower and upper case letters", and the second accepted
+   * the handle. Nothing was sending the handle twice. ChatWindow seeds
+   * its censor list with `=censor` on mount, and the chat window is
+   * opened from the same effect that starts the login — so it mounted
+   * mid-handshake and this method, which gated only on `connected`
+   * (true from WebSocket OPEN, not from auth), pushed `=censor` at the
+   * login prompt. FICS's login reader ate the `=`, and the one real
+   * handle landed on the second prompt.
+   *
+   * The same race ran the other way too: mount before the socket opened
+   * and the seed was silently dropped, so the censor list never arrived
+   * and its reply — that same Sorry line — went to nobody.
+   *
+   * Fixing it at the call site would have left the trap armed for the
+   * next caller, so the rule lives here instead, next to
+   * `prepareOutbound`'s choke point: HUMANS MAY TALK TO THE LOGIN
+   * PROMPT, ROBOTS WAIT FOR AUTH. `sendMessage` (user-typed) is
+   * deliberately untouched — typing at the `login:` prompt is the
+   * documented log-in-by-hand fallback and must still reach the server
+   * raw.
+   */
   override sendMessageHidden(msg: string): boolean {
     if (!this.connected) return false;
+    if (this.loginStage !== 'authed') {
+      this.preAuthQueue.push(msg);
+      return true;
+    }
     this.sendRawString(msg);
     return true;
+  }
+
+  /** Hidden commands parked until login completes. See sendMessageHidden. */
+  private preAuthQueue: string[] = [];
+
+  /**
+   * Send everything that waited, in the order it was asked for. Called
+   * once auth is confirmed — after the login script, so the script's
+   * ordering guarantees (notably `iset lock 1` last) still hold.
+   */
+  private flushPreAuthQueue(): void {
+    const queued = this.preAuthQueue;
+    this.preAuthQueue = [];
+    for (const msg of queued) this.sendRawString(msg);
   }
 
   private handleRaw(raw: string): void {
@@ -427,6 +476,10 @@ export class FicsConnector extends BaseConnector implements Connector {
       const line = cmd.trim();
       if (line) this.sendMessageHidden(line);
     }
+    // Anything that asked to be sent during the handshake goes now, after
+    // the script — so a queued command can never land between `iset lock
+    // 1` and the settings it is meant to follow.
+    this.flushPreAuthQueue();
   }
 
   private publishInternal(message: string): void {

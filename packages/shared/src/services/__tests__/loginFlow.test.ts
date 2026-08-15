@@ -87,6 +87,7 @@ function makeLoginSession(credOverrides: Partial<LoginCredentials> = {}) {
     chat.filter(e => e.type === ChatEventType.INTERNAL).map(e => e.message);
 
   return {
+    connector,
     feed: (raw: string) => priv.handleRaw(raw),
     sent,
     internal,
@@ -233,5 +234,76 @@ describe('outbound Maciejg (2026-08-12)', () => {
       'tell raptortest &#x3112;&#x4E47;',
     );
     expect(prepareOutbound('who')).toBe('who');
+  });
+});
+
+/**
+ * The `=censor` bug of 2026-08-13: the first login prompt bounced with
+ * "Sorry, names can only consist of lower and upper case letters" and
+ * the second accepted the handle. Nothing sent the handle twice —
+ * ChatWindow's censor seeding fired `=censor` on mount, the chat window
+ * mounts mid-handshake, and sendMessageHidden gated on `connected`,
+ * which is true from WebSocket OPEN rather than from auth. FICS's login
+ * reader ate the `=` and the real handle landed on the second prompt.
+ *
+ * The rule now lives in the connector: humans may talk to the login
+ * prompt, robots wait for auth.
+ */
+describe('hidden sends during login', () => {
+  it('a hidden send never reaches the login buffer', () => {
+    const s = makeLoginSession();
+
+    s.feed(LOGIN_PROMPT);
+    expect(s.sent).toEqual(['cday']);
+
+    // ChatWindow mounting mid-handshake. It must not land here.
+    expect(s.connector.sendMessageHidden('=censor')).toBe(true);
+    expect(s.sent).toEqual(['cday']);
+
+    s.feed(PASSWORD_PROMPT);
+    expect(s.sent).toEqual(['cday', 'sesame']);
+  });
+
+  it('flushes after the login script, in order', () => {
+    const s = makeLoginSession();
+    s.feed(LOGIN_PROMPT);
+    s.connector.sendMessageHidden('=censor');
+    s.connector.sendMessageHidden('=noplay');
+    s.feed(PASSWORD_PROMPT);
+    s.feed(SESSION_START('cday'));
+
+    // Everything the bootstrap script sent comes first; the parked
+    // commands follow, in the order they were asked for. `iset lock 1`
+    // seals interface settings, so nothing queued may precede it.
+    const tail = s.sent.slice(-2);
+    expect(tail).toEqual(['=censor', '=noplay']);
+    const lock = s.sent.indexOf('iset lock 1');
+    if (lock !== -1) {
+      expect(s.sent.indexOf('=censor')).toBeGreaterThan(lock);
+    }
+  });
+
+  it('a user-typed line still reaches the login prompt raw', () => {
+    // Logging in by hand is documented FICS behaviour and must survive:
+    // sendMessage is deliberately not queued.
+    const s = makeLoginSession();
+    s.feed(LOGIN_PROMPT);
+    s.connector.sendMessage('guest');
+    expect(s.sent).toContain('guest');
+  });
+
+  it('drops the queue when the login never completes', () => {
+    // Otherwise a command parked during a failed attempt fires into
+    // whatever session comes next.
+    const s = makeLoginSession();
+    s.feed(LOGIN_PROMPT);
+    s.connector.sendMessageHidden('=censor');
+    s.connector.disconnect();
+
+    const after = s.sent.length;
+    s.setStage('authed');
+    s.connector.sendMessageHidden('ping');
+    // disconnect() also drops `connected`, so nothing more can go out.
+    expect(s.sent.length).toBe(after);
   });
 });

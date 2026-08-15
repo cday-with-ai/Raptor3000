@@ -103,13 +103,28 @@ export const ChatWindow = function ChatWindow({
   // scrolling up shows the conversation from before login. Its channel
   // tabs also appear immediately instead of waiting for the first live
   // tell. Failures are silent — backfill must never break the console.
-  // Seed the censor set once per window, invisibly.
-  const censorSeeded = useRef(false);
-  useEffect(() => {
-    if (censorSeeded.current) return;
-    censorSeeded.current = true;
+  // Seed the censor set invisibly — on mount, and again whenever a new
+  // connection comes up.
+  //
+  // Mount alone used to be the whole story, and it raced the login two
+  // ways (2026-08-13 diagnosis). Sending too EARLY put `=censor` at the
+  // login prompt and bounced the handle; the connector's pre-auth queue
+  // now holds it. Sending too early in the other sense — before the
+  // socket was open at all — made sendMessageHidden return false and the
+  // seed vanished, so the list never arrived. Re-seeding on the
+  // connection signal is what closes that half: whichever order mount
+  // and connect happen in, one of these two paths sends it.
+  const seed = () => {
     harvestRef.current = makeListCollector('censor', names => setCensored(names));
     context.connector.sendMessageHidden('=censor');
+  };
+  const seedRef = useRef(seed);
+  seedRef.current = seed;
+  useEffect(() => {
+    seedRef.current();
+    return context.connector.onConnectionChange(up => {
+      if (up) seedRef.current();
+    });
   }, [context]);
 
   const backfilled = useRef(false);
