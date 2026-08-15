@@ -33,6 +33,17 @@ const pt: Messages = {
   // they are; the menu paths are what the visitor will literally see in a
   // browser whose own UI may well be in their language — translate the
   // words, keep the arrows and the order.
+  // The labels inside the address-bar mock. They are a picture of the
+  // visitor's own browser, so an English picture under translated
+  // instructions is the same dead end the translations were for.
+  'gate.pic.allow': 'Sempre permitir pop-ups e redirecionamentos deste site',
+  'gate.pic.blocking': 'Continuar bloqueando',
+  'gate.pic.done': 'Concluído',
+  'gate.pic.ffBar': 'O Firefox impediu que este site abrisse uma janela pop-up',
+  'gate.pic.ffPrefs': 'Preferências',
+  'gate.pic.ffAllow': 'Permitir pop-ups de raptor3000.pages.dev',
+  'gate.pic.ffEdit': 'Editar opções do bloqueador de pop-ups…',
+
   'dir.chromium.steps':
     'Clique no ícone de pop-up na ponta direita da barra de endereço e escolha "Sempre permitir pop-ups e redirecionamentos deste site", depois Concluído. (Ou: Configurações → Privacidade e segurança → Configurações do site → Pop-ups e redirecionamentos → adicione este site.)',
   'dir.firefox.steps':

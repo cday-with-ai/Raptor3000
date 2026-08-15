@@ -27,6 +27,17 @@ const zh: Messages = {
   // they are; the menu paths are what the visitor will literally see in a
   // browser whose own UI may well be in their language — translate the
   // words, keep the arrows and the order.
+  // The labels inside the address-bar mock. They are a picture of the
+  // visitor's own browser, so an English picture under translated
+  // instructions is the same dead end the translations were for.
+  'gate.pic.allow': '一律允许此网站显示弹出式窗口和重定向',
+  'gate.pic.blocking': '继续屏蔽',
+  'gate.pic.done': '完成',
+  'gate.pic.ffBar': 'Firefox 已阻止此网站打开弹出式窗口',
+  'gate.pic.ffPrefs': '设置',
+  'gate.pic.ffAllow': '允许 raptor3000.pages.dev 显示弹出式窗口',
+  'gate.pic.ffEdit': '编辑弹出窗口拦截器选项…',
+
   'dir.chromium.steps':
     '点击地址栏右端的弹窗图标，选择“一律允许此网站显示弹出式窗口和重定向”，再点“完成”。（或者：设置 → 隐私和安全 → 网站设置 → 弹出式窗口和重定向 → 添加本站。）',
   'dir.firefox.steps':

@@ -33,6 +33,17 @@ const es: Messages = {
   // they are; the menu paths are what the visitor will literally see in a
   // browser whose own UI may well be in their language — translate the
   // words, keep the arrows and the order.
+  // The labels inside the address-bar mock. They are a picture of the
+  // visitor's own browser, so an English picture under translated
+  // instructions is the same dead end the translations were for.
+  'gate.pic.allow': 'Permitir siempre ventanas emergentes y redirecciones de este sitio',
+  'gate.pic.blocking': 'Seguir bloqueando',
+  'gate.pic.done': 'Hecho',
+  'gate.pic.ffBar': 'Firefox ha impedido que este sitio abra una ventana emergente',
+  'gate.pic.ffPrefs': 'Preferencias',
+  'gate.pic.ffAllow': 'Permitir ventanas emergentes de raptor3000.pages.dev',
+  'gate.pic.ffEdit': 'Editar opciones del bloqueador de ventanas emergentes…',
+
   'dir.chromium.steps':
     'Haz clic en el icono de ventanas emergentes en el extremo derecho de la barra de direcciones y elige "Permitir siempre ventanas emergentes y redirecciones de este sitio", luego Hecho. (O bien: Configuración → Privacidad y seguridad → Configuración de sitios web → Ventanas emergentes y redirecciones → añade este sitio.)',
   'dir.firefox.steps':

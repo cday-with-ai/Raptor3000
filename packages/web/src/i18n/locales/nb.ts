@@ -31,6 +31,17 @@ const nb: Messages = {
 
   // Per-nettleser-veiledning: menyordlyden er den hver enkelt nettleser
   // faktisk bruker på norsk; pilene og rekkefølgen bærer stien.
+  // The labels inside the address-bar mock. They are a picture of the
+  // visitor's own browser, so an English picture under translated
+  // instructions is the same dead end the translations were for.
+  'gate.pic.allow': 'Tillat alltid forgrunnsvinduer og omdirigeringer fra dette nettstedet',
+  'gate.pic.blocking': 'Fortsett å blokkere',
+  'gate.pic.done': 'Ferdig',
+  'gate.pic.ffBar': 'Firefox hindret dette nettstedet i å åpne et forgrunnsvindu',
+  'gate.pic.ffPrefs': 'Innstillinger',
+  'gate.pic.ffAllow': 'Tillat forgrunnsvinduer for raptor3000.pages.dev',
+  'gate.pic.ffEdit': 'Rediger innstillinger for blokkering av forgrunnsvinduer…',
+
   'dir.chromium.steps':
     'Klikk på popup-ikonet helt til høyre i adressefeltet og velg «Tillat alltid forgrunnsvinduer og omdirigeringer fra dette nettstedet», deretter Ferdig. (Eller: Innstillinger → Personvern og sikkerhet → Nettstedsinnstillinger → Forgrunnsvinduer og omdirigeringer → legg til dette nettstedet.)',
   'dir.firefox.steps':

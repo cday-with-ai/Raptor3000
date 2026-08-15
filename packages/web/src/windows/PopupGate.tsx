@@ -168,6 +168,7 @@ function persist(result: PopupTestResult): void {
 // are stable and near-universal here; the rest stay textual.
 
 function ChromiumPicture() {
+  const { t } = useT();
   return (
     <svg viewBox="0 0 384 150" style={picture} aria-hidden="true">
       {/* address bar */}
@@ -216,25 +217,27 @@ function ChromiumPicture() {
       <rect x="96" y="58" width="284" height="84" rx="8" fill="#17223e" stroke="#3d4c6e" />
       <circle cx="114" cy="80" r="6" fill="none" stroke="#79c19c" strokeWidth="2" />
       <circle cx="114" cy="80" r="2.6" fill="#79c19c" />
-      <text x="128" y="77" fontSize="11" fill="#dfe8f5" fontFamily="system-ui">Always allow pop-ups and redirects</text>
-      <text x="128" y="91" fontSize="11" fill="#dfe8f5" fontFamily="system-ui">from this site</text>
+      <Label x={128} y={64} w={244} h={34} color="#dfe8f5">{t('gate.pic.allow')}</Label>
       <circle cx="114" cy="110" r="6" fill="none" stroke="#67759b" strokeWidth="1.5" />
-      <text x="128" y="114" fontSize="11" fill="#9fb3d9" fontFamily="system-ui">Continue blocking</text>
+      <Label x={128} y={101} w={170} h={20} color="#9fb3d9">{t('gate.pic.blocking')}</Label>
       <rect x="308" y="116" width="60" height="20" rx="5" fill="#4f7cd1" />
-      <text x="338" y="130" fontSize="11" fill="#fff" fontFamily="system-ui" textAnchor="middle">Done</text>
+      <Label x={308} y={119} w={60} h={16} color="#fff" center>{t('gate.pic.done')}</Label>
     </svg>
   );
 }
 
 function FirefoxPicture() {
+  const { t } = useT();
   return (
     <svg viewBox="0 0 384 118" style={picture} aria-hidden="true">
       {/* the infobar firefox drops below its toolbar */}
       <rect x="4" y="8" width="376" height="32" rx="6" fill="#101a33" stroke="#3d4c6e" />
       <rect x="16" y="17" width="14" height="11" rx="2" fill="none" stroke="#dfe8f5" strokeWidth="1.5" />
-      <text x="40" y="28" fontSize="11" fill="#dfe8f5" fontFamily="system-ui">Firefox prevented this site from opening a pop-up window</text>
+      <Label x={38} y={12} w={246} h={26} color="#dfe8f5">{t('gate.pic.ffBar')}</Label>
       <rect x="290" y="14" width="82" height="20" rx="5" fill="#4f7cd1" />
-      <text x="331" y="28" fontSize="11" fill="#fff" fontFamily="system-ui" textAnchor="middle">Preferences ▾</text>
+      <Label x={290} y={17} w={82} h={16} color="#fff" center>
+        {t('gate.pic.ffPrefs')} ▾
+      </Label>
       <circle cx="331" cy="24" r="16" fill="none" stroke="#8fb8f0" strokeWidth="2">
         <animate attributeName="r" values="14;22;14" dur="1.8s" repeatCount="indefinite" />
         <animate attributeName="opacity" values="0.9;0;0.9" dur="1.8s" repeatCount="indefinite" />
@@ -243,9 +246,61 @@ function FirefoxPicture() {
       <path d="M331 42 v8" stroke="#67759b" strokeDasharray="3 3" />
       <rect x="130" y="54" width="250" height="52" rx="8" fill="#17223e" stroke="#3d4c6e" />
       <rect x="136" y="60" width="238" height="20" rx="4" fill="#22345c" />
-      <text x="146" y="74" fontSize="11" fill="#dfe8f5" fontFamily="system-ui">Allow pop-ups for raptor3000.pages.dev</text>
-      <text x="146" y="98" fontSize="11" fill="#9fb3d9" fontFamily="system-ui">Edit Pop-up Blocker Options…</text>
+      <Label x={146} y={62} w={222} h={18} color="#dfe8f5">{t('gate.pic.ffAllow')}</Label>
+      <Label x={146} y={86} w={222} h={18} color="#9fb3d9">{t('gate.pic.ffEdit')}</Label>
     </svg>
+  );
+}
+
+/**
+ * A text run inside one of the mocks.
+ *
+ * `<foreignObject>` rather than `<text>` because SVG text does not wrap,
+ * and these labels are translated now — "Always allow pop-ups and
+ * redirects from this site" is 47 characters in English and 68 in
+ * Norwegian, and a `<text>` element would simply run out past the edge
+ * of the dropdown it is supposed to sit inside. HTML in a box wraps by
+ * itself, in every language, with no per-language line breaks to
+ * maintain.
+ *
+ * The box is sized to the shape it labels, so overflow clips rather than
+ * spilling across the picture; `lang` is not set here because the
+ * document already carries it.
+ */
+function Label({
+  x,
+  y,
+  w,
+  h,
+  color,
+  center,
+  children,
+}: {
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+  color: string;
+  center?: boolean;
+  children: React.ReactNode;
+}) {
+  return (
+    <foreignObject x={x} y={y} width={w} height={h}>
+      <div
+        style={{
+          font: '11px/1.25 system-ui, -apple-system, sans-serif',
+          color,
+          textAlign: center ? 'center' : 'start',
+          height: '100%',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: center ? 'center' : 'flex-start',
+          overflow: 'hidden',
+        }}
+      >
+        <span>{children}</span>
+      </div>
+    </foreignObject>
   );
 }
 

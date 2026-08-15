@@ -31,6 +31,17 @@ const ru: Messages = {
 
   // Per-browser directions. Menu paths use the wording of each browser's
   // real Russian UI.
+  // The labels inside the address-bar mock. They are a picture of the
+  // visitor's own browser, so an English picture under translated
+  // instructions is the same dead end the translations were for.
+  'gate.pic.allow': 'Всегда показывать всплывающие окна и переадресацию с этого сайта',
+  'gate.pic.blocking': 'Продолжить блокировать',
+  'gate.pic.done': 'Готово',
+  'gate.pic.ffBar': 'Firefox заблокировал открытие всплывающего окна этим сайтом',
+  'gate.pic.ffPrefs': 'Настройки',
+  'gate.pic.ffAllow': 'Разрешить всплывающие окна для raptor3000.pages.dev',
+  'gate.pic.ffEdit': 'Изменить настройки блокировки всплывающих окон…',
+
   'dir.chromium.steps':
     'Нажмите на значок всплывающего окна в правой части адресной строки, выберите «Всегда показывать всплывающие окна и переадресацию с этого сайта», затем «Готово». (Или: Настройки → Конфиденциальность и безопасность → Настройки сайтов → Всплывающие окна и переадресация → добавьте этот сайт.)',
   'dir.firefox.steps':

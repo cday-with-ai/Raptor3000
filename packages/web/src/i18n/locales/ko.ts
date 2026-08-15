@@ -33,6 +33,17 @@ const ko: Messages = {
   // they are; the menu paths are what the visitor will literally see in a
   // browser whose own UI may well be in their language — translate the
   // words, keep the arrows and the order.
+  // The labels inside the address-bar mock. They are a picture of the
+  // visitor's own browser, so an English picture under translated
+  // instructions is the same dead end the translations were for.
+  'gate.pic.allow': '이 사이트에서 팝업 및 리디렉션 항상 허용',
+  'gate.pic.blocking': '계속 차단',
+  'gate.pic.done': '완료',
+  'gate.pic.ffBar': 'Firefox가 이 사이트의 팝업 창 열기를 차단했습니다',
+  'gate.pic.ffPrefs': '설정',
+  'gate.pic.ffAllow': 'raptor3000.pages.dev의 팝업 허용',
+  'gate.pic.ffEdit': '팝업 차단 설정 편집…',
+
   'dir.chromium.steps':
     '주소 표시줄 오른쪽 끝의 팝업 아이콘을 클릭해 "이 사이트에서 팝업 및 리디렉션 항상 허용"을 고른 다음 완료를 누르세요. (또는: 설정 → 개인정보 보호 및 보안 → 사이트 설정 → 팝업 및 리디렉션 → 이 사이트를 추가.)',
   'dir.firefox.steps':

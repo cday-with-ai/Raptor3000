@@ -33,6 +33,17 @@ const pl: Messages = {
   // they are; the menu paths are what the visitor will literally see in a
   // browser whose own UI may well be in their language — translate the
   // words, keep the arrows and the order.
+  // The labels inside the address-bar mock. They are a picture of the
+  // visitor's own browser, so an English picture under translated
+  // instructions is the same dead end the translations were for.
+  'gate.pic.allow': 'Zawsze zezwalaj na wyskakujące okienka i przekierowania z tej witryny',
+  'gate.pic.blocking': 'Blokuj nadal',
+  'gate.pic.done': 'Gotowe',
+  'gate.pic.ffBar': 'Firefox zablokował tej witrynie otwarcie wyskakującego okna',
+  'gate.pic.ffPrefs': 'Ustawienia',
+  'gate.pic.ffAllow': 'Zezwalaj na wyskakujące okna z raptor3000.pages.dev',
+  'gate.pic.ffEdit': 'Edytuj opcje blokowania wyskakujących okien…',
+
   'dir.chromium.steps':
     'Kliknij ikonę wyskakującego okienka na prawym końcu paska adresu i wybierz „Zawsze zezwalaj na wyskakujące okienka i przekierowania z tej witryny”, a potem Gotowe. (Albo: Ustawienia → Prywatność i bezpieczeństwo → Ustawienia witryn → Wyskakujące okienka i przekierowania → dodaj tę witrynę.)',
   'dir.firefox.steps':

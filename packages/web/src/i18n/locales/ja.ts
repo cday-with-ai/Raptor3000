@@ -33,6 +33,17 @@ const ja: Messages = {
   // they are; the menu paths are what the visitor will literally see in a
   // browser whose own UI may well be in their language — translate the
   // words, keep the arrows and the order.
+  // The labels inside the address-bar mock. They are a picture of the
+  // visitor's own browser, so an English picture under translated
+  // instructions is the same dead end the translations were for.
+  'gate.pic.allow': 'このサイトのポップアップとリダイレクトを常に許可する',
+  'gate.pic.blocking': 'ブロックを続行',
+  'gate.pic.done': '完了',
+  'gate.pic.ffBar': 'Firefox はこのサイトによるポップアップウィンドウの表示をブロックしました',
+  'gate.pic.ffPrefs': '設定',
+  'gate.pic.ffAllow': 'raptor3000.pages.dev のポップアップを許可する',
+  'gate.pic.ffEdit': 'ポップアップブロックの設定を編集…',
+
   'dir.chromium.steps':
     'アドレスバー右端のポップアップアイコンをクリックし、「このサイトのポップアップとリダイレクトを常に許可する」を選んで「完了」を押します。（または：設定 → プライバシーとセキュリティ → サイトの設定 → ポップアップとリダイレクト → このサイトを追加。）',
   'dir.firefox.steps':

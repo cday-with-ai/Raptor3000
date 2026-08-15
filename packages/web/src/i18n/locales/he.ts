@@ -31,6 +31,17 @@ const he: Messages = {
 
   // הוראות לפי דפדפן. שמות הדפדפנים נשארים כמו שהם; נתיבי התפריטים
   // מתורגמים למה שהממשק העברי של הדפדפן באמת אומר, עם החצים והסדר.
+  // The labels inside the address-bar mock. They are a picture of the
+  // visitor's own browser, so an English picture under translated
+  // instructions is the same dead end the translations were for.
+  'gate.pic.allow': 'לאפשר תמיד חלונות קופצים והפניות אוטומטיות מאתר זה',
+  'gate.pic.blocking': 'להמשיך לחסום',
+  'gate.pic.done': 'סיום',
+  'gate.pic.ffBar': '\u2066Firefox\u2069 מנע מהאתר הזה לפתוח חלון קופץ',
+  'gate.pic.ffPrefs': 'הגדרות',
+  'gate.pic.ffAllow': 'לאפשר חלונות קופצים עבור \u2066raptor3000.pages.dev\u2069',
+  'gate.pic.ffEdit': 'עריכת הגדרות חוסם החלונות הקופצים…',
+
   'dir.chromium.steps':
     'לחצו על סמל החלונות הקופצים בקצה שורת הכתובת ובחרו "לאפשר תמיד חלונות קופצים והפניות אוטומטיות מאתר זה", ואז סיום. (או: הגדרות → פרטיות ואבטחה → הגדרות אתרים → חלונות קופצים והפניות אוטומטיות → הוסיפו את האתר הזה.)',
   'dir.firefox.steps':

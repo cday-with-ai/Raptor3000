@@ -36,6 +36,17 @@ const fr: Messages = {
 
   // Per-browser directions — the menu wording each browser really uses in
   // French, arrows and order preserved.
+  // The labels inside the address-bar mock. They are a picture of the
+  // visitor's own browser, so an English picture under translated
+  // instructions is the same dead end the translations were for.
+  'gate.pic.allow': 'Toujours autoriser les pop-up et les redirections de ce site',
+  'gate.pic.blocking': 'Continuer à bloquer',
+  'gate.pic.done': 'OK',
+  'gate.pic.ffBar': 'Firefox a empêché ce site d’ouvrir une fenêtre pop-up',
+  'gate.pic.ffPrefs': 'Préférences',
+  'gate.pic.ffAllow': 'Autoriser les pop-up pour raptor3000.pages.dev',
+  'gate.pic.ffEdit': 'Modifier les options du bloqueur de pop-up…',
+
   'dir.chromium.steps':
     'Cliquez sur l’icône de popup à l’extrémité droite de la barre d’adresse et choisissez « Toujours autoriser les pop-up et les redirections de ce site », puis OK. (Ou : Paramètres → Confidentialité et sécurité → Paramètres des sites → Pop-up et redirections → ajoutez ce site.)',
   'dir.firefox.steps':

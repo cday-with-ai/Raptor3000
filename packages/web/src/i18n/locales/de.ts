@@ -33,6 +33,17 @@ const de: Messages = {
   // they are; the menu paths are what the visitor will literally see in a
   // browser whose own UI may well be in their language — translate the
   // words, keep the arrows and the order.
+  // The labels inside the address-bar mock. They are a picture of the
+  // visitor's own browser, so an English picture under translated
+  // instructions is the same dead end the translations were for.
+  'gate.pic.allow': 'Pop-ups und Weiterleitungen von dieser Website immer zulassen',
+  'gate.pic.blocking': 'Weiter blockieren',
+  'gate.pic.done': 'Fertig',
+  'gate.pic.ffBar': 'Firefox hat diese Website daran gehindert, ein Pop-up-Fenster zu öffnen',
+  'gate.pic.ffPrefs': 'Einstellungen',
+  'gate.pic.ffAllow': 'Pop-ups für raptor3000.pages.dev erlauben',
+  'gate.pic.ffEdit': 'Pop-up-Blocker-Einstellungen bearbeiten…',
+
   'dir.chromium.steps':
     'Klick auf das Pop-up-Symbol am rechten Ende der Adressleiste und wähl "Pop-ups und Weiterleitungen von dieser Website immer zulassen", dann Fertig. (Oder: Einstellungen → Datenschutz und Sicherheit → Website-Einstellungen → Pop-ups und Weiterleitungen → diese Website hinzufügen.)',
   'dir.firefox.steps':

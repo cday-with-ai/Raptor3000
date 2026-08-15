@@ -47,6 +47,17 @@ export const en = {
   // they are; the menu paths are what the visitor will literally see in a
   // browser whose own UI may well be in their language — translate the
   // words, keep the arrows and the order.
+  // The labels inside the address-bar mock. They are a picture of the
+  // visitor's own browser, so an English picture under translated
+  // instructions is the same dead end the translations were for.
+  'gate.pic.allow': 'Always allow pop-ups and redirects from this site',
+  'gate.pic.blocking': 'Continue blocking',
+  'gate.pic.done': 'Done',
+  'gate.pic.ffBar': 'Firefox prevented this site from opening a pop-up window',
+  'gate.pic.ffPrefs': 'Preferences',
+  'gate.pic.ffAllow': 'Allow pop-ups for raptor3000.pages.dev',
+  'gate.pic.ffEdit': 'Edit Pop-up Blocker Options…',
+
   'dir.chromium.steps':
     'Click the popup icon at the right end of the address bar and pick "Always allow pop-ups and redirects from this site", then Done. (Or: Settings → Privacy → Site settings → Pop-ups and redirects → add this site.)',
   'dir.firefox.steps':
