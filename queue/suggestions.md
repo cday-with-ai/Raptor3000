@@ -729,3 +729,45 @@ disarm itself after a successful claim, at game end, or stay armed across
 games?** For a time-scramble tool I would guess "stays armed until you turn it
 off", but the cost of guessing wrong is a draw offer going out in a game you
 wanted to win.
+
+**Raptor3000:** 2026-08-15 (live session, queue task 6gnk) — Auto-draw is
+built, and verified the only way that means anything: it fired on its own
+in a real game.
+
+The toggle sits beside the promote boxes. Arming it sends the offer; from
+then on the position is checked after every move, and the moment it has
+occurred three times the same `draw` goes out again, which FICS reads as a
+claim. It reads "Auto-draw ●" while armed — a control that acts for you
+while you are busy has to say so at a glance.
+
+The scramble requirement drove the design: no confirmation, no second
+click, and the check runs on the position itself rather than on a timer, so
+it fires in the same render that shows you the repetition.
+
+Two things worth knowing:
+
+- **chessops has no repetition helper.** I checked rather than assumed, so
+  it is hand-rolled. The trap you flagged is real and worse than it sounds:
+  the halfmove and fullmove counters advance on moves that do not change
+  the position, so comparing whole FENs finds *no* repetitions ever — a
+  dead feature that reads fine. The key keeps the first four fields only.
+  It counts over the history the board already replays from the game's
+  movelist, so a mid-game join still sees earlier repetitions.
+- **It disarms at game end**, and is not persisted. That is your open
+  question answered with the safe default rather than a guess: the
+  expensive failure is a draw offer going out unasked in a game you were
+  winning. If you want it to survive a game, or to stand down after a
+  successful claim instead, say which and it is a one-line change.
+
+Also: disarming sends nothing. A draw already offered cannot be recalled,
+and a toggle that pretended otherwise would be lying about what it did.
+
+The live test arms it, has the opponent **decline** — your case, so the
+mode has to earn the draw — then shuffles knights back to the start
+position three times. Nothing is clicked after arming, and both clients
+end up drawn by repetition.
+
+Queue is down to two: the day-mode chat palette (the tell greens and
+channel ambers still picked for a dark background) and the three
+preferences nothing reads (`moveListVisible`, `soundMode`,
+`showEngineAnalysis`).
