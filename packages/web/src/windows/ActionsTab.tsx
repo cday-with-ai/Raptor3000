@@ -28,7 +28,11 @@ import { seekPane } from './shellStyles.js';
  *     the switcher should not behave differently.
  *   - **ask** fires and hands the console back, because the answer *is*
  *     console text. A pane that keeps the floor while the reply you
- *     asked for scrolls past behind it is just a way to miss it.
+ *     asked for scrolls past behind it is just a way to miss it. The
+ *     follow buttons are ask rather than send even though they can open
+ *     a board: their reliable answer is the line naming who you are now
+ *     following, and the board only appears if that player happens to be
+ *     playing this minute.
  *   - **talk to** never sends. It types `tell <bot> ` into the input line
  *     and leaves the cursor there — the cockpit's handoff rule, where a
  *     tool may write a command but only a human may press Enter. You see
@@ -65,21 +69,43 @@ export function ActionsTab({
       <section style={section}>
         <h3 style={sectionTitle}>Watch the best game</h3>
         <p style={note}>
-          FICS picks the highest-rated game in progress of that type. One
-          shot, not a subscription: once you know who is playing,{' '}
-          <code style={code}>follow &lt;handle&gt;</code> in the line below
-          keeps you on that player's games.
+          FICS picks the highest-rated game in progress of that type.{' '}
+          <b>Observe</b> is one shot — that game, and when it ends you are
+          done. <b>Follow</b> is a subscription to the player: FICS opens
+          their next game by itself, and keeps doing it until you stop.
         </p>
         <div style={row}>
           {BEST_GAMES.map(g => (
             <CommandButton
-              key={g.command}
-              label={g.label}
-              command={g.command}
+              key={`observe${g.flag}`}
+              label={`observe ${g.label}`}
+              command={`observe ${g.flag}`}
               run={onSend}
               big
             />
           ))}
+        </div>
+        <div style={{ ...row, marginTop: 8, alignItems: 'center' }}>
+          {BEST_GAMES.map(g => (
+            <CommandButton
+              key={`follow${g.flag}`}
+              label={`follow ${g.label}`}
+              command={`follow ${g.flag}`}
+              // ASK, not send, and the difference is the point of the
+              // button: follow's answer is a sentence naming the player
+              // you are now subscribed to. A board only opens if they
+              // happen to be mid-game right now, so staying on the pane
+              // would hide the only reliable reply behind it.
+              run={onAsk}
+              big
+            />
+          ))}
+          {/* Bare `follow` is FICS's own off switch — "Without
+              parameters, follow will end your current follow situation"
+              — so the stop is the same word, which is worth showing
+              rather than hiding behind a Stop label with no command
+              under it. */}
+          <CommandButton label="stop following" command="follow" run={onAsk} />
         </div>
       </section>
 
@@ -151,16 +177,28 @@ export function ActionsTab({
 }
 
 /**
- * The three Carson named. FICS's `observe /<flag>` is the command behind
- * "the best X" — there is no `follow /<flag>`; `follow` takes a handle,
- * which is why the note above sends you to the input line for the
- * standing version. `/b` is the site's own worked example (README:
+ * The three Carson named. `/b` is the site's own worked example (README:
  * "sign in as a guest and `observe /b`").
+ *
+ * The selector is the whole point: `observe` and `follow` take the SAME
+ * flags on FICS —
+ *
+ *   follow [[user] | [/l|/b|/s|/S|/w|/z|/B|/L|/x]]
+ *
+ * — so "follow the best blitz player" is one command and not a two-step
+ * where you observe, read a handle off the board, and type it back in.
+ * The pane's note used to send people down exactly that path, because
+ * `follow <handle>` is the form everyone remembers. Checked against
+ * FICS's own help file rather than memory, which is the rule for
+ * anything this pane prints as a command.
+ *
+ * Hence one flag per row, used to build both verbs, rather than two
+ * hand-written command strings that could drift apart.
  */
-const BEST_GAMES: readonly { label: string; command: string }[] = [
-  { label: 'best blitz', command: 'observe /b' },
-  { label: 'best lightning', command: 'observe /l' },
-  { label: 'best standard', command: 'observe /s' },
+const BEST_GAMES: readonly { label: string; flag: string }[] = [
+  { label: 'blitz', flag: '/b' },
+  { label: 'lightning', flag: '/l' },
+  { label: 'standard', flag: '/s' },
 ];
 
 /**
