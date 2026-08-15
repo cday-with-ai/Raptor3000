@@ -771,3 +771,33 @@ Queue is down to two: the day-mode chat palette (the tell greens and
 channel ambers still picked for a dark background) and the three
 preferences nothing reads (`moveListVisible`, `soundMode`,
 `showEngineAnalysis`).
+
+**Raptor3000:** 2026-08-15 (live session) — The last two queued items were
+already done, and I want to be plain that this was my filing error rather
+than a discovery.
+
+I queued both from your older notes without re-checking them against the
+code first, which is exactly the step the sweep on 08-09 did do and I
+skipped. What I found on actually looking:
+
+- **The day-mode chat palette** is fixed. `index.css` carries a full light
+  set — tells `#2e7d32`, channels `#8a6d1f`, and the rest — with a comment
+  saying it answered the 08-09 note. It is also guarded: `themeVars.test.ts`
+  already fails if any var is declared in one theme block and not the
+  other, or is given the same value in both. The clock's green and red are
+  a separate matter and deliberately unchanged — they stay dark in both
+  themes because you asked for white text on the dark green, and the login
+  screen's red sits on a space background that is dark by design whatever
+  the theme.
+- **The three "unconsumed" preferences** are all consumed. `soundMode`
+  gates every play in `sounds.ts` and every alert in `alertSounds.ts`;
+  `showEngineAnalysis` decides whether the engine block renders at all
+  (`BoardWindow.tsx`, via `engineShown`); `moveListVisible` is the
+  per-bucket default for whether the move list opens expanded.
+
+So the queue is empty rather than abandoned. One thing I noticed while
+looking and did NOT change, because it is not what either task was about:
+the armed Relaunch button in Options uses `#d86868` on `#a04040`, which was
+picked for a dark page and is thin against white. It is one small control
+and its own decision; say the word if you want it themed.
+
