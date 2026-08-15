@@ -1751,7 +1751,28 @@ function MovesSection({
           }}
         >
           {opening && (
-            <div style={{ opacity: 0.85, marginBottom: 2 }}>
+            /* Two destinations, because they answer different questions
+               (Carson, 2026-08-15: "the eco number should be a link").
+               The ECO code goes to the code's own reference — what else
+               is filed under B90 — and the name goes on to lichess with
+               the position, as it always did.
+
+               One line, always. The name is the only part allowed to
+               grow, so it is the part that ellipsizes; the ECO code and
+               the panel's width both stay put no matter how long
+               "Sicilian Defense: Najdorf Variation, Poisoned Pawn" gets.
+               (Carson: "i still don't like how big the opening font is
+               and how it wraps.") */
+            <div style={openingLine}>
+              <a
+                href={`https://www.365chess.com/eco/${encodeURIComponent(opening.eco)}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                title={`ECO ${opening.eco} — other openings filed under this code`}
+                style={openingEco}
+              >
+                {opening.eco}
+              </a>
               <a
                 href={
                   openingFen
@@ -1760,10 +1781,10 @@ function MovesSection({
                 }
                 target="_blank"
                 rel="noopener noreferrer"
-                title={`study on lichess (book through ply ${opening.plies})`}
-                style={{ color: 'inherit', textDecoration: 'none' }}
+                title={`${opening.name} — study on lichess (book through ply ${opening.plies})`}
+                style={openingName}
               >
-                <strong>{opening.eco}</strong> {opening.name}
+                {opening.name}
               </a>
             </div>
           )}
@@ -1781,6 +1802,37 @@ function MovesSection({
     </div>
   );
 }
+
+// The opening line above the move list. Smaller than the moves it sits
+// over — it is a caption, not a row of the list — and pinned to a single
+// line: `minWidth: 0` on both the flex container and the name is what
+// actually lets the name shrink, since a flex item defaults to its
+// content's min width and would otherwise push the panel wider.
+const openingLine = {
+  display: 'flex',
+  alignItems: 'baseline',
+  gap: 5,
+  minWidth: 0,
+  opacity: 0.85,
+  fontSize: 11,
+  marginBottom: 3,
+} as const;
+
+const openingEco = {
+  flexShrink: 0,
+  fontWeight: 700,
+  color: 'inherit',
+  textDecoration: 'none',
+} as const;
+
+const openingName = {
+  minWidth: 0,
+  overflow: 'hidden',
+  textOverflow: 'ellipsis',
+  whiteSpace: 'nowrap',
+  color: 'inherit',
+  textDecoration: 'none',
+} as const;
 
 /** ⏮ ◀ ▶ ⏭ — Moves-control navigation, all modes (server-side walk in
  *  examine, local history browse elsewhere). */
