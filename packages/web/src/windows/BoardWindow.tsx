@@ -1663,6 +1663,31 @@ function SidePanel({
   const [liveEngineRatio, setLiveEngineRatio] = useState<number | null>(null);
   useLivePreferences(); // re-render on layout-memory changes
   const movesScrollRef = useRef<HTMLDivElement | null>(null);
+
+  /**
+   * Follow new moves, but only from the bottom (Carson, 2026-08-15: "if
+   * at the bottom when appending move list should scroll to the bottom
+   * when adding content afterwards").
+   *
+   * The condition is the whole feature. A list that always jumped would
+   * yank you back down mid-game every time your opponent moved, exactly
+   * while you were scrolled up reading how you got here — which is worse
+   * than never following at all, because it happens at the moment you
+   * are concentrating.
+   *
+   * `stuck` is recorded on scroll rather than measured when the moves
+   * change, because by then the new row has already been laid out and
+   * the old answer is gone: the container that WAS at its end no longer
+   * is. Starts true — a fresh list is at its bottom by definition.
+   */
+  const stuckToBottom = useRef(true);
+  const BOTTOM_EPS = 4; // a couple of subpixel rows of slack
+
+  useLayoutEffect(() => {
+    const list = movesScrollRef.current;
+    if (!list || !stuckToBottom.current) return;
+    list.scrollTop = list.scrollHeight;
+  }, [sans]);
   const engineRatio = liveEngineRatio ?? loadBoardLayout(bucket).engineRatio;
   const clampEngine = (v: number) => Math.min(0.7, Math.max(0.15, v));
   const engineShown = showEngine && engineAnalysisAllowed(mode);
@@ -1719,6 +1744,11 @@ function SidePanel({
       <div
         ref={movesScrollRef}
         data-pane="moves"
+        onScroll={e => {
+          const el = e.currentTarget;
+          stuckToBottom.current =
+            el.scrollTop + el.clientHeight >= el.scrollHeight - BOTTOM_EPS;
+        }}
         style={{ flex: 1, minHeight: 0, overflowY: 'auto' }}
       >
         <MovesSection
