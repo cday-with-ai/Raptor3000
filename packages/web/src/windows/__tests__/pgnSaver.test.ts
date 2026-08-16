@@ -4,8 +4,9 @@ import { savePgnFile, type PgnSaveEnvironment, type PgnSaveResult } from '../pgn
 /**
  * The seam tests: a fake environment stands in for the browser, and the
  * assertions land on what a real browser would act on — the picked
- * handle's write stream contents, the blob handed to the download, the
- * confirm prompt shown.
+ * handle's write stream contents and the blob handed to the download.
+ * The core behavioural pin: an existing non-empty file is appended to,
+ * never offered, never overwritten (Carson, 2026-08-16).
  */
 
 const PGN_A = '[Event "Online Game"]\n\n1. e4 e5 *\n';
@@ -30,20 +31,15 @@ function fakeHandle(initialText: string) {
 }
 
 function fakeEnv(overrides: Partial<PgnSaveEnvironment> = {}) {
-  const calls: { pick: string[]; download: { name: string; blob: Blob }[]; confirms: string[] } = {
+  const calls: { pick: string[]; download: { name: string; blob: Blob }[] } = {
     pick: [],
     download: [],
-    confirms: [],
   };
   const env: PgnSaveEnvironment = {
     supportsSavePicker: true,
     pickFile: async (name: string) => {
       calls.pick.push(name);
       return null;
-    },
-    confirmAppend: (message: string) => {
-      calls.confirms.push(message);
-      return true;
     },
     downloadBlob: (blob: Blob, name: string) => {
       calls.download.push({ name, blob });
@@ -65,66 +61,48 @@ describe('savePgnFile', () => {
     expect(await calls.download[0].blob.text()).toBe(PGN_A);
   });
 
-  it('writes the pgn to a brand-new file without asking anything', async () => {
+  it('writes the pgn to a brand-new file as-is', async () => {
     const handle = fakeHandle('');
-    const { env, calls } = fakeEnv({ pickFile: async () => handle as never });
+    const { env } = fakeEnv({ pickFile: async () => handle as never });
 
     const result = await savePgnFile(PGN_A, 'a-vs-b.pgn', env);
 
     expect(result).toBe('saved');
-    expect(calls.confirms).toEqual([]);
     expect(handle.writable.written.map(String)).toEqual([PGN_A]);
   });
 
-  it('writes to an empty existing file without asking either', async () => {
+  it('writes to an empty existing file as-is', async () => {
     const handle = fakeHandle('   \n');
-    const { env, calls } = fakeEnv({ pickFile: async () => handle as never });
+    const { env } = fakeEnv({ pickFile: async () => handle as never });
 
     const result = await savePgnFile(PGN_A, 'a-vs-b.pgn', env);
 
     expect(result).toBe('saved');
-    expect(calls.confirms).toEqual([]);
     expect(handle.writable.written.map(String)).toEqual([PGN_A]);
   });
 
-  it('appends to a non-empty file after the offer is accepted', async () => {
+  it('appends to a non-empty file without asking', async () => {
     const handle = fakeHandle('[Event "Online Game"]\n\n1. e4 e5 *\n');
-    const { env, calls } = fakeEnv({ pickFile: async () => handle as never });
+    const { env } = fakeEnv({ pickFile: async () => handle as never });
 
     const result = await savePgnFile(PGN_B, 'games.pgn', env);
 
     expect(result).toBe('appended');
-    expect(calls.confirms).toHaveLength(1);
-    expect(calls.confirms[0]).toContain('already contains 1 game');
     expect(handle.writable.written.map(String)).toEqual([
       '[Event "Online Game"]\n\n1. e4 e5 *\n\n[Event "Online Game"]\n\n1. d4 d5 *\n',
     ]);
   });
 
-  it('counts the games the file already holds in the offer', async () => {
-    const handle = fakeHandle('[Event "a"]\n\n1. e4 *\n\n[Event "b"]\n\n1. d4 *\n');
-    const { env, calls } = fakeEnv({ pickFile: async () => handle as never });
-
-    await savePgnFile(PGN_B, 'games.pgn', env);
-
-    expect(calls.confirms[0]).toContain('already contains 2 games');
-  });
-
-  it('writes nothing when the append offer is declined', async () => {
-    const handle = fakeHandle('[Event "Online Game"]\n\n1. e4 e5 *\n');
-    const { env, calls } = fakeEnv({
-      pickFile: async () => handle as never,
-      confirmAppend: message => {
-        calls.confirms.push(message);
-        return false;
-      },
-    });
+  it('normalises the join so trailing newlines do not accumulate', async () => {
+    const handle = fakeHandle('[Event "Online Game"]\n\n1. e4 e5 *\n\n\n');
+    const { env } = fakeEnv({ pickFile: async () => handle as never });
 
     const result = await savePgnFile(PGN_B, 'games.pgn', env);
 
-    expect(result).toBe('cancelled');
-    expect(handle.writable.written).toEqual([]);
-    expect(calls.confirms).toHaveLength(1);
+    expect(result).toBe('appended');
+    expect(handle.writable.written.map(String)).toEqual([
+      '[Event "Online Game"]\n\n1. e4 e5 *\n\n[Event "Online Game"]\n\n1. d4 d5 *\n',
+    ]);
   });
 
   it('cancels quietly when the user dismisses the picker', async () => {
@@ -134,10 +112,9 @@ describe('savePgnFile', () => {
 
     expect(result).toBe('cancelled');
     expect(calls.download).toEqual([]);
-    expect(calls.confirms).toEqual([]);
   });
 
-  it('falls back to overwriting... never — an unreadable file aborts', async () => {
+  it('aborts on a file it cannot read, rather than guess and overwrite', async () => {
     const { env } = fakeEnv({
       pickFile: async () =>
         ({

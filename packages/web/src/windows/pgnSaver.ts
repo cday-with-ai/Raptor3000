@@ -4,7 +4,8 @@
  * (Firefox/Safari). The one behaviour the picker makes possible that the
  * download cannot: choosing an EXISTING file and appending the game to
  * the end of it instead of silently destroying its contents — the
- * collection-file flow (BOTCHvinik, 2026-08-16).
+ * collection-file flow. Appending is automatic, never offered: picking
+ * an existing file IS the user's intent to grow it (Carson, 2026-08-16).
  *
  * The environment seam mirrors `theme.ts`: the default is the browser
  * implementation, tests inject a fake and never touch the DOM.
@@ -17,8 +18,6 @@ export interface PgnSaveEnvironment {
   supportsSavePicker: boolean;
   /** Open the save dialog; null when the user dismisses it. */
   pickFile: (suggestedName: string) => Promise<FileSystemFileHandle | null>;
-  /** The append offer; the user's yes is the only way content merges. */
-  confirmAppend: (message: string) => boolean;
   /** Fallback: the classic anchor-click blob download. */
   downloadBlob: (blob: Blob, name: string) => void;
 }
@@ -45,7 +44,6 @@ const browserEnvironment: PgnSaveEnvironment = {
       return null;
     }
   },
-  confirmAppend: message => window.confirm(message),
   downloadBlob(blob, name) {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -64,9 +62,9 @@ const browserEnvironment: PgnSaveEnvironment = {
 };
 
 /**
- * Write `pgn` to a file the user picks. When the chosen file already
- * holds games, offer to append instead of overwriting; a declined offer
- * writes nothing. Returns what actually happened.
+ * Write `pgn` to a file the user picks. A file that already holds games
+ * gets the game appended to its end — picking an existing file means
+ * growing it, so no one is asked. Returns what actually happened.
  */
 export async function savePgnFile(
   pgn: string,
@@ -89,14 +87,7 @@ export async function savePgnFile(
     // destroy a collection. Abort rather than guess.
     return 'cancelled';
   }
-  const existingTrimmed = existing.trim();
-  if (existingTrimmed.length > 0) {
-    const games = (existing.match(/\[Event\s/g) ?? []).length;
-    const ok = env.confirmAppend(
-      `${suggestedName} already contains ${games} game${games === 1 ? '' : 's'}. ` +
-        'Append this game to the end instead of overwriting it?',
-    );
-    if (!ok) return 'cancelled';
+  if (existing.trim().length > 0) {
     const writable = await handle.createWritable();
     await writable.write(existing.replace(/\s+$/, '') + '\n\n' + pgn);
     await writable.close();
