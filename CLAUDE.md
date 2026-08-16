@@ -24,25 +24,23 @@ read its comments before writing a new spec, they record the traps.
 
 ## "How many hits is Raptor getting?"
 
-Asked often. The honest answer as of 2026-08-15 is **nobody knows, and
-the counter is not recording** — do not report zero as if it were
-traffic. What is established:
+Asked often. The honest answer as of 2026-08-16: **the counter is
+recording again, or it is not — check the dashboard.** What stands:
 
-- The beacon is fine. `packages/web/index.html` loads
-  `static.cloudflareinsights.com/beacon.min.js` (200) and it POSTs to
-  `cloudflareinsights.com/cdn-cgi/rum`, verified live against production.
-  It is gated to humans on purpose: `navigator.webdriver` browsers and
-  anything with `localStorage raptor.noCount` are skipped, so a plain
-  Playwright load can never confirm it — spoof webdriver false to test.
-- Nothing arrives. RUM GraphQL returns **zero rows for every site in the
-  account** over the last month, so this is not a raptor3000-only gap.
-- Cloudflare Pages auto-injection was deliberately turned OFF (task
-  `9is1`) so our own gated snippet would be the only counter. The site
-  token in `index.html` is `f4e8c60b70ec4fad9fc757f436ce6549`; the live
-  suspicion is that it no longer matches a Web Analytics site in the
-  account, so posts are accepted and land nowhere. **Confirming that
-  needs the dashboard** — the REST endpoint
-  `/accounts/<acct>/rum/site_info/list` refuses both tokens below.
+- The whole custom snippet is gone (2026-08-16, Carson: "turn analytics
+  back on there, i don't care if you or e2e tests trigger it"). The
+  gated beacon with token `f4e8c60b70ec4fad9fc757f436ce6549` was
+  removed from `index.html`; Cloudflare Pages auto-injection (Workers &
+  Pages → project → Metrics → Enable under Web Analytics) is back ON,
+  server-side, and injects the correct token by itself. e2e runs pollute
+  the numbers now — accepted, deliberately.
+- The gate's whole premise was wrong anyway: RUM GraphQL returned **zero
+  rows for every site in the account**, not just raptor — and the site
+  EXISTS in the dashboard. The dead end is recorded in DECISIONS.md;
+  don't re-open it.
+- Never report zero as traffic: it is just as likely "no reads
+  available". Numbers come from the dashboard, or via GraphQL with
+  wrangler's OAuth token (below).
 
 ### Reading the numbers
 

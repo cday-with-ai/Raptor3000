@@ -3,9 +3,9 @@
 # line in the pager daily digest.
 #
 # Deterministic plumbing end to end: Cloudflare Web Analytics GraphQL in,
-# one `beeper send` out, no model anywhere. "Human" is enforced at the
-# beacon (index.html gates on navigator.webdriver and raptor.noCount), so
-# by the time a number reaches this script the filtering already happened.
+# one `beeper send` out, no model anywhere. Counts are whatever the
+# beacon recorded — since 2026-08-16 the dash auto-injects it and e2e
+# runs count too (Carson accepted the pollution; see CLAUDE.md).
 # A zero-traffic day sends nothing — an empty digest day is correct
 # (pager house rule), and counting started 2026-08-14 so early days are
 # legitimately quiet.
@@ -119,7 +119,7 @@ VISITS="$(printf '%s' "$PARSED" | awk '{print $3}')"
 
 if [ "${VISITS:-0}" -gt 0 ] || [ "${VIEWS:-0}" -gt 0 ]; then
   beeper send --source raptor3000 \
-    "usage $DAY: $VISITS visits, $VIEWS page views (humans only; e2e and driven browsers don't count)"
+    "usage $DAY: $VISITS visits, $VIEWS page views (e2e runs count since 2026-08-16)"
 else
   echo "quiet day ($DAY): nothing sent"
 fi

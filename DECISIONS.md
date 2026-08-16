@@ -41,6 +41,15 @@ Logged as taken, per the house rule. Walk this on completion.
    the number that matters. The site token is public by design (it ships
    in every visitor's page source).
 
+   **Reversed 2026-08-16 ("turn analytics back on there, i don't care if
+   you or e2e tests trigger it").** The gate was the wrong fight: RUM
+   GraphQL returned zero rows for EVERY site in the account while the
+   snippet demonstrably fired, so the gate was never the problem (and
+   the site token could not be confirmed via any API — REST refuses both
+   available tokens). The custom snippet is deleted, auto-injection is
+   back ON server-side, and e2e pollution is accepted. The 08-14..08-15
+   stats are genuinely lost. Do not re-open this dead end.
+
 6. **The watcher waits out transient activation (2026-08-14, found live
    by Carson: "it says enabled … i didnt enable it").** A page click
    grants ~5s of activation and fresh-default browsers allow GESTURE
