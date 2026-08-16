@@ -42,6 +42,7 @@ import {
   type ToolbarItem,
 } from './boardToolbar.js';
 import { installCloseGuard, partingCommands } from './closeGuard.js';
+import { savePgnFile } from './pgnSaver.js';
 import { installPositionTracker, windowStorageKey } from './windowPosition.js';
 import type { EngineAnalysis } from '../engine/EngineService.js';
 import {
@@ -642,20 +643,7 @@ function savePgn(args: {
 
   const movetext = wrapPgnMoves([...moves, result]);
   const pgn = [...headers, '', movetext, ''].join('\n');
-  const blob = new Blob([pgn], { type: 'application/x-chess-pgn' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = `${s12?.whiteName ?? 'white'}-vs-${s12?.blackName ?? 'black'}.pgn`;
-  // In the DOM and revoking late (2026-08-16): clicking a detached
-  // anchor while revoking the blob URL immediately could abort the
-  // download before it started — and the click fell through to
-  // navigating the blob, which popped the PGN open in a new window.
-  a.style.display = 'none';
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  setTimeout(() => URL.revokeObjectURL(url), 1000);
+  void savePgnFile(pgn, `${s12?.whiteName ?? 'white'}-vs-${s12?.blackName ?? 'black'}.pgn`);
 }
 
 /** `1-0`, `0-1`, `1/2-1/2`, `*` — the PGN spec's result tokens. */
