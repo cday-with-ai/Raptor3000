@@ -457,7 +457,17 @@ export const BoardWindow = observer(function BoardWindow({
     adjourn: () => context.connector.sendMessageHidden('adjourn'),
     resign: () => context.connector.sendMessageHidden('resign'),
     rematch: () => context.connector.sendMessageHidden('rematch'),
-    'save-pgn': () => savePgn(s12, sans),
+    'save-pgn': () =>
+      savePgn({
+        context,
+        gameId,
+        s12,
+        sans,
+        gameEnd,
+        opening,
+        whiteRating,
+        blackRating,
+      }),
   };
 
 
@@ -559,32 +569,79 @@ export const BoardWindow = observer(function BoardWindow({
 });
 
 /**
- * Download the window's game as a .pgn file. Movetext from the
- * window-local history; result is unknown to this window (FICS's end
- * message isn't retained), so `*` — every importer accepts it.
+ * Download the window's game as a .pgn file, lichess/babaschess header
+ * flavor (BOTCHvinik, 2026-08-16): Event/Site/Round/UTCDate/UTCTime and
+ * one `[Tag "value"]` per line, then the movetext wrapped to the PGN
+ * spec's 75-char lines. Deliberately breaks with original Raptor's
+ * writer (Carson, 2026-08-16) — its headers ("3 0 unrated blitz",
+ * ResultDescription) are the ones other tools don't read.
+ *
+ * Movetext from the window-local history; Result/Termination from the
+ * window's gameEnd (played, observed and examined games all get one);
+ * Opening/ECO from the lichess openings table; Variant only when the
+ * game is not standard chess.
  */
-function savePgn(
-  s12: Style12Message | undefined,
-  sans: ReadonlyMap<number, string>,
-): void {
+function savePgn(args: {
+  context: RaptorContext;
+  gameId: string | null;
+  s12: Style12Message | undefined;
+  sans: ReadonlyMap<number, string>;
+  gameEnd: GameEndMessage | null;
+  opening: Opening | null;
+  whiteRating: string;
+  blackRating: string;
+}): void {
+  const { context, gameId, s12, sans, gameEnd, opening, whiteRating, blackRating } = args;
   const moves: string[] = [];
   for (let p = 1; sans.has(p); p++) {
     if (p % 2 === 1) moves.push(`${(p + 1) / 2}.`);
     moves.push(sans.get(p)!);
   }
+
   const today = new Date();
   const date = `${today.getFullYear()}.${String(today.getMonth() + 1).padStart(2, '0')}.${String(today.getDate()).padStart(2, '0')}`;
-  const pgn = [
-    '[Event "FICS game"]',
-    '[Site "freechess.org"]',
+  const utcDate = `${today.getUTCFullYear()}.${String(today.getUTCMonth() + 1).padStart(2, '0')}.${String(today.getUTCDate()).padStart(2, '0')}`;
+  const utcTime = `${String(today.getUTCHours()).padStart(2, '0')}:${String(today.getUTCMinutes()).padStart(2, '0')}:${String(today.getUTCSeconds()).padStart(2, '0')}`;
+
+  // The variant rides the same type string as the status flavor: <g1>
+  // when it survived the game end, else the `moves` header. FICS names:
+  // blitz, standard, wild/fr, wild/0 (crazyhouse), suicide, atomic, ...
+  const g1 = gameId ? context.gameService.getLatestG1(gameId) : undefined;
+  const mm = gameId ? context.gameService.getLatestMoves(gameId) : undefined;
+  const gameType = g1?.gameTypeDescription ?? mm?.gameType;
+
+  // Time control: <g1>/Style12 carry ms; the moves header carries
+  // minutes+seconds. Written seconds+seconds, "120+12", like lichess.
+  let tc: string | null = null;
+  if (s12) {
+    tc = `${Math.round(s12.initialTimeMillis / 1000)}+${Math.round(s12.initialIncMillis / 1000)}`;
+  } else if (mm?.initialMinutes != null) {
+    tc = `${mm.initialMinutes}+${mm.incrementSeconds ?? 0}`;
+  }
+
+  const result = pgnResult(gameEnd);
+  const variant = variantFor(gameType);
+    const headers = [
+    '[Event "Online Game"]',
+    '[Site "https://freechess.org"]',
     `[Date "${date}"]`,
+    '[Round "-"]',
     `[White "${s12?.whiteName ?? '?'}"]`,
     `[Black "${s12?.blackName ?? '?'}"]`,
-    '[Result "*"]',
-    '',
-    moves.join(' ') + (moves.length ? ' *' : '*'),
-    '',
-  ].join('\n');
+    `[Result "${result}"]`,
+    tc ? `[TimeControl "${tc}"]` : null,
+    `[WhiteElo "${whiteRating || '-'}"]`,
+    `[BlackElo "${blackRating || '-'}"]`,
+    variant ? `[Variant "${variant}"]` : null,
+    `[UTCDate "${utcDate}"]`,
+    `[UTCTime "${utcTime}"]`,
+    opening ? `[Opening "${opening.name}"]` : null,
+    opening ? `[ECO "${opening.eco}"]` : null,
+    gameEnd ? `[Termination "${pgnTermination(gameEnd)}"]` : null,
+  ].filter((h): h is string => h !== null);
+
+  const movetext = wrapPgnMoves([...moves, result]);
+  const pgn = [...headers, '', movetext, ''].join('\n');
   const blob = new Blob([pgn], { type: 'application/x-chess-pgn' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
@@ -592,6 +649,75 @@ function savePgn(
   a.download = `${s12?.whiteName ?? 'white'}-vs-${s12?.blackName ?? 'black'}.pgn`;
   a.click();
   URL.revokeObjectURL(url);
+}
+
+/** `1-0`, `0-1`, `1/2-1/2`, `*` — the PGN spec's result tokens. */
+function pgnResult(ge: GameEndMessage | null): string {
+  if (!ge) return '*';
+  switch (ge.type) {
+    case GameEndType.WHITE_WON: return '1-0';
+    case GameEndType.BLACK_WON: return '0-1';
+    case GameEndType.DRAW: return '1/2-1/2';
+    default: return '*';
+  }
+}
+
+/**
+ * The lichess Termination vocabulary, inferred from FICS's end
+ * description ("Black resigns" → resignation, "Black forfeits by
+ * timeout" → time forfeit, "Game drawn by repetition" → repetition...).
+ * Descriptions are free text, so this is keyword matching with the
+ * specific phrases first — "stalemate" before "mate", since the latter
+ * is a substring of the former.
+ */
+function pgnTermination(ge: GameEndMessage): string {
+  if (ge.type === GameEndType.ABORTED) return 'abandoned';
+  if (ge.type === GameEndType.ADJOURNED) return 'adjourned';
+  if (ge.type === GameEndType.UNDETERMINED) return 'unterminated';
+  const d = ge.description.toLowerCase();
+  if (d.includes('stalemate')) return 'stalemate';
+  if (d.includes('checkmate') || d.includes('mates')) return 'checkmate';
+  if (d.includes('resign')) return 'resignation';
+  if (d.includes('forfeit') || d.includes('time')) return 'time forfeit';
+  if (d.includes('repetition')) return 'repetition';
+  if (d.includes('insufficient')) return 'insufficient material';
+  if (d.includes('agreement') || d.includes('offered')) return 'agreement';
+  if (d.includes('50') || d.includes('fifty')) return '50 move rule';
+  return 'normal';
+}
+
+/**
+ * The PGN Variant tag for a FICS game type, in the names other tools
+ * read (lichess's). Only non-standard chess gets one. FICS's wild
+ * types: wild/0 crazyhouse, wild/1 losers, wild/2 suicide, wild/3
+ * giveaway, wild/4 atomic, wild/fr fischer random.
+ */
+function variantFor(type: string | undefined): string | null {
+  if (!type) return null;
+  const t = type.toLowerCase();
+  if (t.includes('wild/fr') || t.includes('fischer')) return 'Chess960';
+  if (t.includes('crazyhouse') || t.includes('zh') || t.includes('wild/0')) return 'Crazyhouse';
+  if (t.includes('suicide') || t.includes('losers') || t.includes('giveaway') || t.includes('wild/1') || t.includes('wild/2') || t.includes('wild/3')) return 'Antichess';
+  if (t.includes('atomic') || t.includes('wild/4')) return 'Atomic';
+  if (t.includes('bughouse')) return 'Bughouse';
+  return null;
+}
+
+/** Movetext wrapped to the PGN spec's 75-char lines. */
+function wrapPgnMoves(tokens: string[]): string {
+  const lines: string[] = [];
+  let line = '';
+  for (const tok of tokens) {
+    const joined = line ? `${line} ${tok}` : tok;
+    if (line && joined.length > 75) {
+      lines.push(line);
+      line = tok;
+    } else {
+      line = joined;
+    }
+  }
+  if (line) lines.push(line);
+  return lines.join('\n');
 }
 
 /** PLAYING and EXAMINING get their own layout memory; everything else
@@ -1746,16 +1872,23 @@ function SidePanel({
           At 220px the old single line was the thing most likely to run
           out of room, and it ran out on the half you actually read. */}
       <div style={statusBlock}>
-        <span style={{ fontWeight: 700, opacity: 0.75 }}>Status:</span>
-        {followLabel && (
-          <span style={{ opacity: 0.85, alignSelf: 'center' }}>{followLabel}</span>
-        )}
-        <span style={{ opacity: 0.85, alignSelf: 'center' }}>{modeLabel(mode)}</span>
-        {gameFlavor(context, gameId) && (
-          <span style={{ opacity: 0.8, alignSelf: 'center' }}>
-            {gameFlavor(context, gameId)}
+        {/* "Status:" labels the block from the left edge; the follow
+            marker stays centre-justified like the values under it.
+            The third column is the empty balance side, so the middle
+            `auto` column is the true centre of the line. */}
+        <span style={{ display: 'grid', gridTemplateColumns: '1fr auto 1fr' }}>
+          <span style={{ fontWeight: 700, opacity: 0.75, justifySelf: 'start' }}>
+            Status:
           </span>
-        )}
+          {followLabel && <span style={{ opacity: 0.85 }}>{followLabel}</span>}
+          <span />
+        </span>
+        <span style={{ display: 'flex', gap: 6, alignSelf: 'center' }}>
+          <span style={{ opacity: 0.85 }}>{modeLabel(mode)}</span>
+          {gameFlavor(context, gameId) && (
+            <span style={{ opacity: 0.8 }}>{gameFlavor(context, gameId)}</span>
+          )}
+        </span>
       </div>
       {/* Named so a test can ask whether the thing that is supposed to
           scroll actually scrolled; the pane is otherwise anonymous
@@ -2258,7 +2391,12 @@ function PlyButton({
   if (!san) return <span style={{ minWidth: 52 }} />;
   const shownSan = figurine(san, ply % 2 === 1);
   const clickable = ply <= viewablePlies;
-  const active = viewPly === ply;
+  // Active = the move whose position is shown. While browsing that is
+  // the ply under viewPly; live it is the final ply — the last move IS
+  // the live position, so it should light up exactly like the move an
+  // arrow key lands on.
+  const active =
+    viewPly === ply || (viewPly === null && ply === viewablePlies);
   // The final ply IS the live position — selecting it means live
   // (Carson): keep following new moves, no read-only viewing state.
   const target = ply === viewablePlies ? null : ply;
