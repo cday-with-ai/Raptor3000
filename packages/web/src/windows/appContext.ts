@@ -13,6 +13,7 @@ import {
   announceBlockedBoardWindows,
 } from '../game/GameManager.js';
 import { GameWindowMachine } from '../game/GameWindowMachine.js';
+import { TellResolver } from '../game/TellResolver.js';
 import { EngineManager } from '../engine/EngineManager.js';
 import { getWindowManager } from './WindowManager.js';
 import { loadPreferences } from '../preferences.js';
@@ -45,6 +46,10 @@ export interface RaptorContext {
    *  context (the machine itself is the observable, so the follow label
    *  re-renders where it is shown). */
   gameWindowMachine: GameWindowMachine | null;
+  /** Pairs outbound tells with FICS confirmations so person tabs key
+   *  on the canonical handle. Main window only; popups read it through
+   *  the shared context. */
+  tellResolver: TellResolver | null;
   /** Stockfish-backed analysis. Listens to lifecycle hooks; auto-analyzes
    *  observed/examined/finished games, never an in-progress play. Main
    *  window only. */
@@ -94,6 +99,10 @@ export function createContext(): RaptorContext {
     // loops back here and is a harmless no-op on the already-idle state.
     connector.onCommand(line => gameWindowMachine.onUserCommand(line));
   }
+  const tellResolver = main ? new TellResolver({ chatService }) : null;
+  if (tellResolver) {
+    connector.onCommand(line => tellResolver.onUserCommand(line));
+  }
   const gameManager = main
     ? new GameManager(gameService, getWindowManager(), gameWindowMachine ?? undefined)
     : null;
@@ -112,6 +121,7 @@ export function createContext(): RaptorContext {
     connector,
     gameManager,
     gameWindowMachine,
+    tellResolver,
     engineManager,
     sessionId: Date.now(),
   };

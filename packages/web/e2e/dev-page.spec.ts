@@ -21,10 +21,10 @@ test('the dev page serves the space landing', async ({ page }) => {
   await expect(page.getByLabel('Guest login')).toBeVisible();
 
   // The raptor is on duty (icon asset resolves).
-  const icon = page.locator('img[src="/raptor3000.svg"]').first();
+  const icon = page.locator('img[src="/raptor3000.png"]').first();
   await expect(icon).toBeVisible();
   const iconOk = await page.evaluate(async () => {
-    const r = await fetch('/raptor3000.svg');
+    const r = await fetch('/raptor3000.png');
     return r.ok;
   });
   expect(iconOk).toBe(true);

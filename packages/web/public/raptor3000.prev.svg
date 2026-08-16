@@ -1,0 +1,77 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <!-- Raptor3000: a raptor in a space suit. Designed to read at 16px:
+       the helmet dome + long snout silhouette carry the shape; everything
+       else is garnish. Deep-space rounded square, glassy dome, teal
+       raptor, orange suit collar — no other icon on a taskbar looks
+       like this. -->
+  <defs>
+    <radialGradient id="dome" cx="0.35" cy="0.3" r="1.1">
+      <stop offset="0" stop-color="#bfe8ff" stop-opacity="0.55"/>
+      <stop offset="0.45" stop-color="#7fc4f0" stop-opacity="0.18"/>
+      <stop offset="1" stop-color="#274a66" stop-opacity="0.12"/>
+    </radialGradient>
+    <linearGradient id="space" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#101a33"/>
+      <stop offset="1" stop-color="#060a18"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="64" height="64" rx="14" fill="url(#space)"/>
+
+  <!-- stars -->
+  <circle cx="12" cy="13" r="1.1" fill="#e8f4ff"/>
+  <circle cx="53" cy="10" r="0.8" fill="#e8f4ff" opacity="0.8"/>
+  <circle cx="57" cy="27" r="1.0" fill="#e8f4ff" opacity="0.6"/>
+  <circle cx="8"  cy="34" r="0.7" fill="#e8f4ff" opacity="0.7"/>
+  <circle cx="47" cy="55" r="0.8" fill="#e8f4ff" opacity="0.5"/>
+
+  <!-- suit body / shoulders -->
+  <path d="M14 58 c1-10 8-15 18-15 c10 0 17 5 18 15 z" fill="#e9e3d5"/>
+  <path d="M14 58 c0.5-5 2.5-9 6-11.5 l4 3.5 c-3 2-5 4.5-5.5 8 z" fill="#d8863b"/>
+  <path d="M50 58 c-0.5-5 -2.5-9 -6-11.5 l-4 3.5 c3 2 5 4.5 5.5 8 z" fill="#d8863b"/>
+  <!-- chest panel -->
+  <rect x="27" y="49" width="10" height="6" rx="1.5" fill="#25314f"/>
+  <circle cx="30" cy="52" r="1.2" fill="#69d2a2"/>
+  <circle cx="34" cy="52" r="1.2" fill="#d85f4f"/>
+
+  <!-- helmet ring -->
+  <rect x="17" y="42" width="30" height="5" rx="2.5" fill="#c0cad9"/>
+
+  <!-- helmet dome -->
+  <circle cx="32" cy="27" r="17.5" fill="#0c1526"/>
+  <circle cx="32" cy="27" r="17.5" fill="url(#dome)" stroke="#c0cad9" stroke-width="2"/>
+
+  <!-- the raptor: dromaeosaur profile. Upper skull and lower jaw are
+       separate shapes so the dark dome shows through the open gape —
+       that gap is what makes it read as a hunting jaw, not a chin. -->
+  <path d="M21 23
+           c0-5 2.5-8 6.5-8.5
+           l6-0.3
+           l1.5 1.6
+           l10 5.2
+           l-0.5 2.3
+           l-14.5 2.2
+           l-3 3.5
+           c-3.5 0.5-6-2.5-6-6 z"
+        fill="#3fa08a"/>
+  <!-- lower jaw, hinged open -->
+  <path d="M26.5 26.5
+           l15 1.6
+           l-1.2 2.4
+           l-11 0.3
+           c-1.8 0-2.8-2-2.8-4.3 z"
+        fill="#2c7a68"/>
+  <!-- teeth hanging from the upper jaw -->
+  <path d="M33.5 25.5 l1.7-0.25 l-0.65 2 z" fill="#e8f4ff"/>
+  <path d="M36.8 25 l1.7-0.25 l-0.65 2 z" fill="#e8f4ff"/>
+  <path d="M40.1 24.5 l1.7-0.25 l-0.65 2 z" fill="#e8f4ff"/>
+  <!-- nostril -->
+  <circle cx="42.8" cy="20" r="0.7" fill="#0c1526"/>
+  <!-- the eye: yellow with a slit pupil, clear of the brow -->
+  <path d="M28 18.2 l5.5-0.7 l-1.2 3 l-4.6 0.5 z" fill="#e8c33a"/>
+  <path d="M30.9 17.9 l1.2-0.15 l-1 2.75 l-1.2 0.15 z" fill="#0c1526"/>
+  <!-- brow ridge -->
+  <path d="M27 15.8 l7.5-0.9" stroke="#2c7a68" stroke-width="1.7" stroke-linecap="round" fill="none"/>
+  <!-- dome glare -->
+  <path d="M20.5 19 c2-4.5 6-7.5 10-8" stroke="#e8f4ff" stroke-width="1.8" stroke-linecap="round" fill="none" opacity="0.65"/>
+</svg>

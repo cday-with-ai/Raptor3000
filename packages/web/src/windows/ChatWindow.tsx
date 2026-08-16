@@ -189,7 +189,10 @@ export const ChatWindow = function ChatWindow({
 
   // Derive tab list from events. Stable order: main, then channels by
   // first-seen order, then persons by first-seen order, then partner.
-  const tabs = useMemo(() => deriveTabs(events, manualTabs), [events, manualTabs]);
+  const tabs = useMemo(
+    () => deriveTabs(events, manualTabs, context.tellResolver),
+    [events, manualTabs, context.tellResolver],
+  );
 
   const activeTab = tabs.find(t => t.id === activeTabId) ?? tabs[0];
   const tabEvents = useMemo(
@@ -559,8 +562,11 @@ interface Tab {
   label: string;
   /** For channel tabs. */
   channel?: string;
-  /** For person tabs. */
+  /** For person tabs — canonical handle. */
   person?: string;
+  /** Lowercased typed names that should also route to this person tab
+   *  (e.g. the partial name the user typed before FICS resolved it). */
+  personAliases?: string[];
   /** For game tabs (kibitz/whisper traffic). */
   gameId?: string;
 }
@@ -574,6 +580,7 @@ const MAIN_TAB: Tab = {
 function deriveTabs(
   events: readonly ChatEvent[],
   manual: readonly string[] = [],
+  resolver?: { resolve(name: string): string } | null,
 ): Tab[] {
   const channels = new Map<string, Tab>();
   const persons = new Map<string, Tab>();
@@ -651,14 +658,24 @@ function deriveTabs(
               });
             }
           } else {
-            const key = target.toLowerCase();
+            const canonical = resolver ? resolver.resolve(target) : target;
+            const key = canonical.toLowerCase();
             if (!persons.has(key)) {
               persons.set(key, {
                 id: 'person:' + key,
                 kind: 'person',
-                label: target,
-                person: target,
+                label: canonical,
+                person: canonical,
+                personAliases: canonical.toLowerCase() !== target.toLowerCase()
+                  ? [target.toLowerCase()]
+                  : undefined,
               });
+            } else if (canonical.toLowerCase() !== target.toLowerCase()) {
+              const existing = persons.get(key)!;
+              if (!existing.personAliases) existing.personAliases = [];
+              if (!existing.personAliases.includes(target.toLowerCase())) {
+                existing.personAliases.push(target.toLowerCase());
+              }
             }
           }
         } else if (/^ptell\s+/i.test(e.message)) {
@@ -738,10 +755,14 @@ function tabAcceptsBy(tab: Tab, e: ChatEvent): boolean {
     }
     case 'person': {
       const target = (tab.person ?? '').toLowerCase();
-      if (e.type === ChatEventType.TELL && e.source?.toLowerCase() === target) return true;
-      if (e.type === ChatEventType.TOLD && e.source?.toLowerCase() === target) return true;
+      const aliases = tab.personAliases ?? [];
+      const matches = (name: string): boolean =>
+        name === target || aliases.includes(name);
+      if (e.type === ChatEventType.TELL && e.source && matches(e.source.toLowerCase())) return true;
+      if (e.type === ChatEventType.TOLD && e.source && matches(e.source.toLowerCase())) return true;
       if (e.type === ChatEventType.OUTBOUND) {
-        return outboundTell(e.message)?.target.toLowerCase() === target;
+        const ot = outboundTell(e.message);
+        return ot ? matches(ot.target.toLowerCase()) : false;
       }
       return false;
     }

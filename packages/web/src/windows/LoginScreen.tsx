@@ -122,7 +122,7 @@ export function LoginScreen({
       <div style={{ ...shell, position: 'relative', overflow: 'auto', flexDirection: 'column', justifyContent: 'flex-start' }}>
         <StarField />
         <div style={mobileStop}>
-          <img src="/raptor3000.svg" alt="" style={{ width: 88, height: 88, margin: '0 auto 10px', display: 'block' }} />
+          <img src="/raptor3000.png" alt="" style={{ width: 88, height: 88, margin: '0 auto 10px', display: 'block' }} />
           <div style={{ fontSize: 22, fontWeight: 700, letterSpacing: '0.02em' }}>
             {t('mobile.title')}
           </div>
@@ -161,7 +161,7 @@ export function LoginScreen({
           submit();
         }}
       >
-        <img src="/raptor3000.svg" alt="" style={loginIcon} />
+        <img src="/raptor3000.png" alt="" style={loginIcon} />
         <div style={brand}>Raptor3000</div>
         <div style={tagline}>{t('login.tagline')}</div>
 

@@ -197,7 +197,7 @@ function PostLoginShell({
       <header style={pageHeader}>
         <div style={headerRow}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-            <img src="/raptor3000.svg" alt="" style={{ width: 40, height: 40 }} />
+            <img src="/raptor3000.png" alt="" style={{ width: 40, height: 40 }} />
             <div>
               <div style={brand}>Raptor3000</div>
               <div style={tagline}>
