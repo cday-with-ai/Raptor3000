@@ -26,6 +26,9 @@ export function App() {
   const params = new URLSearchParams(window.location.search);
   const kind = params.get('window');
   const id = params.get('id');
+  // Slot windows ('follow', 'playing') carry their stable slot name so
+  // the popup can key position persistence on the slot, not the game.
+  const slot = params.get('slot');
 
   // Main window: we own the context, mount it on window.raptor. The hooks for
   // that live in MainWindowRoot rather than here, so they are never called
@@ -41,7 +44,7 @@ export function App() {
     return <Orphaned kind={kind} inPopup={isPopup()} />;
   }
 
-  return <PopupRoot kind={kind} id={id} ctx={ctx} />;
+  return <PopupRoot kind={kind} id={id} slot={slot} ctx={ctx} />;
 }
 
 /**
@@ -52,10 +55,12 @@ export function App() {
 function PopupRoot({
   kind,
   id,
+  slot,
   ctx,
 }: {
   kind: string;
   id: string | null;
+  slot: string | null;
   ctx: RaptorContext;
 }) {
   // Close ourselves when the window that owns the FICS session goes
@@ -67,7 +72,7 @@ function PopupRoot({
     case 'chat':
       return <ChatWindow context={ctx} />;
     case 'board':
-      return <BoardWindow context={ctx} gameId={id} />;
+      return <BoardWindow context={ctx} gameId={id} slot={slot} />;
     default:
       return <UnknownWindow kind={kind} />;
   }

@@ -33,6 +33,15 @@ export interface OpenWindowSpec {
   kind: WindowKind;
   /** For 'board' — the game id. For everything else, stable singleton. */
   id?: string;
+  /** Stable identity shared across games: the window keeps its name and
+   *  position while the game it shows changes. A slot window ('follow',
+   *  'playing') retargets to each new `id` by navigating instead of
+   *  opening a fresh popup, so following a player never piles up windows.
+   *  The storage key and window-open name come from the slot, not the id. */
+  slot?: string;
+  /** Fired when this window closes. Only poll-detected user closes fire
+   *  it — a close the manager itself initiates does not. */
+  onClose?: () => void;
   /** Initial width/height. Position is managed by cascadePoint or saved prefs. */
   width?: number;
   height?: number;
@@ -77,11 +86,13 @@ const DEFAULT_ANCHOR: Record<WindowKind, { fx: number; fy: number }> = {
 const MIN_VISIBLE = 120;
 
 function storageKeyFor(spec: OpenWindowSpec): string {
-  return windowStorageKey(spec.kind, spec.id);
+  return windowStorageKey(spec.kind, spec.slot ?? spec.id);
 }
 
 export class WindowManager {
   private readonly openWindows = new Map<string, Window>();
+  /** onClose callbacks by window key — see OpenWindowSpec.onClose. */
+  private readonly closeCallbacks = new Map<string, () => void>();
   private cascadeIndex = 0;
 
   /**
@@ -90,9 +101,14 @@ export class WindowManager {
    */
   open(spec: OpenWindowSpec): Window | null {
     const key = storageKeyFor(spec);
+    if (spec.onClose) this.closeCallbacks.set(key, spec.onClose);
     const existing = this.openWindows.get(key);
     if (existing && !existing.closed) {
       existing.focus();
+      // A slot window keeps its name while the game it shows changes, so
+      // retarget by navigating to the new id rather than opening a second
+      // popup. No-op when the id is unchanged.
+      if (spec.slot) this.retarget(existing, spec);
       return existing;
     }
 
@@ -113,6 +129,7 @@ export class WindowManager {
     const win = this.openWindows.get(key);
     if (win && !win.closed) win.close();
     this.openWindows.delete(key);
+    this.closeCallbacks.delete(key);
   }
 
   /** Close all subordinate windows (e.g. on logout). */
@@ -121,6 +138,7 @@ export class WindowManager {
       if (!win.closed) win.close();
     }
     this.openWindows.clear();
+    this.closeCallbacks.clear();
   }
 
   isOpen(spec: OpenWindowSpec): boolean {
@@ -133,7 +151,29 @@ export class WindowManager {
   private urlFor(spec: OpenWindowSpec): string {
     const params = new URLSearchParams({ window: spec.kind });
     if (spec.id) params.set('id', spec.id);
+    // A slot window's identity in the URL is the game id it shows; the
+    // slot itself is a hint so the popup can key its position persistence
+    // on the slot rather than the game (App.tsx reads both).
+    if (spec.slot) params.set('slot', spec.slot);
     return `${location.pathname}?${params.toString()}`;
+  }
+
+  /**
+   * Navigate an existing slot window to a new game. Cross-origin handles
+   * cannot be read or navigated; leave them alone in that case.
+   *
+   * Comparison is on the query string, not the whole href: a browser
+   * resolves `location.href` to an absolute URL, so a relative compare
+   * would never match and would reload the popup on every focus.
+   */
+  private retarget(win: Window, spec: OpenWindowSpec): void {
+    const url = this.urlFor(spec);
+    try {
+      const target = new URL(url, 'https://raptor.invalid');
+      if (win.location.search !== target.search) win.location.href = url;
+    } catch {
+      // cross-origin — nothing we can do
+    }
   }
 
   private featuresFor(spec: OpenWindowSpec): string {
@@ -185,7 +225,9 @@ export class WindowManager {
     const baseY = screen.top + Math.round(anchor.fy * screen.height);
 
     // Cascade offset only for multi-instance windows (boards, bugEar).
-    const cascade = spec.id ? this.cascadeIndex++ % 6 : 0;
+    // A slot window is a singleton in its slot — one follow window, one
+    // playing window — so it anchors and stays wherever the user puts it.
+    const cascade = spec.id && !spec.slot ? this.cascadeIndex++ % 6 : 0;
     const x = baseX + cascade * CASCADE_STEP;
     const y = baseY + cascade * CASCADE_STEP;
     return { x, y, width, height };
@@ -273,6 +315,8 @@ export class WindowManager {
       if (win.closed) {
         this.openWindows.delete(key);
         clearInterval(interval);
+        this.closeCallbacks.get(key)?.();
+        this.closeCallbacks.delete(key);
       }
     }, 500);
   }

@@ -58,6 +58,21 @@ class FakeStorage {
   }
 }
 
+/** Mimics the bits of `Location` WindowManager reads/writes: href and
+ *  search, kept in sync the way a browser keeps them. */
+class FakeLocation {
+  private _href = '/app/?window=board&id=0';
+  get href(): string {
+    return this._href;
+  }
+  set href(v: string) {
+    this._href = v;
+    const q = v.indexOf('?');
+    this.search = q === -1 ? '' : v.slice(q);
+  }
+  search = '';
+}
+
 /** The subset of Window a popup handle needs for persistence + close-watching. */
 class FakePopup {
   closed = false;
@@ -67,6 +82,8 @@ class FakePopup {
   screenY = 0;
   outerWidth = 0;
   outerHeight = 0;
+  /** The popup's own URL; WindowManager navigates slot windows through it. */
+  location = new FakeLocation();
 
   focus(): void {
     this.focusCount++;
@@ -122,7 +139,10 @@ function installGlobals(screen: Partial<FakeScreen> = {}): void {
     open(url: string, name: string, features: string): FakePopup | null {
       openCalls.push({ url, name, features });
       const next = openResults.shift();
-      return next === undefined ? new FakePopup() : next;
+      const popup = next === undefined ? new FakePopup() : next;
+      // What a real browser does: the popup loads the url it was opened at.
+      if (popup) popup.location.href = url;
+      return popup;
     },
   };
 
@@ -175,6 +195,13 @@ function nextPopup(popup: FakePopup | null): void {
 }
 
 const board = (id: string): OpenWindowSpec => ({ kind: 'board', id });
+
+/** A slot window: stable name, changes the game it shows. */
+const followSlot = (id: string): OpenWindowSpec => ({
+  kind: 'board',
+  id,
+  slot: 'follow',
+});
 
 beforeEach(() => {
   installGlobals();
@@ -293,6 +320,106 @@ describe('WindowManager — window identity', () => {
     expect(b.closeCount).toBe(1);
     expect(wm.isOpen(board('42'))).toBe(false);
     expect(wm.isOpen({ kind: 'chat' })).toBe(false);
+  });
+});
+
+// ---- slot windows ----------------------------------------------------------
+
+describe('WindowManager — slot windows', () => {
+  it('names the window by slot and carries the game id in the URL', () => {
+    new WindowManager().open(followSlot('42'));
+    expect(openCalls[0].name).toBe('board:follow');
+    const params = new URLSearchParams(openCalls[0].url.split('?')[1]);
+    expect(params.get('window')).toBe('board');
+    expect(params.get('id')).toBe('42');
+    expect(params.get('slot')).toBe('follow');
+  });
+
+  it('retargets the same slot window to a new game instead of opening another', () => {
+    const wm = new WindowManager();
+    const popup = new FakePopup();
+    nextPopup(popup);
+    wm.open(followSlot('42'));
+
+    wm.open(followSlot('77'));
+
+    expect(openCalls).toHaveLength(1);
+    expect(popup.location.href).toBe('/app/?window=board&id=77&slot=follow');
+    expect(popup.focusCount).toBe(1);
+  });
+
+  it('leaves the slot window alone when the game has not changed', () => {
+    const wm = new WindowManager();
+    const popup = new FakePopup();
+    nextPopup(popup);
+    wm.open(followSlot('42'));
+
+    const before = popup.location.href;
+    wm.open(followSlot('42'));
+
+    expect(popup.location.href).toBe(before);
+    expect(popup.focusCount).toBe(1);
+  });
+
+  it('persists a slot window under the slot key, shared across games', () => {
+    storage.seedPositions({
+      'board:follow': { x: 300, y: 200, width: 500, height: 600 },
+    });
+    new WindowManager().open(followSlot('42'));
+    expect(geometryOf(openCalls[0])).toEqual({
+      left: 300,
+      top: 200,
+      width: 500,
+      height: 600,
+    });
+  });
+
+  it('does not cascade slot windows — one follow window stays anchored', () => {
+    const wm = new WindowManager();
+    wm.open(followSlot('1'));
+    wm.open({ kind: 'board', id: '2', slot: 'playing' });
+    expect(geometryOf(openCalls[0])).toMatchObject({ left: 320, top: 64 });
+    expect(geometryOf(openCalls[1])).toMatchObject({ left: 320, top: 64 });
+  });
+
+  it('fires onClose when the user closes the window (poll-detected)', () => {
+    const wm = new WindowManager();
+    const popup = new FakePopup();
+    nextPopup(popup);
+    const onClose = vi.fn();
+    wm.open({ ...followSlot('42'), onClose });
+
+    popup.closed = true;
+    vi.advanceTimersByTime(500);
+
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not fire onClose when the manager closes the window itself', () => {
+    const wm = new WindowManager();
+    const popup = new FakePopup();
+    nextPopup(popup);
+    const onClose = vi.fn();
+    wm.open({ ...followSlot('42'), onClose });
+
+    wm.close(followSlot('42'));
+    vi.advanceTimersByTime(500);
+
+    expect(onClose).not.toHaveBeenCalled();
+  });
+
+  it('fires onClose only once', () => {
+    const wm = new WindowManager();
+    const popup = new FakePopup();
+    nextPopup(popup);
+    const onClose = vi.fn();
+    wm.open({ ...followSlot('42'), onClose });
+
+    popup.closed = true;
+    vi.advanceTimersByTime(500);
+    vi.advanceTimersByTime(500);
+
+    expect(onClose).toHaveBeenCalledTimes(1);
   });
 });
 

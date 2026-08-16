@@ -6,6 +6,7 @@ import {
   type GameServiceListener,
 } from '@raptor3000/shared';
 import type { WindowManager } from '../windows/WindowManager.js';
+import { GameWindowMachine } from './GameWindowMachine.js';
 
 /**
  * GameManager — owns the lifecycle of board windows.
@@ -32,6 +33,9 @@ export class GameManager {
   constructor(
     private readonly gameService: GameService,
     private readonly windowManager: WindowManager,
+    /** Who owns the follow/playing window decisions. Optional so the
+     *  machine's absence degrades to today's per-game windows. */
+    private readonly gameWindowMachine?: GameWindowMachine,
   ) {
     // Route listener callbacks back to the overridable methods on `this`
     // so subclasses can change behavior by overriding the protected hook
@@ -62,22 +66,39 @@ export class GameManager {
 
   // ---- mode-specific lifecycle hooks (override these) ----
 
-  /** Playing our own game — full interactive board + play controls. */
+  /** Playing our own game — full interactive board + play controls. One
+   *  playing window, reused across our games: the next game (rematch or
+   *  otherwise) takes over the same popup instead of piling up windows. */
   onPlayingGameStart(gameId: string): void {
-    this.openBoardWindow(gameId);
+    this.openSlotWindow('playing', gameId);
   }
   onPlayingGameEnd(gameId: string): void {
     // Keep window open for post-mortem / rematch. User closes manually.
     void gameId;
   }
 
-  /** Observing a live game — read-only board + engine allowed. */
+  /** Observing a live game — read-only board + engine allowed. Follow
+   *  games arrive as observes too; the machine says which window they
+   *  belong to. */
   onObsGameStart(gameId: string): void {
-    this.openBoardWindow(gameId);
+    const s12 = this.gameService.getLatestStyle12(gameId);
+    const kind =
+      this.gameWindowMachine?.classifyObservedGame(
+        gameId,
+        s12?.whiteName ?? null,
+        s12?.blackName ?? null,
+      ) ?? 'manual';
+    if (kind === 'follow') {
+      this.openSlotWindow('follow', gameId);
+    } else {
+      this.openBoardWindow(gameId);
+    }
   }
   onObsGameEnd(gameId: string): void {
-    // Keep window open so user can review final position; they'll close
-    // it via `unobserve` or the window's close button.
+    // A follow game ending returns the subscription to awaiting — the
+    // window stays for review, and FICS opens the next game in the same
+    // slot when it starts.
+    this.gameWindowMachine?.onFollowGameEnd(gameId);
     void gameId;
   }
 
@@ -120,6 +141,34 @@ export class GameManager {
        
       console.warn(
         `[GameManager] board window for game ${gameId} was blocked by the browser. ` +
+          `Allow popups for this origin, or open it from a click.`,
+      );
+    }
+  }
+
+  /**
+   * Open a board window for `gameId` in a stable slot ('follow' or
+   * 'playing'). The same slot window is reused across games, retargeted
+   * to each new gameId. Safe to call twice for the same game.
+   */
+  protected openSlotWindow(slot: 'follow' | 'playing', gameId: string): void {
+    if (this.disposed) return;
+    this.openGames.add(gameId);
+    const win = this.windowManager.open({
+      kind: 'board',
+      id: gameId,
+      slot,
+      // Closing the follow window stops following — the machine owns that
+      // decision and sends FICS's bare `follow` off-switch.
+      onClose:
+        slot === 'follow'
+          ? () => this.gameWindowMachine?.onFollowWindowClosed()
+          : undefined,
+    });
+    if (!win) {
+      this.onBoardWindowBlocked?.(gameId);
+      console.warn(
+        `[GameManager] ${slot} window for game ${gameId} was blocked by the browser. ` +
           `Allow popups for this origin, or open it from a click.`,
       );
     }

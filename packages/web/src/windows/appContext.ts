@@ -12,6 +12,7 @@ import {
   GameManager,
   announceBlockedBoardWindows,
 } from '../game/GameManager.js';
+import { GameWindowMachine } from '../game/GameWindowMachine.js';
 import { EngineManager } from '../engine/EngineManager.js';
 import { getWindowManager } from './WindowManager.js';
 import { loadPreferences } from '../preferences.js';
@@ -39,6 +40,11 @@ export interface RaptorContext {
   /** Opens/closes board popups in response to GameService events. Lives
    *  only on the main window; popup windows don't get one of their own. */
   gameManager: GameManager | null;
+  /** Decides which board window a game belongs to and labels the follow
+   *  window. Main window only, but popups read it through the shared
+   *  context (the machine itself is the observable, so the follow label
+   *  re-renders where it is shown). */
+  gameWindowMachine: GameWindowMachine | null;
   /** Stockfish-backed analysis. Listens to lifecycle hooks; auto-analyzes
    *  observed/examined/finished games, never an in-progress play. Main
    *  window only. */
@@ -62,6 +68,9 @@ export function createContext(): RaptorContext {
     chunkParsers: defaultChunkParsers(),
     gameService,
   });
+  // Created after the connector, but its onCommand subscription must
+  // exist before any login traffic flows.
+  let gameWindowMachine: GameWindowMachine | null = null;
   const connector = new FicsConnector({
     // Read fresh each login: an Options edit applies to the next connect.
     loginScript: () => loadPreferences().loginScript.split('\n'),
@@ -73,8 +82,20 @@ export function createContext(): RaptorContext {
   // window.opener and should NOT double-register listeners or they'd
   // each try to open redundant windows.
   const main = isMainWindow();
+  gameWindowMachine = main
+    ? new GameWindowMachine({
+        chatService,
+        sendHidden: line => connector.sendMessageHidden(line),
+      })
+    : null;
+  if (gameWindowMachine) {
+    // Attribute follow/observe commands to the games they produce. The
+    // machine sends its own stop (`follow`) through sendHidden, which
+    // loops back here and is a harmless no-op on the already-idle state.
+    connector.onCommand(line => gameWindowMachine.onUserCommand(line));
+  }
   const gameManager = main
-    ? new GameManager(gameService, getWindowManager())
+    ? new GameManager(gameService, getWindowManager(), gameWindowMachine ?? undefined)
     : null;
   // A blocked board popup is otherwise indistinguishable from a broken board;
   // say so in the console tab rather than only in devtools.
@@ -90,6 +111,7 @@ export function createContext(): RaptorContext {
     parser,
     connector,
     gameManager,
+    gameWindowMachine,
     engineManager,
     sessionId: Date.now(),
   };

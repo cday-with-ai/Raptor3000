@@ -95,6 +95,9 @@ export class FicsConnector extends BaseConnector implements Connector {
    *  single assignable hook: two UI surfaces subscribing must not clobber
    *  each other silently. */
   private connectionListeners = new Set<(connected: boolean) => void>();
+  /** Every outbound command, observed — see onCommand. Same Set pattern
+   *  as connectionListeners, for the same reason. */
+  private commandListeners = new Set<(line: string) => void>();
   private readonly options: Required<Omit<FicsConnectorOptions, 'gameService' | 'parser'>> &
     Pick<FicsConnectorOptions, 'gameService' | 'parser'>;
 
@@ -137,6 +140,22 @@ export class FicsConnector extends BaseConnector implements Connector {
 
   private fireConnectionChange(connected: boolean): void {
     for (const cb of this.connectionListeners) cb(connected);
+  }
+
+  /**
+   * Observe every command as it goes to the wire, before timeseal framing.
+   * Fired from `sendRawString`, so it sees both `sendMessage` (user-typed
+   * and echoed) and `sendMessageHidden` (robot traffic) — one hook where
+   * reimplementing the routing would be the alternative.
+   *
+   * This is how a game gets attributed to the command that produced it:
+   * commands and Style12s share the socket stream in order, so the follow
+   * whose window opened next is the one whose `follow` was seen here.
+   * Returns the unsubscribe.
+   */
+  onCommand(cb: (line: string) => void): () => void {
+    this.commandListeners.add(cb);
+    return () => this.commandListeners.delete(cb);
   }
 
   /** The handle this session logged in as, or null before login. */
@@ -248,6 +267,7 @@ export class FicsConnector extends BaseConnector implements Connector {
    */
   protected sendRawString(line: string): void {
     if (!this.ws) return;
+    for (const cb of this.commandListeners) cb(line);
     this.ws.send(encodeTimeseal(prepareOutbound(line)));
   }
 

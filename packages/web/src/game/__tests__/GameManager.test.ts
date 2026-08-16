@@ -7,6 +7,7 @@ import {
   defaultChatParsers,
   defaultChunkParsers,
   defaultGameLineParsers,
+  makeChatEvent,
   type ChatEvent,
 } from '@raptor3000/shared';
 import type { OpenWindowSpec, WindowManager } from '../../windows/WindowManager.js';
@@ -15,6 +16,7 @@ import {
   announceBlockedBoardWindows,
   blockedBoardWindowMessage,
 } from '../GameManager.js';
+import { GameWindowMachine } from '../GameWindowMachine.js';
 
 /**
  * GameManager tests — the segment past where the shared-package seam test
@@ -32,21 +34,31 @@ import {
  */
 
 /** Records what GameManager asked the browser to do. `open` returns null when
- *  `blockedGames` names the game — the browser's own signal for a refusal. */
+ *  `blockedGames` names the game — the browser's own signal for a refusal.
+ *  Slot windows are recorded as `kind:slot`; the per-game `onClose` callbacks
+ *  are kept so tests can fire them the way WindowManager's poll would. */
 class StubWindowManager {
   readonly opened: string[] = [];
   readonly closed: string[] = [];
   blockedGames = new Set<string>();
+  private readonly onCloses = new Map<string, () => void>();
 
   open(spec: OpenWindowSpec): Window | null {
-    this.opened.push(`${spec.kind}:${spec.id ?? ''}`);
+    const key = `${spec.kind}:${spec.slot ?? spec.id ?? ''}`;
+    this.opened.push(key);
+    if (spec.onClose) this.onCloses.set(key, spec.onClose);
     return this.blockedGames.has(spec.id ?? '')
       ? null
       : ({} as unknown as Window);
   }
 
   close(spec: OpenWindowSpec): void {
-    this.closed.push(`${spec.kind}:${spec.id ?? ''}`);
+    this.closed.push(`${spec.kind}:${spec.slot ?? spec.id ?? ''}`);
+  }
+
+  /** Fire a slot's onClose the way WindowManager's close-poll would. */
+  fireOnClose(key: string): void {
+    this.onCloses.get(key)?.();
   }
 
   asWindowManager(): WindowManager {
@@ -56,10 +68,15 @@ class StubWindowManager {
 
 // Style12 relation is what decides the mode, and therefore which lifecycle
 // hook fires: 0 = observing live, 1 = playing with the move, 2 = examining.
-function style12(gameId: string, relation: number): string {
+function style12(
+  gameId: string,
+  relation: number,
+  white = 'GuestFOO',
+  black = 'GuestBAR',
+): string {
   return (
     '<12> rnbqkbnr pppppppp -------- -------- ----P--- -------- PPPP-PPP RNBQKBNR' +
-    ` B 4 1 1 1 1 0 ${gameId} GuestFOO GuestBAR ${relation} 3 0 39 39 180000 180000 1` +
+    ` B 4 1 1 1 1 0 ${gameId} ${white} ${black} ${relation} 3 0 39 39 180000 180000 1` +
     ' P/e2-e4 (0:00.000) e4 0 1 0\n'
   );
 }
@@ -92,6 +109,35 @@ function makeHarness() {
   return { chatService, gameService, gameManager, windows, chat, feed };
 }
 
+/** The harness plus a GameWindowMachine, wired like appContext wires it
+ *  (minus the connector: commands are fed by hand). */
+function makeHarnessWithMachine() {
+  const base = makeHarness();
+  // The harness built a machine-less manager over the same gameService;
+  // dispose it so only the wired manager answers lifecycle hooks.
+  base.gameManager.dispose();
+  const sent: string[] = [];
+  const machine = new GameWindowMachine({
+    chatService: base.chatService,
+    sendHidden: line => sent.push(line),
+  });
+  const gameManager = new GameManager(
+    base.gameService,
+    base.windows.asWindowManager(),
+    machine,
+  );
+  return { ...base, gameManager, machine, sent };
+}
+
+/** The FOLLOWING confirmation, as FICS would send it after a follow. */
+function feedFollowing(chatService: ChatService, source: string): void {
+  chatService.publish(
+    makeChatEvent(ChatEventType.FOLLOWING, `You will now be following ${source}'s games.`, {
+      source,
+    }),
+  );
+}
+
 describe('GameManager → WindowManager', () => {
   it('opens one board window per game from a parsed Style12', () => {
     const { gameManager, windows, feed } = makeHarness();
@@ -119,7 +165,8 @@ describe('GameManager → WindowManager', () => {
     feed(style12('22', 2)); // examining
     feed(style12('33', 0)); // observing
 
-    expect(windows.opened).toEqual(['board:11', 'board:22', 'board:33']);
+    // Playing reuses one stable window; examine/observe get per-game ones.
+    expect(windows.opened).toEqual(['board:playing', 'board:22', 'board:33']);
   });
 
   it('keeps observed and played games open past game end, closes examines', () => {
@@ -145,6 +192,83 @@ describe('GameManager → WindowManager', () => {
     feed(style12('95', 0));
 
     expect(windows.opened).toEqual([]);
+  });
+});
+
+describe('GameManager → follow/playing slots', () => {
+  it('routes a follow game into the follow slot window', () => {
+    const { machine, windows, feed, chatService } = makeHarnessWithMachine();
+
+    machine.onUserCommand('follow billjr');
+    feedFollowing(chatService, 'billjr');
+    feed(style12('77', 0, 'GuestFoo', 'billjr'));
+
+    expect(windows.opened).toEqual(['board:follow']);
+    expect(machine.isFollowGame('77')).toBe(true);
+  });
+
+  it('routes a game the user named to a per-game window, not the follow slot', () => {
+    const { machine, windows, feed, chatService } = makeHarnessWithMachine();
+
+    machine.onUserCommand('follow billjr');
+    feedFollowing(chatService, 'billjr');
+    machine.onUserCommand('observe 45');
+    feed(style12('45', 0, 'billjr', 'GuestX'));
+    feed(style12('77', 0, 'GuestFoo', 'billjr'));
+
+    expect(windows.opened).toEqual(['board:45', 'board:follow']);
+  });
+
+  it('reuses the playing slot across two of our games', () => {
+    const { windows, feed } = makeHarnessWithMachine();
+
+    feed(style12('11', 1));
+    feed(style12('22', 1));
+
+    // The manager opens the slot once; the real WindowManager retargets
+    // it (covered in windowManager.test.ts).
+    expect(windows.opened).toEqual(['board:playing', 'board:playing']);
+  });
+
+  it('closing the follow window stops following', () => {
+    const { machine, windows, feed, chatService, sent } = makeHarnessWithMachine();
+
+    machine.onUserCommand('follow billjr');
+    feedFollowing(chatService, 'billjr');
+    feed(style12('77', 0, 'GuestFoo', 'billjr'));
+    expect(windows.opened).toEqual(['board:follow']);
+
+    windows.fireOnClose('board:follow');
+
+    expect(sent).toEqual(['follow']);
+    expect(machine.following).toBe(false);
+  });
+
+  it('a follow game ending keeps the window open for review', () => {
+    const { gameService, windows, feed, chatService, machine } = makeHarnessWithMachine();
+
+    machine.onUserCommand('follow billjr');
+    feedFollowing(chatService, 'billjr');
+    feed(style12('77', 0, 'GuestFoo', 'billjr'));
+    gameService.fireGameInactive('77');
+
+    expect(windows.closed).toEqual([]);
+    expect(machine.following).toBe(true);
+    expect(machine.currentFollowGame).toBeNull();
+  });
+
+  it('a blocked follow window still stops following when it never opened', () => {
+    const { machine, windows, feed, chatService } = makeHarnessWithMachine();
+
+    machine.onUserCommand('follow billjr');
+    feedFollowing(chatService, 'billjr');
+    windows.blockedGames.add('77');
+    feed(style12('77', 0, 'GuestFoo', 'billjr'));
+
+    expect(windows.opened).toEqual(['board:follow']);
+    // No window exists, so no close event can ever fire; the machine's
+    // own stop (bare `follow`) is the only way back.
+    expect(machine.following).toBe(true);
   });
 });
 

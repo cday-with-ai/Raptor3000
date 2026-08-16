@@ -83,13 +83,18 @@ import { endShowFor, kingShowAnimation, teamShowAnimation } from '../game/endSho
 export const BoardWindow = observer(function BoardWindow({
   context,
   gameId,
+  slot,
 }: {
   context: RaptorContext;
   gameId: string | null;
+  /** Stable window slot ('follow' | 'playing') when this is a reusable
+   *  window rather than a per-game one. Position persistence keys on the
+   *  slot so the window stays where the user put it across games. */
+  slot?: string | null;
 }) {
   useEffect(
-    () => installPositionTracker(windowStorageKey('board', gameId)),
-    [gameId],
+    () => installPositionTracker(windowStorageKey('board', slot ?? gameId)),
+    [gameId, slot],
   );
 
   const [s12, setS12] = useState<Style12Message | undefined>(() =>
@@ -293,6 +298,12 @@ export const BoardWindow = observer(function BoardWindow({
   // keeps the shape of the mode it ended FROM — a finished played game
   // still looks like a playing window (Carson).
   const bucket = layoutBucketFor(ended ? (endedFrom ?? mode) : mode);
+
+  // The follow marker, when this window is the one following a player or
+  // the best-rated game: `(follow billjr)` / `(follow best blitz)`. Read
+  // off the shared machine so it updates reactively when the follow game
+  // changes. Null when the game is not the current follow game.
+  const followLabel = context.gameWindowMachine?.followLabelFor(gameId) ?? null;
 
   // Locally-ticked clock offsets, applied to the server clocks between
   // Style12 updates. Reset on every new Style12; frozen once the game ends.
@@ -508,6 +519,7 @@ export const BoardWindow = observer(function BoardWindow({
           context={context}
           s12={s12}
           gameId={gameId}
+          followLabel={followLabel}
           mode={mode}
           sans={sans}
           viewablePlies={replay.grids.length - 1}
@@ -1623,6 +1635,7 @@ function SidePanel({
   context,
   s12,
   gameId,
+  followLabel,
   mode,
   sans,
   viewablePlies,
@@ -1640,6 +1653,9 @@ function SidePanel({
   context: RaptorContext;
   s12: Style12Message | undefined;
   gameId: string | null;
+  /** The follow marker for this window's game, or null. Computed by the
+   *  observer BoardWindow so it arrives reactive here. */
+  followLabel: string | null;
   mode: BoardModeCode;
   sans: ReadonlyMap<number, string>;
   viewablePlies: number;
@@ -1731,6 +1747,9 @@ function SidePanel({
           out of room, and it ran out on the half you actually read. */}
       <div style={statusBlock}>
         <span style={{ fontWeight: 700, opacity: 0.75 }}>Status:</span>
+        {followLabel && (
+          <span style={{ opacity: 0.85, alignSelf: 'center' }}>{followLabel}</span>
+        )}
         <span style={{ opacity: 0.85, alignSelf: 'center' }}>{modeLabel(mode)}</span>
         {gameFlavor(context, gameId) && (
           <span style={{ opacity: 0.8, alignSelf: 'center' }}>
