@@ -647,8 +647,15 @@ function savePgn(args: {
   const a = document.createElement('a');
   a.href = url;
   a.download = `${s12?.whiteName ?? 'white'}-vs-${s12?.blackName ?? 'black'}.pgn`;
+  // In the DOM and revoking late (2026-08-16): clicking a detached
+  // anchor while revoking the blob URL immediately could abort the
+  // download before it started — and the click fell through to
+  // navigating the blob, which popped the PGN open in a new window.
+  a.style.display = 'none';
+  document.body.appendChild(a);
   a.click();
-  URL.revokeObjectURL(url);
+  document.body.removeChild(a);
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
 /** `1-0`, `0-1`, `1/2-1/2`, `*` — the PGN spec's result tokens. */
