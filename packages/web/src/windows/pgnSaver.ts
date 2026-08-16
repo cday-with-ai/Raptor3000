@@ -27,6 +27,9 @@ declare global {
     showSaveFilePicker?: (options: {
       suggestedName?: string;
       types?: { description?: string; accept: Record<string, string[]> }[];
+      /** A stable id keeps the permission tied to one file across
+       *  picker calls (the journal uses it). */
+      id?: string;
     }) => Promise<FileSystemFileHandle>;
   }
 }
@@ -78,7 +81,18 @@ export async function savePgnFile(
 
   const handle = await env.pickFile(suggestedName);
   if (!handle) return 'cancelled';
+  return writePgnToHandle(handle, pgn);
+}
 
+/**
+ * Write to a handle the caller already holds (picked, or loaded from
+ * storage). The one writer both save paths go through, so an existing
+ * file is always grown and never overwritten.
+ */
+export async function writePgnToHandle(
+  handle: FileSystemFileHandle,
+  pgn: string,
+): Promise<'saved' | 'appended' | 'cancelled'> {
   let existing: string;
   try {
     existing = await (await handle.getFile()).text();

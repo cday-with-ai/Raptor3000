@@ -202,6 +202,20 @@ const pl: Messages = {
   'options.sound.note':
     'Ruchy, bicia i szachy używają wybranego zestawu; dźwięki końca partii zostają na Piano. Wszystkie zestawy pochodzą z lichess i mają wolne licencje — słynny zestaw „standard” wolnej licencji nie ma. Powiadomienia — przychodzący tell, przyjście albo odejście znajomego — to nasze własne syntezowane dźwięki w stylu wybranego zestawu.',
 
+  'options.pgnJournal': 'Autozapis PGN',
+  'options.pgnJournal.append': 'Dodawaj partie, które gram',
+  'options.pgnJournal.appendNote':
+    'Każda partia, którą GRASZ, jest dodawana do pliku PGN na koniec — partie, które tylko obserwujesz lub analizujesz, nigdy tam nie trafiają. Działa w Chrome, Brave i Edge; inne przeglądarki nie zapisują niczego.',
+  'options.pgnJournal.file': 'Plik dziennika',
+  'options.pgnJournal.choose': 'Wybierz plik…',
+  'options.pgnJournal.change': 'Zmień plik…',
+  'options.pgnJournal.unsupported':
+    'Ta przeglądarka nie ma API dostępu do systemu plików — autozapis jest tu niedostępny.',
+  'options.pgnJournal.chosenNote':
+    'Partie będą tu dodawane na koniec. Jeśli przeglądarka zapyta ponownie, wybierz plik jeszcze raz, aby odnowić zgodę.',
+  'options.pgnJournal.noneNote':
+    'Nie wybrano jeszcze pliku — nic nie zostanie zapisane, dopóki go nie wybierzesz.',
+
   'options.loginScript': 'Skrypt logowania',
   'options.loginScript.note1':
     'Wysyłany (niewidocznie) po każdym logowaniu, jedna komenda na linijkę; puste linijki są pomijane; działa od następnego połączenia. Zostaw',

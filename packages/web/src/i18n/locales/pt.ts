@@ -202,6 +202,20 @@ const pt: Messages = {
   'options.sound.note':
     'Lances, capturas e xeques usam o conjunto selecionado; os sons de fim de partida ficam no Piano. Todos os conjuntos são os de licença livre do lichess — o famoso conjunto "standard" não tem licença livre. Os alertas — um tell chegando, um amigo entrando ou saindo — são notas sintetizadas por nós no estilo do conjunto selecionado.',
 
+  'options.pgnJournal': 'Salvamento automático de PGN',
+  'options.pgnJournal.append': 'Adicionar as partidas que eu jogo',
+  'options.pgnJournal.appendNote':
+    'Cada partida que você JOGA é adicionada a um arquivo PGN no final — as que você apenas observa ou examina nunca chegam lá. Funciona no Chrome, Brave e Edge; outros navegadores não salvam nada.',
+  'options.pgnJournal.file': 'Arquivo do diário',
+  'options.pgnJournal.choose': 'Escolher arquivo…',
+  'options.pgnJournal.change': 'Trocar arquivo…',
+  'options.pgnJournal.unsupported':
+    'Este navegador não tem a API de acesso ao sistema de arquivos — o salvamento automático não está disponível aqui.',
+  'options.pgnJournal.chosenNote':
+    'As partidas serão adicionadas aqui no final. Se o navegador perguntar de novo, escolha o arquivo novamente para renovar a permissão.',
+  'options.pgnJournal.noneNote':
+    'Nenhum arquivo escolhido ainda — nada é salvo até você escolher um.',
+
   'options.loginScript': 'Script de login',
   'options.loginScript.note1':
     'Enviado (oculto) após cada login, um comando por linha; linhas em branco são ignoradas; vale a partir da próxima conexão. Mantenha',

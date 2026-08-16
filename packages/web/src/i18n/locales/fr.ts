@@ -205,6 +205,20 @@ const fr: Messages = {
   'options.sound.note':
     'Coups, prises et échecs utilisent le jeu sélectionné ; les sons de fin de partie restent sur Piano. Tous les jeux sont ceux de lichess, sous licence libre — le fameux jeu « standard », lui, ne l’est pas. Les alertes — un tell qui arrive, un ami qui se connecte ou s’en va — sont nos propres notes synthétisées, stylées d’après le jeu sélectionné.',
 
+  'options.pgnJournal': 'Sauvegarde PGN automatique',
+  'options.pgnJournal.append': 'Ajouter les parties que je joue',
+  'options.pgnJournal.appendNote':
+    'Chaque partie que vous JOUEZ est ajoutée à un fichier PGN à la fin — celles que vous ne faites que regarder ou analyser n’y arrivent jamais. Fonctionne dans Chrome, Brave et Edge ; les autres navigateurs n’enregistrent rien.',
+  'options.pgnJournal.file': 'Fichier du journal',
+  'options.pgnJournal.choose': 'Choisir un fichier…',
+  'options.pgnJournal.change': 'Changer de fichier…',
+  'options.pgnJournal.unsupported':
+    'Ce navigateur n’a pas d’API d’accès au système de fichiers — la sauvegarde automatique est indisponible ici.',
+  'options.pgnJournal.chosenNote':
+    'Les parties seront ajoutées ici à la fin. Si le navigateur redemande, rechoisissez le fichier pour renouveler l’autorisation.',
+  'options.pgnJournal.noneNote':
+    'Aucun fichier choisi pour l’instant — rien n’est enregistré tant que vous n’en choisissez pas un.',
+
   'options.loginScript': 'Script de connexion',
   'options.loginScript.note1':
     'Envoyé (masqué) après chaque connexion, une commande par ligne ; les lignes vides sont sautées ; s’applique à la prochaine connexion. Gardez',

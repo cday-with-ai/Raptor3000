@@ -17,6 +17,7 @@ import {
   type GameEndMessage,
   type Style12Message,
 } from '@raptor3000/shared';
+import { ChatEventType, makeChatEvent } from '@raptor3000/shared';
 import {
   formatEvalWhitePov,
   formatSanLine,
@@ -42,7 +43,9 @@ import {
   type ToolbarItem,
 } from './boardToolbar.js';
 import { installCloseGuard, partingCommands } from './closeGuard.js';
+import { appendToJournal } from './pgnJournal.js';
 import { savePgnFile } from './pgnSaver.js';
+import { buildPgnText } from './pgnText.js';
 import { installPositionTracker, windowStorageKey } from './windowPosition.js';
 import type { EngineAnalysis } from '../engine/EngineService.js';
 import {
@@ -474,6 +477,47 @@ export const BoardWindow = observer(function BoardWindow({
 
   const prefs = useLivePreferences();
 
+  // Auto-append (Carson, 2026-08-16): a game we PLAYED is appended to
+  // the journal file at game end, with nothing asked. Games we only
+  // watched or examined never reach it — `endedFrom` is the mode the
+  // window held when the game ended. The browser restrictions that
+  // shape this (Carson asked, 2026-08-16): the picker and
+  // `requestPermission` need a user gesture, so the file is chosen in
+  // Options, while the append itself needs none; a handle whose
+  // permission has decayed to 'prompt' is reported rather than prompted
+  // for mid-game-end. The guard ref makes the append exactly-once even
+  // under StrictMode's double-invoked effects.
+  const journaledRef = useRef(false);
+  useEffect(() => {
+    if (!gameEnd || endedFrom !== BoardMode.PLAYING || !prefs.autoAppendPgn) return;
+    if (journaledRef.current) return;
+    journaledRef.current = true;
+    void appendToJournal(
+      buildPgnText({
+        context,
+        gameId,
+        s12,
+        sans,
+        gameEnd,
+        opening,
+        whiteRating,
+        blackRating,
+      }),
+    ).then(result => {
+      if (result === 'appended' || result === 'saved') return;
+      const message =
+        result === 'no-file'
+          ? 'PGN auto-save: no journal file chosen yet — pick one in Options → Auto-save PGN.'
+          : result === 'needs-permission'
+            ? 'PGN auto-save: the browser needs permission again — re-choose the journal file in Options → Auto-save PGN.'
+            : result === 'denied'
+              ? 'PGN auto-save: permission was denied, this game was not saved.'
+              : 'PGN auto-save: could not read the journal file, this game was not saved.';
+      context.chatService.publish(makeChatEvent(ChatEventType.INTERNAL, message, { message }));
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [gameEnd, endedFrom, prefs.autoAppendPgn]);
+
   const topBar = (
     <InfoBar side="opponent" name={topName} rating={topRating} clockMs={topClock} ticking={topTicking} prefs={prefs} />
   );
@@ -570,17 +614,10 @@ export const BoardWindow = observer(function BoardWindow({
 });
 
 /**
- * Download the window's game as a .pgn file, lichess/babaschess header
- * flavor (BOTCHvinik, 2026-08-16): Event/Site/Round/UTCDate/UTCTime and
- * one `[Tag "value"]` per line, then the movetext wrapped to the PGN
- * spec's 75-char lines. Deliberately breaks with original Raptor's
- * writer (Carson, 2026-08-16) — its headers ("3 0 unrated blitz",
- * ResultDescription) are the ones other tools don't read.
- *
- * Movetext from the window-local history; Result/Termination from the
- * window's gameEnd (played, observed and examined games all get one);
- * Opening/ECO from the lichess openings table; Variant only when the
- * game is not standard chess.
+ * Download the window's game as a .pgn file. The text comes from
+ * `buildPgnText` — the one builder shared with the auto-append journal
+ * (pgnText.ts), so a game saved by hand and a game saved at game end
+ * are byte-identical in shape.
  */
 function savePgn(args: {
   context: RaptorContext;
@@ -592,127 +629,8 @@ function savePgn(args: {
   whiteRating: string;
   blackRating: string;
 }): void {
-  const { context, gameId, s12, sans, gameEnd, opening, whiteRating, blackRating } = args;
-  const moves: string[] = [];
-  for (let p = 1; sans.has(p); p++) {
-    if (p % 2 === 1) moves.push(`${(p + 1) / 2}.`);
-    moves.push(sans.get(p)!);
-  }
-
-  const today = new Date();
-  const date = `${today.getFullYear()}.${String(today.getMonth() + 1).padStart(2, '0')}.${String(today.getDate()).padStart(2, '0')}`;
-  const utcDate = `${today.getUTCFullYear()}.${String(today.getUTCMonth() + 1).padStart(2, '0')}.${String(today.getUTCDate()).padStart(2, '0')}`;
-  const utcTime = `${String(today.getUTCHours()).padStart(2, '0')}:${String(today.getUTCMinutes()).padStart(2, '0')}:${String(today.getUTCSeconds()).padStart(2, '0')}`;
-
-  // The variant rides the same type string as the status flavor: <g1>
-  // when it survived the game end, else the `moves` header. FICS names:
-  // blitz, standard, wild/fr, wild/0 (crazyhouse), suicide, atomic, ...
-  const g1 = gameId ? context.gameService.getLatestG1(gameId) : undefined;
-  const mm = gameId ? context.gameService.getLatestMoves(gameId) : undefined;
-  const gameType = g1?.gameTypeDescription ?? mm?.gameType;
-
-  // Time control: <g1>/Style12 carry ms; the moves header carries
-  // minutes+seconds. Written seconds+seconds, "120+12", like lichess.
-  let tc: string | null = null;
-  if (s12) {
-    tc = `${Math.round(s12.initialTimeMillis / 1000)}+${Math.round(s12.initialIncMillis / 1000)}`;
-  } else if (mm?.initialMinutes != null) {
-    tc = `${mm.initialMinutes}+${mm.incrementSeconds ?? 0}`;
-  }
-
-  const result = pgnResult(gameEnd);
-  const variant = variantFor(gameType);
-    const headers = [
-    '[Event "Online Game"]',
-    '[Site "https://freechess.org"]',
-    `[Date "${date}"]`,
-    '[Round "-"]',
-    `[White "${s12?.whiteName ?? '?'}"]`,
-    `[Black "${s12?.blackName ?? '?'}"]`,
-    `[Result "${result}"]`,
-    tc ? `[TimeControl "${tc}"]` : null,
-    `[WhiteElo "${whiteRating || '-'}"]`,
-    `[BlackElo "${blackRating || '-'}"]`,
-    variant ? `[Variant "${variant}"]` : null,
-    `[UTCDate "${utcDate}"]`,
-    `[UTCTime "${utcTime}"]`,
-    opening ? `[Opening "${opening.name}"]` : null,
-    opening ? `[ECO "${opening.eco}"]` : null,
-    gameEnd ? `[Termination "${pgnTermination(gameEnd)}"]` : null,
-  ].filter((h): h is string => h !== null);
-
-  const movetext = wrapPgnMoves([...moves, result]);
-  const pgn = [...headers, '', movetext, ''].join('\n');
-  void savePgnFile(pgn, `${s12?.whiteName ?? 'white'}-vs-${s12?.blackName ?? 'black'}.pgn`);
-}
-
-/** `1-0`, `0-1`, `1/2-1/2`, `*` — the PGN spec's result tokens. */
-function pgnResult(ge: GameEndMessage | null): string {
-  if (!ge) return '*';
-  switch (ge.type) {
-    case GameEndType.WHITE_WON: return '1-0';
-    case GameEndType.BLACK_WON: return '0-1';
-    case GameEndType.DRAW: return '1/2-1/2';
-    default: return '*';
-  }
-}
-
-/**
- * The lichess Termination vocabulary, inferred from FICS's end
- * description ("Black resigns" → resignation, "Black forfeits by
- * timeout" → time forfeit, "Game drawn by repetition" → repetition...).
- * Descriptions are free text, so this is keyword matching with the
- * specific phrases first — "stalemate" before "mate", since the latter
- * is a substring of the former.
- */
-function pgnTermination(ge: GameEndMessage): string {
-  if (ge.type === GameEndType.ABORTED) return 'abandoned';
-  if (ge.type === GameEndType.ADJOURNED) return 'adjourned';
-  if (ge.type === GameEndType.UNDETERMINED) return 'unterminated';
-  const d = ge.description.toLowerCase();
-  if (d.includes('stalemate')) return 'stalemate';
-  if (d.includes('checkmate') || d.includes('mates')) return 'checkmate';
-  if (d.includes('resign')) return 'resignation';
-  if (d.includes('forfeit') || d.includes('time')) return 'time forfeit';
-  if (d.includes('repetition')) return 'repetition';
-  if (d.includes('insufficient')) return 'insufficient material';
-  if (d.includes('agreement') || d.includes('offered')) return 'agreement';
-  if (d.includes('50') || d.includes('fifty')) return '50 move rule';
-  return 'normal';
-}
-
-/**
- * The PGN Variant tag for a FICS game type, in the names other tools
- * read (lichess's). Only non-standard chess gets one. FICS's wild
- * types: wild/0 crazyhouse, wild/1 losers, wild/2 suicide, wild/3
- * giveaway, wild/4 atomic, wild/fr fischer random.
- */
-function variantFor(type: string | undefined): string | null {
-  if (!type) return null;
-  const t = type.toLowerCase();
-  if (t.includes('wild/fr') || t.includes('fischer')) return 'Chess960';
-  if (t.includes('crazyhouse') || t.includes('zh') || t.includes('wild/0')) return 'Crazyhouse';
-  if (t.includes('suicide') || t.includes('losers') || t.includes('giveaway') || t.includes('wild/1') || t.includes('wild/2') || t.includes('wild/3')) return 'Antichess';
-  if (t.includes('atomic') || t.includes('wild/4')) return 'Atomic';
-  if (t.includes('bughouse')) return 'Bughouse';
-  return null;
-}
-
-/** Movetext wrapped to the PGN spec's 75-char lines. */
-function wrapPgnMoves(tokens: string[]): string {
-  const lines: string[] = [];
-  let line = '';
-  for (const tok of tokens) {
-    const joined = line ? `${line} ${tok}` : tok;
-    if (line && joined.length > 75) {
-      lines.push(line);
-      line = tok;
-    } else {
-      line = joined;
-    }
-  }
-  if (line) lines.push(line);
-  return lines.join('\n');
+  const pgn = buildPgnText(args);
+  void savePgnFile(pgn, `${args.s12?.whiteName ?? 'white'}-vs-${args.s12?.blackName ?? 'black'}.pgn`);
 }
 
 /** PLAYING and EXAMINING get their own layout memory; everything else

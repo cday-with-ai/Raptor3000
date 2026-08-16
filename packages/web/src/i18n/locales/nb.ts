@@ -200,6 +200,20 @@ const nb: Messages = {
   'options.sound.note':
     'Trekk, slag og sjakk bruker det valgte settet; lydene ved partislutt holder seg til Piano. Alle settene er lichess sine fritt lisensierte — det berømte «standard»-settet er ikke fritt lisensiert. Varsler — en innkommende tell, en venn som kommer eller går — er våre egne syntetiserte toner i stil med det valgte settet.',
 
+  'options.pgnJournal': 'PGN-autolagring',
+  'options.pgnJournal.append': 'Legg til partier jeg spiller',
+  'options.pgnJournal.appendNote':
+    'Hvert parti du SPILLER blir lagt til i én PGN-fil når partiet er over — partier du bare ser på eller analyserer havner aldri der. Fungerer i Chrome, Brave og Edge; andre nettlesere lagrer ingenting.',
+  'options.pgnJournal.file': 'Journalfil',
+  'options.pgnJournal.choose': 'Velg fil…',
+  'options.pgnJournal.change': 'Bytt fil…',
+  'options.pgnJournal.unsupported':
+    'Denne nettleseren har ikke File System Access API — autolagring er ikke tilgjengelig her.',
+  'options.pgnJournal.chosenNote':
+    'Partier blir lagt til her når partiet er over. Hvis nettleseren spør igjen, velg filen på nytt for å fornye tillatelsen.',
+  'options.pgnJournal.noneNote':
+    'Ingen fil valgt ennå — ingenting lagres før du velger en.',
+
   'options.loginScript': 'Innloggingsskript',
   'options.loginScript.note1':
     'Sendes (skjult) etter hver innlogging, én kommando per linje; tomme linjer hoppes over; gjelder fra neste tilkobling. Legg',

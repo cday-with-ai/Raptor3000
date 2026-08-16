@@ -202,6 +202,20 @@ const de: Messages = {
   'options.sound.note':
     'Züge, Schläge und Schachgebote nutzen den gewählten Satz; Partieende-Sounds bleiben auf Piano. Alle Sätze sind die frei lizenzierten von lichess — der berühmte "standard"-Satz ist nicht frei lizenziert. Hinweise — ein eingehendes Tell, ein Freund kommt oder geht — sind unsere eigenen synthetisierten Töne im Stil des gewählten Satzes.',
 
+  'options.pgnJournal': 'PGN-Autospeicherung',
+  'options.pgnJournal.append': 'Gespiele Partien anhängen',
+  'options.pgnJournal.appendNote':
+    'Jede Partie, die du SPIELST, wird am Partieende an eine PGN-Datei angehängt — Partien, die du nur zusiehst oder analysierst, landen nie dort. Funktioniert in Chrome, Brave und Edge; andere Browser speichern nichts.',
+  'options.pgnJournal.file': 'Journal-Datei',
+  'options.pgnJournal.choose': 'Datei wählen…',
+  'options.pgnJournal.change': 'Datei ändern…',
+  'options.pgnJournal.unsupported':
+    'Dieser Browser hat keine File-System-Access-API — Autospeicherung ist hier nicht verfügbar.',
+  'options.pgnJournal.chosenNote':
+    'Partien werden hier am Partieende angehängt. Falls der Browser erneut fragt, wähle die Datei neu, um die Erlaubnis zu erneuern.',
+  'options.pgnJournal.noneNote':
+    'Noch keine Datei gewählt — es wird nichts gespeichert, bis du eine wählst.',
+
   'options.loginScript': 'Login-Skript',
   'options.loginScript.note1':
     'Wird nach jedem Login (unsichtbar) gesendet, ein Befehl pro Zeile; Leerzeilen werden übersprungen; gilt ab dem nächsten Verbinden. Lass',

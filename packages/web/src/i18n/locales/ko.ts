@@ -202,6 +202,20 @@ const ko: Messages = {
   'options.sound.note':
     '이동과 잡기, 체크는 선택한 세트를 쓰고, 대국 종료 소리는 Piano로 고정입니다. 모든 세트는 lichess가 자유 라이선스로 공개한 것입니다 — 정작 유명한 "standard" 세트는 자유 라이선스가 아닙니다. 알림음(들어온 텔, 친구의 접속과 접속 종료)은 선택한 세트의 분위기에 맞춰 저희가 직접 합성한 소리입니다.',
 
+  'options.pgnJournal': 'PGN 자동 저장',
+  'options.pgnJournal.append': '내가 둔 기보 추가',
+  'options.pgnJournal.appendNote':
+    '내가 둔 기보는 기보가 끝날 때 PGN 파일 끝에 추가됩니다. 지켜보기나 분석만 한 기보는 절대 추가되지 않습니다. Chrome, Brave, Edge에서 작동하며 다른 브라우저에서는 저장되지 않습니다.',
+  'options.pgnJournal.file': '저널 파일',
+  'options.pgnJournal.choose': '파일 선택…',
+  'options.pgnJournal.change': '파일 변경…',
+  'options.pgnJournal.unsupported':
+    '이 브라우저에는 파일 시스템 접근 API가 없어 자동 저장을 사용할 수 없습니다.',
+  'options.pgnJournal.chosenNote':
+    '기보가 끝나면 여기에 추가됩니다. 브라우저가 다시 묻는다면 파일을 다시 선택해 권한을 갱신하세요.',
+  'options.pgnJournal.noneNote':
+    '아직 파일을 선택하지 않았습니다. 선택하기 전에는 아무것도 저장되지 않습니다.',
+
   'options.loginScript': '로그인 스크립트',
   'options.loginScript.note1':
     '로그인할 때마다 (보이지 않게) 전송됩니다. 한 줄에 명령 하나씩이고, 빈 줄은 건너뜁니다. 다음 연결부터 적용됩니다. 그리고',

@@ -180,6 +180,13 @@ export interface AppPreferences {
    * promotion never opens a dialog.
    */
   autoPromote: AutoPromote;
+  /**
+   * Auto-append every game you PLAY to a designated PGN collection file
+   * (Carson, 2026-08-16). The file is chosen once in Options — the only
+   * place with a user gesture — and its handle lives in IndexedDB.
+   * Games you only watch or examine never reach it.
+   */
+  autoAppendPgn: boolean;
 }
 
 export const DEFAULT_PREFERENCES: AppPreferences = {
@@ -234,6 +241,7 @@ export const DEFAULT_PREFERENCES: AppPreferences = {
   // say otherwise.
   autoPromote: 'Q',
   moveListVisible: true,
+  autoAppendPgn: false,
 };
 
 /**
@@ -443,6 +451,10 @@ export function loadPreferences(): AppPreferences {
       DEFAULT_PREFERENCES.autoPromote,
       AUTO_PROMOTE_VALUES,
     ),
+    autoAppendPgn: readBool(
+      'autoAppendPgn',
+      DEFAULT_PREFERENCES.autoAppendPgn,
+    ),
   };
 }
 
@@ -488,4 +500,5 @@ export function savePreferences(prefs: AppPreferences): void {
   setRaw('flipOnPlayAsBlack', String(prefs.flipOnPlayAsBlack));
   setRaw('moveListVisible', String(prefs.moveListVisible));
   setRaw('autoPromote', prefs.autoPromote);
+  setRaw('autoAppendPgn', String(prefs.autoAppendPgn));
 }

@@ -190,6 +190,20 @@ const zh: Messages = {
   'options.sound.note':
     '走子、吃子和将军使用所选音效组；对局结束音固定用 Piano。所有音效组都来自 lichess 的自由授权音效——那套著名的 “standard” 并非自由授权。提醒音——收到私聊、好友上线或下线——是我们自己合成的音符，风格向所选音效组看齐。',
 
+  'options.pgnJournal': 'PGN 自动保存',
+  'options.pgnJournal.append': '追加我下过的对局',
+  'options.pgnJournal.appendNote':
+    '您下过的每一局棋都会在对局结束时追加到一个 PGN 文件中——只看或分析过的对局永远不会写入。适用于 Chrome、Brave 和 Edge；其他浏览器不会保存。',
+  'options.pgnJournal.file': '日志文件',
+  'options.pgnJournal.choose': '选择文件…',
+  'options.pgnJournal.change': '更换文件…',
+  'options.pgnJournal.unsupported':
+    '此浏览器没有文件系统访问 API——此处无法自动保存。',
+  'options.pgnJournal.chosenNote':
+    '对局结束时棋局会追加到这里。如果浏览器再次询问，请重新选择文件以重新授权。',
+  'options.pgnJournal.noneNote':
+    '尚未选择文件——选择之前不会保存任何内容。',
+
   'options.loginScript': '登录脚本',
   'options.loginScript.note1':
     '每次登录后（隐藏）发送，一行一条命令；空行会被跳过；对下一次连接生效。如果保留',

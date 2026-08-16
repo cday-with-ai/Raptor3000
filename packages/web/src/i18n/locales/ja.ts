@@ -202,6 +202,20 @@ const ja: Messages = {
   'options.sound.note':
     '移動・キャプチャ・チェックには選択したセットを使い、対局終了の音は Piano のままです。収録しているのはすべて lichess の自由なライセンスのセットで、有名な「standard」セットは自由なライセンスではないため入っていません。アラート（tell の受信、フレンドの到着・退出）は、選択中のセットの響きに寄せて自前で合成した音です。',
 
+  'options.pgnJournal': 'PGN 自動保存',
+  'options.pgnJournal.append': '自分が指した対局を追加',
+  'options.pgnJournal.appendNote':
+    '自分が指した対局は、終局時に PGN ファイルの末尾に追加されます。観戦や検討だけの対局は決して追加されません。Chrome、Brave、Edge で動作し、他のブラウザでは保存されません。',
+  'options.pgnJournal.file': 'ジャーナルファイル',
+  'options.pgnJournal.choose': 'ファイルを選択…',
+  'options.pgnJournal.change': 'ファイルを変更…',
+  'options.pgnJournal.unsupported':
+    'このブラウザにはファイルシステムアクセス API がないため、自動保存は利用できません。',
+  'options.pgnJournal.chosenNote':
+    '終局時にここへ対局が追加されます。ブラウザが再度確認してきたら、ファイルを選び直して許可を更新してください。',
+  'options.pgnJournal.noneNote':
+    'まだファイルが選択されていません。選択するまで何も保存されません。',
+
   'options.loginScript': 'ログインスクリプト',
   'options.loginScript.note1':
     '各ログイン後に（非表示で）送信されます。1 行につき 1 コマンドで、空行はスキップされ、次回の接続から適用されます。なお、',

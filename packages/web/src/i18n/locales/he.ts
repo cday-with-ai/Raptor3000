@@ -199,6 +199,20 @@ const he: Messages = {
   'options.sound.note':
     'מהלכים, הכאות ושחים משתמשים בערכה שנבחרה; צלילי סיום המשחק נשארים על ⁦Piano⁩. כל הערכות הן הערכות ברישיון חופשי של ⁦lichess⁩ — ערכת "⁦standard⁩" המפורסמת אינה ברישיון חופשי. ההתראות — הודעה נכנסת, חבר שמגיע או עוזב — הן תווים שסינתזנו בעצמנו, בהשראת הערכה שנבחרה.',
 
+  'options.pgnJournal': 'שמירה אוטומטית של PGN',
+  'options.pgnJournal.append': 'הוספת משחקים שאני משחק',
+  'options.pgnJournal.appendNote':
+    'כל משחק שאתה משחק מתווסף לקובץ PGN בסוף המשחק — משחקים שרק צפית בהם או בחנת אותם אף פעם לא מגיעים לשם. עובד בכרום, ברייב ובאדג’; דפדפנים אחרים לא שומרים כלום.',
+  'options.pgnJournal.file': 'קובץ היומן',
+  'options.pgnJournal.choose': 'בחירת קובץ…',
+  'options.pgnJournal.change': 'החלפת קובץ…',
+  'options.pgnJournal.unsupported':
+    'לדפדפן הזה אין File System Access API — שמירה אוטומטית אינה זמינה כאן.',
+  'options.pgnJournal.chosenNote':
+    'משחקים יתווספו כאן בסוף המשחק. אם הדפדפן ישאל שוב, בחר את הקובץ שוב כדי לחדש את ההרשאה.',
+  'options.pgnJournal.noneNote':
+    'עדיין לא נבחר קובץ — שום דבר לא נשמר עד שתבחר אחד.',
+
   'options.loginScript': 'סקריפט התחברות',
   'options.loginScript.note1':
     'נשלח (בהסתר) אחרי כל התחברות, פקודה אחת בכל שורה; שורות ריקות מדולגות; נכנס לתוקף בחיבור הבא. השאירו את',

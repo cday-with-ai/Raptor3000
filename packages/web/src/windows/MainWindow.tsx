@@ -17,6 +17,7 @@ import type { MessageKey } from '../i18n/index.js';
 import { armRelaunchToLogin, consumeRelaunchToLogin } from '../relaunch.js';
 import { playSound } from '../sounds.js';
 import { playAlert } from '../alertSounds.js';
+import { chooseJournalFile, loadJournalHandle, supportsSavePicker } from './pgnJournal.js';
 import { useLivePreferences } from '../useLivePreferences.js';
 import { CHAT_COLOR_AUTO, type ChatColorKey } from '../chatFormat.js';
 import {
@@ -578,6 +579,19 @@ function OptionsPage({
           </Row>
         </Section>
 
+        <Section title={t('options.pgnJournal')}>
+          <Row label={t('options.pgnJournal.append')}>
+            <Toggle
+              checked={prefs.autoAppendPgn}
+              onChange={v => update('autoAppendPgn', v)}
+            />
+            <Note>{t('options.pgnJournal.appendNote')}</Note>
+          </Row>
+          <Row label={t('options.pgnJournal.file')}>
+            <JournalFileRow active={prefs.autoAppendPgn} />
+          </Row>
+        </Section>
+
         <Section title={t('options.sound')}>
           <Row label={t('options.sound.sounds')}>
             <Select<SoundMode>
@@ -1077,6 +1091,68 @@ function Toggle({
         {t(checked ? 'common.on' : 'common.off')}
       </span>
     </label>
+  );
+}
+
+/**
+ * The journal-file picker row (Options → PGN auto-save). Choosing the
+ * file lives HERE and only here, because both the picker and
+ * `requestPermission` need a user gesture and this button is one. The
+ * chosen handle is persisted in IndexedDB; the board popup reads it at
+ * game end with no gesture available. Status states, in the row:
+ *   - nothing chosen yet → the button only
+ *   - unsupported browser → a plain note, no button
+ *   - chosen → the file's name, with a change button
+ */
+function JournalFileRow({ active }: { active: boolean }) {
+  const { t } = useT();
+  const [state, setState] = useState<
+    | { kind: 'loading' }
+    | { kind: 'none' }
+    | { kind: 'unsupported' }
+    | { kind: 'chosen'; name: string }
+  >({ kind: 'loading' });
+
+  useEffect(() => {
+    let cancelled = false;
+    void loadJournalHandle().then(handle => {
+      if (cancelled) return;
+      if (!handle) {
+        setState({ kind: 'none' });
+        return;
+      }
+      setState({ kind: 'chosen', name: handle.name });
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [active]);
+
+  if (!supportsSavePicker) {
+    return <Note>{t('options.pgnJournal.unsupported')}</Note>;
+  }
+
+  return (
+    <>
+      <button
+        style={linkBtn}
+        onClick={() => {
+          void chooseJournalFile('my-games.pgn').then(result => {
+            if (result.ok) setState({ kind: 'chosen', name: result.name });
+            else if (result.reason === 'unsupported') setState({ kind: 'unsupported' });
+            else if (result.reason === 'denied') setState({ kind: 'none' });
+          });
+        }}
+      >
+        {state.kind === 'chosen' ? t('options.pgnJournal.change') : t('options.pgnJournal.choose')}
+      </button>
+      {state.kind === 'chosen' && <span style={{ fontSize: 12, opacity: 0.8 }}>{state.name}</span>}
+      <Note>
+        {state.kind === 'chosen'
+          ? t('options.pgnJournal.chosenNote')
+          : t('options.pgnJournal.noneNote')}
+      </Note>
+    </>
   );
 }
 

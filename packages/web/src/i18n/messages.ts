@@ -216,6 +216,20 @@ export const en = {
   'options.sound.note':
     'Moves, captures and checks use the selected set; game-end sounds stay on Piano. All sets are lichess’s freely licensed ones — the famous "standard" set is not freely licensed. Alerts — an incoming tell, a friend arriving or departing — are our own synthesized notes styled after the selected set.',
 
+  'options.pgnJournal': 'PGN auto-save',
+  'options.pgnJournal.append': 'Append games I play',
+  'options.pgnJournal.appendNote':
+    'Every game you PLAY is appended to one PGN file at game end — games you only watch or examine never reach it. Works in Chrome, Brave and Edge; other browsers save nothing.',
+  'options.pgnJournal.file': 'Journal file',
+  'options.pgnJournal.choose': 'Choose file…',
+  'options.pgnJournal.change': 'Change file…',
+  'options.pgnJournal.unsupported':
+    'This browser has no File System Access API — auto-save is unavailable here.',
+  'options.pgnJournal.chosenNote':
+    'Games will be appended here at game end. If the browser ever asks again, re-choose the file to re-grant.',
+  'options.pgnJournal.noneNote':
+    'No file chosen yet — nothing is saved until you pick one.',
+
   'options.loginScript': 'Login script',
   'options.loginScript.note1':
     'Sent (hidden) after each login, one command per line; blank lines are skipped; applies to the next connect. Keep',
