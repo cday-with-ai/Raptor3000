@@ -19,11 +19,23 @@ if [ ! -f package.json ] || ! grep -q '"raptor3000"' package.json 2>/dev/null; t
 fi
 
 echo "── auth ──────────────────────────────────────────"
-if ! npx wrangler whoami >/dev/null 2>&1; then
-  echo "error: wrangler is not logged in. Run:  npx wrangler login" >&2
+# whoami exits 0 even when unauthenticated ("You are not
+# authenticated." is a message, not a failure) — the gate has to read
+# the output, not the exit code (Carson, 2026-08-16: the fake gate
+# sailed past dead tokens and the deploy failed mid-way instead).
+# Credentials come from CLOUDFLARE_API_TOKEN — set in .env, which
+# wrangler loads itself (see docs "System environment variables").
+if ! out=$(npx wrangler whoami 2>&1); then
+  echo "error: wrangler failed to run. Output:" >&2
+  echo "$out" >&2
   exit 1
 fi
-echo "wrangler: logged in"
+if echo "$out" | grep -qi "not authenticated"; then
+  echo "error: not authenticated. Put a real CLOUDFLARE_API_TOKEN in .env" >&2
+  echo "       (dashboard -> My Profile -> API Tokens -> Create Token)." >&2
+  exit 1
+fi
+echo "wrangler: authenticated"
 
 echo "── build ─────────────────────────────────────────"
 yarn workspace @raptor3000/web build
