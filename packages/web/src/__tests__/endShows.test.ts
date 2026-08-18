@@ -50,10 +50,10 @@ describe('endShowFor', () => {
 
 describe('kingShowAnimation', () => {
   const show = END_SHOWS.find(s => s.key === 'boom')!;
-  it('gives the loser the explosion and the winner the hop', () => {
-    expect(kingShowAnimation(show, end(GameEndType.WHITE_WON), true)).toContain('hop');
-    expect(kingShowAnimation(show, end(GameEndType.WHITE_WON), false)).toContain('explode');
-    expect(kingShowAnimation(show, end(GameEndType.BLACK_WON), true)).toContain('explode');
+  it('gives the loser the vaporize and the winner the pump', () => {
+    expect(kingShowAnimation(show, end(GameEndType.WHITE_WON), true)).toContain('pump');
+    expect(kingShowAnimation(show, end(GameEndType.WHITE_WON), false)).toContain('vaporize');
+    expect(kingShowAnimation(show, end(GameEndType.BLACK_WON), true)).toContain('vaporize');
   });
   it('draws share the draw animation', () => {
     expect(kingShowAnimation(show, end(GameEndType.DRAW), true)).toBe(show.draw);
@@ -64,10 +64,10 @@ describe('kingShowAnimation', () => {
 describe('teamShowAnimation', () => {
   const team = END_SHOWS.find(s => s.key === 'team')!;
   const solo = END_SHOWS.find(s => s.key === 'classic')!;
-  it('cheers the winning side, droops the losing side', () => {
-    expect(teamShowAnimation(team, end(GameEndType.WHITE_WON), true)).toContain('cheer');
+  it('pumps the winning side, droops the losing side', () => {
+    expect(teamShowAnimation(team, end(GameEndType.WHITE_WON), true)).toContain('team-pump');
     expect(teamShowAnimation(team, end(GameEndType.WHITE_WON), false)).toContain('droop');
-    expect(teamShowAnimation(team, end(GameEndType.BLACK_WON), false)).toContain('cheer');
+    expect(teamShowAnimation(team, end(GameEndType.BLACK_WON), false)).toContain('team-pump');
   });
   it('king-only shows and draws animate no team', () => {
     expect(teamShowAnimation(solo, end(GameEndType.WHITE_WON), true)).toBeNull();

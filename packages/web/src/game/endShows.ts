@@ -2,7 +2,7 @@ import { GameEndType, type GameEndMessage } from '@raptor3000/shared';
 import type { SoundName } from '../sounds.js';
 
 /**
- * Game-end theater, season two (Carson, 2026-08-12, after winning his
+ * Game-end theater (Carson, 2026-08-12, after winning his
  * first game on it: "add some random stuff to it and make it
  * interesting like exploding king mating piece does some animation
  * things like that get creative" — and "the sounds are also good at
@@ -33,42 +33,44 @@ export interface EndShow {
   readonly requiresMate?: boolean;
 }
 
-const DANCE = 'raptor-king-dance 1.4s ease-in-out 2';
-const BOW = 'raptor-king-bow 1.4s ease-in-out 2';
-const TOPPLE = 'raptor-king-topple 1.2s ease-in forwards';
+// Season three (Carson, 2026-08-18): "still gay" — the bow and the
+// floaty dance went; winners pump — a hard double-stomp with a
+// snapping landing — and the boom show vaporizes the loser in a
+// burst of light instead of wobbling him off the board.
+const PUMP = 'raptor-king-pump 1.1s cubic-bezier(0.34, 1.56, 0.64, 1) 2';
+const TOPPLE = 'raptor-king-topple 0.9s cubic-bezier(0.55, 0, 1, 0.45) forwards';
+const VAPORIZE = 'raptor-king-vaporize 0.6s ease-in forwards';
 
 export const END_SHOWS: readonly EndShow[] = [
-  // The original cast.
-  { key: 'classic', winner: DANCE, loser: TOPPLE, draw: BOW },
-  // The loser goes out with a bang; the winner hops in place.
+  // The winner pumps his fist; the loser's king takes the fall.
+  { key: 'classic', winner: PUMP, loser: TOPPLE, draw: PUMP },
+  // The nuke: the losing king is erased in a burst of light.
   {
     key: 'boom',
-    winner: 'raptor-king-hop 0.6s ease-in-out 3',
-    loser: 'raptor-king-explode 1.1s ease-out forwards',
-    draw: BOW,
+    winner: PUMP,
+    loser: VAPORIZE,
+    draw: PUMP,
     extraSound: 'explosion',
   },
   // The mating piece takes the spotlight; the kings play it straight.
   {
     key: 'mate-spin',
-    winner: DANCE,
+    winner: PUMP,
     loser: TOPPLE,
-    draw: BOW,
+    draw: PUMP,
     materAnim: 'raptor-mater-spin 1.3s ease-in-out 2',
     requiresMate: true,
   },
-  // Gentlemen's finish.
-  { key: 'bows', winner: BOW, loser: TOPPLE, draw: 'raptor-mater-spin 1.3s ease-in-out 1' },
-  // The whole team celebrates; the other team can't watch (Carson:
+  // The whole winning side pumps as one; the losers droop (Carson:
   // "all the pieces celebrate on the winning team the other pieces
   // look sad"). Staggered per square by the renderer.
   {
     key: 'team',
-    winner: DANCE,
+    winner: PUMP,
     loser: TOPPLE,
-    draw: BOW,
-    teamWinnerAnim: 'raptor-team-cheer 0.9s ease-in-out 3',
-    teamLoserAnim: 'raptor-team-droop 1.6s ease-in forwards',
+    draw: PUMP,
+    teamWinnerAnim: 'raptor-team-pump 0.7s cubic-bezier(0.34, 1.56, 0.64, 1) 3',
+    teamLoserAnim: 'raptor-team-droop 1.4s ease-in forwards',
   },
 ];
 
