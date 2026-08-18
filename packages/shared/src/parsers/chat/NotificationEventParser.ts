@@ -7,11 +7,18 @@ import type { ChatEventParser } from '../ChatEventParser.js';
  * Notify arrival/departure. Parity with NotificationEventParser.java.
  *   Notification: GuestABCD has arrived.
  *   Notification: GuestABCD has departed.
+ *   Notification: GuestABCD has arrived and isn't on your notify list.
+ *   Notification: GuestABCD has departed and isn't on your notify list.
+ *
+ * The last two are sent when the other player has *you* on their notify
+ * list (FICS playerdb.c player_notify_departure/player_notify_present);
+ * the classifier must not key on the trailing period, which only the
+ * short forms have.
  */
 export class NotificationEventParser implements ChatEventParser {
   readonly name = 'NotificationEventParser';
   private static readonly PREFIX = 'Notification: ';
-  private static readonly DEPARTED = 'departed.';
+  private static readonly DEPARTED = 'departed';
 
   parse(line: string): ChatEvent | null {
     if (line.length >= 600 && !line.startsWith(NotificationEventParser.PREFIX, 1)) return null;

@@ -208,6 +208,16 @@ describe('NotificationEventParser', () => {
     expect(e.type).toBe(ChatEventType.NOTIFICATION_DEPARTURE);
     expect(e.source).toBe('GuestABCD');
   });
+  it('classifies the "isn\'t on your notify list" arrival', () => {
+    const e = p("Notification: GuestABCD has arrived and isn't on your notify list.");
+    expect(e.type).toBe(ChatEventType.NOTIFICATION_ARRIVAL);
+    expect(e.source).toBe('GuestABCD');
+  });
+  it('classifies the "isn\'t on your notify list" departure', () => {
+    const e = p("Notification: GuestABCD has departed and isn't on your notify list.");
+    expect(e.type).toBe(ChatEventType.NOTIFICATION_DEPARTURE);
+    expect(e.source).toBe('GuestABCD');
+  });
 });
 
 describe('FingerEventParser', () => {

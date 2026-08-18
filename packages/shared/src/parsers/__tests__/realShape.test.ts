@@ -176,6 +176,18 @@ const CASES: Case[] = [
     source: 'GuestABCD',
   },
   {
+    what: 'Notification (arrival, not on notify list)',
+    line: "Notification: GuestABCD has arrived and isn't on your notify list.",
+    type: ChatEventType.NOTIFICATION_ARRIVAL,
+    source: 'GuestABCD',
+  },
+  {
+    what: 'Notification (departure, not on notify list)',
+    line: "Notification: GuestABCD has departed and isn't on your notify list.",
+    type: ChatEventType.NOTIFICATION_DEPARTURE,
+    source: 'GuestABCD',
+  },
+  {
     what: 'Variables',
     line: 'Variable settings of GuestABCD:',
     type: ChatEventType.VARIABLES,
