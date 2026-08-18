@@ -130,14 +130,6 @@ export const en = {
   'common.preview': 'Preview',
 
   'options.session': 'Session',
-  'options.session.chatWindow': 'Chat window',
-  'options.session.reopen': 'Reopen',
-  'options.session.chatNote':
-    'The chat window auto-opens at login; reopen here if closed.',
-  'options.session.connection': 'Connection',
-  'options.session.reconnect': 'Reconnect',
-  'options.session.connectionNote':
-    'No-op while connected. Use it after another login kicks this session — it takes the account back (FICS kicks them in turn).',
   'options.session.startOver': 'Start over',
   'options.session.relaunch': 'Relaunch',
   'options.session.relaunchArmed': 'Click again to relaunch',

@@ -55,7 +55,22 @@ const VOLUME: Record<SoundName, number> = {
   victory: 0.6,
   defeat: 0.6,
   draw: 0.6,
-  explosion: 0.55,
+  explosion: 0.65,
+};
+
+// Verdicts sit a step deeper than the moves — the piano notes sound
+// thin at their natural pitch (Carson, 2026-08-18). playbackRate below
+// 1 drops the pitch, and a lowered note lasts a touch longer, which
+// suits a verdict; the nuke boom goes deepest.
+const PITCH: Record<SoundName, number> = {
+  move: 1,
+  capture: 1,
+  check: 1,
+  notify: 1,
+  victory: 0.85,
+  defeat: 0.85,
+  draw: 0.85,
+  explosion: 0.7,
 };
 
 /** Which sound a just-played SAN deserves; null for "none played". */
@@ -107,6 +122,7 @@ function playHere(name: SoundName): Promise<void> {
     cache.set(key, a);
   }
   a.volume = VOLUME[name];
+  a.playbackRate = PITCH[name];
   a.currentTime = 0;
   return a.play();
 }

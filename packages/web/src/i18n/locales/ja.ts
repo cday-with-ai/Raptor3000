@@ -116,14 +116,6 @@ const ja: Messages = {
   'common.preview': 'プレビュー',
 
   'options.session': 'セッション',
-  'options.session.chatWindow': 'チャットウィンドウ',
-  'options.session.reopen': '開き直す',
-  'options.session.chatNote':
-    'チャットウィンドウはログイン時に自動で開きます。閉じてしまったらここから開き直してください。',
-  'options.session.connection': '接続',
-  'options.session.reconnect': '再接続',
-  'options.session.connectionNote':
-    '接続中は何も起きません。別の場所からのログインでこのセッションが切断されたときに使うと、アカウントを取り戻せます（今度は FICS が相手の接続を切ります）。',
   'options.session.startOver': 'やり直し',
   'options.session.relaunch': '再起動',
   'options.session.relaunchArmed': 'もう一度クリックで再起動',

@@ -116,14 +116,6 @@ const ko: Messages = {
   'common.preview': '미리 듣기',
 
   'options.session': '세션',
-  'options.session.chatWindow': '채팅 창',
-  'options.session.reopen': '다시 열기',
-  'options.session.chatNote':
-    '채팅 창은 로그인할 때 저절로 열립니다. 닫았다면 여기서 다시 여세요.',
-  'options.session.connection': '연결',
-  'options.session.reconnect': '다시 연결',
-  'options.session.connectionNote':
-    '연결되어 있는 동안에는 아무 일도 하지 않습니다. 다른 로그인이 이 세션을 밀어냈을 때 쓰세요 — 계정을 다시 가져옵니다(이번에는 FICS가 그쪽을 밀어냅니다).',
   'options.session.startOver': '처음부터 다시',
   'options.session.relaunch': '다시 시작',
   'options.session.relaunchArmed': '다시 시작하려면 한 번 더 클릭',

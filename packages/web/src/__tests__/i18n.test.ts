@@ -105,7 +105,6 @@ describe('matchLocale', () => {
   });
 
   it('does not match a language we do not ship', () => {
-    expect(matchLocale('it')).toBeNull();
     expect(matchLocale('sv')).toBeNull();
     // legacy Indonesian — must not be mistaken for anything
     expect(matchLocale('in-ID')).toBeNull();

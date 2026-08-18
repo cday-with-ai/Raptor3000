@@ -26,6 +26,7 @@ import {
   outboundTell,
   rowAction,
 } from '../chatFormat.js';
+import { WINDOW_OPENED, timelineStamps as stampEvents } from '../chatStamp.js';
 
 /**
  * Chat window — connected FICS console with per-channel / per-person tabs.
@@ -819,6 +820,9 @@ function TabLog({
     });
   }, [events]);
 
+  // Backfill stamps, deduped per minute/day, in the same single walk.
+  const stamps = useMemo(() => stampEvents(events), [events]);
+
   return (
     <div
       ref={ref}
@@ -839,6 +843,7 @@ function TabLog({
           <ChatLine
             key={i}
             e={e}
+            stamp={stamps[i]}
             prefs={prefs}
             ownHandle={ownHandle}
             listOwner={owners[i]}
@@ -857,18 +862,20 @@ function TabLog({
  */
 function ChatLine({
   e,
+  stamp,
   prefs,
   ownHandle,
   listOwner,
   onCommand,
 }: {
   e: ChatEvent;
+  stamp: string;
   prefs: AppPreferences;
   ownHandle: string | null;
   listOwner: string | null;
   onCommand: (cmd: string) => void;
 }) {
-  const body = historyStamp(e) + lineBody(e, ownHandle);
+  const body = stamp + lineBody(e, ownHandle);
   const color = chatColorFor(e, prefs);
   // Multi-line events (list output) get per-line row actions.
   const lines = body.split('\n');
@@ -983,21 +990,6 @@ function TabBar({
     </div>
   );
 }
-
-
-/** When this window opened — events older than this are backfill and get
- *  a timestamp prefix, since "when" is the point of reading history. */
-const WINDOW_OPENED = Date.now();
-
-function historyStamp(e: ChatEvent): string {
-  if (e.time >= WINDOW_OPENED - 5_000) return '';
-  const d = new Date(e.time);
-  const hhmm = `${d.getHours().toString().padStart(2, '0')}:${d.getMinutes().toString().padStart(2, '0')}`;
-  const sameDay = new Date(WINDOW_OPENED).toDateString() === d.toDateString();
-  const day = d.toLocaleDateString(undefined, { weekday: 'short' });
-  return sameDay ? `[${hhmm}] ` : `[${day} ${hhmm}] `;
-}
-
 
 
 const shell = {

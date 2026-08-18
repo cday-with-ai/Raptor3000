@@ -114,14 +114,6 @@ const ru: Messages = {
   'common.preview': 'Предпросмотр',
 
   'options.session': 'Сессия',
-  'options.session.chatWindow': 'Окно чата',
-  'options.session.reopen': 'Открыть заново',
-  'options.session.chatNote':
-    'Окно чата открывается автоматически при входе; если вы его закрыли, откройте заново здесь.',
-  'options.session.connection': 'Соединение',
-  'options.session.reconnect': 'Переподключиться',
-  'options.session.connectionNote':
-    'Ничего не делает, пока вы подключены. Используйте после того, как другой вход вытеснил эту сессию, — аккаунт вернётся вам (теперь уже FICS вытеснит их).',
   'options.session.startOver': 'Начать заново',
   'options.session.relaunch': 'Перезапустить',
   'options.session.relaunchArmed': 'Нажмите ещё раз для перезапуска',

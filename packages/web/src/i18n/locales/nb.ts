@@ -114,14 +114,6 @@ const nb: Messages = {
   'common.preview': 'Forhåndsvis',
 
   'options.session': 'Økt',
-  'options.session.chatWindow': 'Chatvindu',
-  'options.session.reopen': 'Åpne på nytt',
-  'options.session.chatNote':
-    'Chatvinduet åpnes automatisk ved innlogging; åpne det her igjen om det er lukket.',
-  'options.session.connection': 'Tilkobling',
-  'options.session.reconnect': 'Koble til på nytt',
-  'options.session.connectionNote':
-    'Gjør ingenting mens du er tilkoblet. Bruk den etter at en annen innlogging har kastet ut denne økten — den tar kontoen tilbake (FICS kaster dem ut i sin tur).',
   'options.session.startOver': 'Start forfra',
   'options.session.relaunch': 'Start på nytt',
   'options.session.relaunchArmed': 'Klikk igjen for å starte på nytt',

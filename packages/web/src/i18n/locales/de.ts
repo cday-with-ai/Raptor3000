@@ -116,14 +116,6 @@ const de: Messages = {
   'common.preview': 'Vorschau',
 
   'options.session': 'Sitzung',
-  'options.session.chatWindow': 'Chatfenster',
-  'options.session.reopen': 'Wieder öffnen',
-  'options.session.chatNote':
-    'Das Chatfenster öffnet sich beim Login von selbst; falls geschlossen, hier wieder öffnen.',
-  'options.session.connection': 'Verbindung',
-  'options.session.reconnect': 'Neu verbinden',
-  'options.session.connectionNote':
-    'Ohne Wirkung, solange die Verbindung steht. Gedacht für den Fall, dass ein anderer Login diese Sitzung rausgeworfen hat — der Knopf holt das Konto zurück (FICS wirft dann die andere Seite raus).',
   'options.session.startOver': 'Von vorn anfangen',
   'options.session.relaunch': 'Neu starten',
   'options.session.relaunchArmed': 'Zum Neustarten erneut klicken',

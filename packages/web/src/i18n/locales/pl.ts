@@ -116,14 +116,6 @@ const pl: Messages = {
   'common.preview': 'Podgląd',
 
   'options.session': 'Sesja',
-  'options.session.chatWindow': 'Okno czatu',
-  'options.session.reopen': 'Otwórz ponownie',
-  'options.session.chatNote':
-    'Okno czatu otwiera się samo przy logowaniu; jeśli je zamkniesz, otwórz je ponownie tutaj.',
-  'options.session.connection': 'Połączenie',
-  'options.session.reconnect': 'Połącz ponownie',
-  'options.session.connectionNote':
-    'Nic nie robi, dopóki połączenie działa. Przydaje się, gdy inne logowanie wyrzuci tę sesję — odbiera konto z powrotem (FICS wyrzuca wtedy tamtą stronę).',
   'options.session.startOver': 'Zacznij od nowa',
   'options.session.relaunch': 'Uruchom ponownie',
   'options.session.relaunchArmed': 'Kliknij ponownie, aby uruchomić od nowa',

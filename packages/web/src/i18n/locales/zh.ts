@@ -109,13 +109,6 @@ const zh: Messages = {
   'common.preview': '预览',
 
   'options.session': '会话',
-  'options.session.chatWindow': '聊天窗口',
-  'options.session.reopen': '重新打开',
-  'options.session.chatNote': '聊天窗口在登录时自动打开；如果关掉了，从这里重开。',
-  'options.session.connection': '连接',
-  'options.session.reconnect': '重新连接',
-  'options.session.connectionNote':
-    '连接正常时按了也没动作。留着它对付被另一次登录顶下线的时候——它会把账号抢回来（这回换 FICS 去顶掉对方）。',
   'options.session.startOver': '重新开始',
   'options.session.relaunch': '重新启动',
   'options.session.relaunchArmed': '再点一次即重启',

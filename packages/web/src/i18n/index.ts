@@ -25,14 +25,17 @@
 
 import { en, type MessageKey, type Messages } from './messages.js';
 import de from './locales/de.js';
+import el from './locales/el.js';
 import es from './locales/es.js';
 import fr from './locales/fr.js';
 import he from './locales/he.js';
+import it from './locales/it.js';
 import ja from './locales/ja.js';
 import ko from './locales/ko.js';
 import nb from './locales/nb.js';
 import pl from './locales/pl.js';
 import pt from './locales/pt.js';
+import ro from './locales/ro.js';
 import ru from './locales/ru.js';
 import zh from './locales/zh.js';
 
@@ -40,12 +43,12 @@ export type { MessageKey, Messages } from './messages.js';
 
 /**
  * The languages we ship. Chosen from who actually plays on FICS rather
- * than from a list of biggest languages: the European chess countries,
- * Brazil (pt), Russia, Poland, Scandinavia, Israel, and the three East
- * Asian chess-playing countries.
+ * than from a list of biggest languages: the European chess countries
+ * (including Italy, Greece and Romania), Brazil (pt), Russia, Poland,
+ * Scandinavia, Israel, and the three East Asian chess-playing countries.
  */
 export const LOCALES = [
-  'en', 'de', 'es', 'pt', 'fr', 'ru', 'pl', 'nb', 'he', 'zh', 'ja', 'ko',
+  'en', 'de', 'es', 'pt', 'fr', 'it', 'el', 'ro', 'ru', 'pl', 'nb', 'he', 'zh', 'ja', 'ko',
 ] as const;
 
 export type Locale = (typeof LOCALES)[number];
@@ -57,6 +60,9 @@ export const LOCALE_NAMES: Record<Locale, string> = {
   es: 'Español',
   pt: 'Português',
   fr: 'Français',
+  it: 'Italiano',
+  el: 'Ελληνικά',
+  ro: 'Română',
   ru: 'Русский',
   pl: 'Polski',
   nb: 'Norsk',
@@ -67,7 +73,7 @@ export const LOCALE_NAMES: Record<Locale, string> = {
 };
 
 const CATALOGS: Record<Locale, Messages> = {
-  en, de, es, pt, fr, ru, pl, nb, he, zh, ja, ko,
+  en, de, es, pt, fr, it, el, ro, ru, pl, nb, he, zh, ja, ko,
 };
 
 /** Right-to-left scripts among the shipped set. */
@@ -94,7 +100,8 @@ function isLocale(v: string): v is Locale {
  *   - `no`/`nn` fold into `nb`: we ship Bokmål, and Nynorsk readers read
  *     it far more comfortably than they read English.
  *   - `in` is legacy Indonesian, NOT a match for anything we ship — it is
- *     listed here only so nobody "fixes" it into an Italian match.
+ *     listed here only so nobody "fixes" it into an Italian match (we
+ *     ship `it`, the modern tag, and `in` must never fold into it).
  */
 export function matchLocale(tag: string): Locale | null {
   const base = tag.toLowerCase().split(/[-_]/)[0];

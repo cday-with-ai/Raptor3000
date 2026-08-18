@@ -114,14 +114,6 @@ const he: Messages = {
   'common.preview': 'תצוגה מקדימה',
 
   'options.session': 'סשן',
-  'options.session.chatWindow': 'חלון הצ׳אט',
-  'options.session.reopen': 'פתיחה מחדש',
-  'options.session.chatNote':
-    'חלון הצ׳אט נפתח אוטומטית בהתחברות; אם סגרתם אותו, פתחו אותו מחדש כאן.',
-  'options.session.connection': 'חיבור',
-  'options.session.reconnect': 'התחברות מחדש',
-  'options.session.connectionNote':
-    'לא עושה כלום כשמחוברים. שימושי אחרי שהתחברות אחרת ניתקה את הסשן הזה — הוא לוקח את החשבון בחזרה (⁦FICS⁩ מנתק אותם בתורם).',
   'options.session.startOver': 'התחלה מחדש',
   'options.session.relaunch': 'הפעלה מחדש',
   'options.session.relaunchArmed': 'לחצו שוב להפעלה מחדש',

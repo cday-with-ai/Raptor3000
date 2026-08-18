@@ -116,14 +116,6 @@ const pt: Messages = {
   'common.preview': 'Prévia',
 
   'options.session': 'Sessão',
-  'options.session.chatWindow': 'Janela de chat',
-  'options.session.reopen': 'Reabrir',
-  'options.session.chatNote':
-    'A janela de chat abre sozinha no login; reabra aqui se tiver fechado.',
-  'options.session.connection': 'Conexão',
-  'options.session.reconnect': 'Reconectar',
-  'options.session.connectionNote':
-    'Não faz nada enquanto você está conectado. Use depois que outro login derrubar esta sessão — ele retoma a conta (o FICS derruba o outro, por sua vez).',
   'options.session.startOver': 'Começar de novo',
   'options.session.relaunch': 'Reiniciar',
   'options.session.relaunchArmed': 'Clique de novo para reiniciar',

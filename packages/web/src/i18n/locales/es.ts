@@ -116,14 +116,6 @@ const es: Messages = {
   'common.preview': 'Vista previa',
 
   'options.session': 'Sesión',
-  'options.session.chatWindow': 'Ventana de chat',
-  'options.session.reopen': 'Reabrir',
-  'options.session.chatNote':
-    'La ventana de chat se abre sola al iniciar sesión; reábrela aquí si la cerraste.',
-  'options.session.connection': 'Conexión',
-  'options.session.reconnect': 'Reconectar',
-  'options.session.connectionNote':
-    'No hace nada mientras estás conectado. Úsalo cuando otro inicio de sesión expulse a esta sesión — recupera la cuenta (y FICS los expulsa a ellos a su vez).',
   'options.session.startOver': 'Empezar de cero',
   'options.session.relaunch': 'Relanzar',
   'options.session.relaunchArmed': 'Haz clic otra vez para relanzar',

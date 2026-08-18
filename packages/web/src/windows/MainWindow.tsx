@@ -84,8 +84,6 @@ export const MainWindow = observer(function MainWindow({
       context={context}
       session={session}
       sessionId={context.sessionId}
-      reopenChat={() => wm.open({ kind: 'chat' })}
-      reconnect={() => loginWithContext(context, connectorCreds(session))}
       relaunch={() => {
         // Full restart at the login screen: the reload is the teardown
         // (nothing half-alive to leak); closing the popups first keeps
@@ -134,15 +132,11 @@ function PostLoginShell({
   context,
   session,
   sessionId,
-  reopenChat,
-  reconnect,
   relaunch,
 }: {
   context: RaptorContext;
   session: LoginSubmission;
   sessionId: number;
-  reopenChat: () => void;
-  reconnect: () => void;
   relaunch: () => void;
 }) {
   const [tab, setTab] = useState<NavTab>('options');
@@ -258,7 +252,7 @@ function PostLoginShell({
         </div>
       )}
 
-      {tab === 'options' && <OptionsPage reopenChat={reopenChat} reconnect={reconnect} relaunch={relaunch} />}
+      {tab === 'options' && <OptionsPage relaunch={relaunch} />}
       {tab === 'help' && <HelpPage />}
 
       <footer style={{ ...footer, display: 'flex', justifyContent: 'space-between' }}>
@@ -357,12 +351,8 @@ function ThemeToggle({
 }
 
 function OptionsPage({
-  reopenChat,
-  reconnect,
   relaunch,
 }: {
-  reopenChat: () => void;
-  reconnect: () => void;
   relaunch: () => void;
 }) {
   const [prefs, setPrefs] = useState<AppPreferences>(() => loadPreferences());
@@ -395,18 +385,6 @@ function OptionsPage({
   return (
     <main style={optionsGrid}>
         <Section title={t('options.session')}>
-          <Row label={t('options.session.chatWindow')}>
-            <button style={linkBtn} onClick={reopenChat}>
-              {t('options.session.reopen')}
-            </button>
-            <Note>{t('options.session.chatNote')}</Note>
-          </Row>
-          <Row label={t('options.session.connection')}>
-            <button style={linkBtn} onClick={reconnect}>
-              {t('options.session.reconnect')}
-            </button>
-            <Note>{t('options.session.connectionNote')}</Note>
-          </Row>
           <Row label={t('options.session.startOver')}>
             <button
               style={{

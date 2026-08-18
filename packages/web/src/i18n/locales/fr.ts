@@ -119,14 +119,6 @@ const fr: Messages = {
   'common.preview': 'Aperçu',
 
   'options.session': 'Session',
-  'options.session.chatWindow': 'Fenêtre de chat',
-  'options.session.reopen': 'Rouvrir',
-  'options.session.chatNote':
-    'La fenêtre de chat s’ouvre toute seule à la connexion ; rouvrez-la ici si vous l’avez fermée.',
-  'options.session.connection': 'Connexion',
-  'options.session.reconnect': 'Reconnecter',
-  'options.session.connectionNote':
-    'Sans effet tant que la connexion tient. À utiliser quand une autre connexion éjecte cette session — il reprend le compte (FICS les éjecte à leur tour).',
   'options.session.startOver': 'Tout recommencer',
   'options.session.relaunch': 'Relancer',
   'options.session.relaunchArmed': 'Cliquez encore pour relancer',
