@@ -161,19 +161,40 @@ function MiniBoard({
           )}
         </>
       )}
+      {/* The inlay is what the eye picks a frame by, so the picker has to
+          show it. Scaled down with the chip — a fixed 3px ring on a 34px
+          preview is a third of the board. */}
       <div
-        style={{
-          width: '100%',
-          height: '100%',
-          display: 'grid',
-          gridTemplateColumns: 'repeat(4, 1fr)',
-          overflow: 'hidden',
-          borderRadius: d.gutter ? 1 : d.radius,
-          outline: d.piping === 'none' ? undefined : d.piping,
-          outlineOffset: d.piping === 'none' ? undefined : -1,
-        }}
+        style={
+          d.inlay
+            ? {
+                width: '100%',
+                height: '100%',
+                boxSizing: 'border-box',
+                padding: Math.max(1, Math.round((d.inlayWidth ?? 3) * (px / 150))),
+                background: d.inlay,
+                // see BoardWindow — sized to the ring, not the board
+                backgroundSize: `${Math.max(8, Math.round(26 * (px / 150)))}px ${Math.max(8, Math.round(26 * (px / 150)))}px`,
+                borderRadius: d.gutter ? 2 : d.radius,
+                boxShadow: '0 0 0 1px rgba(0,0,0,0.45)',
+              }
+            : { width: '100%', height: '100%' }
+        }
       >
-        {cells}
+        <div
+          style={{
+            width: '100%',
+            height: '100%',
+            display: 'grid',
+            gridTemplateColumns: 'repeat(4, 1fr)',
+            overflow: 'hidden',
+            borderRadius: d.gutter ? 1 : d.radius,
+            outline: d.piping === 'none' ? undefined : d.piping,
+            outlineOffset: d.piping === 'none' ? undefined : -1,
+          }}
+        >
+          {cells}
+        </div>
       </div>
     </div>
   );

@@ -4,6 +4,8 @@
  * shadow).
  */
 
+import { woodRail } from './woodGrain.js';
+
 export const BOARD_FRAMES = [
   'shadow',
   'none',
@@ -29,18 +31,45 @@ export interface BoardFrameDesign {
   rail: string;
   /** Thin line between rail and squares. */
   piping: string;
+  /**
+   * Inlay band between the rail and the playing surface, as a CSS
+   * background. A real board of any quality has one — a stringing line of
+   * brass or holly let into the frame — and it is the single detail that
+   * separates a board from a printed grid. Omit for frames that have no
+   * rail, or whose own material already carries the edge (the Chronos box
+   * has red piping moulded in; the tournament mat has a printed border).
+   */
+  inlay?: string;
+  /** Inlay width in px. Fixed rather than proportional: an inlay that
+   *  scales with the board stops being a line and becomes a stripe. */
+  inlayWidth?: number;
   coords: CoordPlacement;
   /** Rim labels sit on all four sides (tournament mat) or left+bottom. */
   coordsAllSides: boolean;
   labelColor: string;
 }
 
-const WOOD_WALNUT =
-  'repeating-linear-gradient(90deg, #5a3a22 0px, #6e4a2c 5px, #4a2e18 8px, #6a462a 13px, #5a3a22 18px)';
-const WOOD_OAK =
-  'repeating-linear-gradient(90deg, #c4a06a 0px, #d4b47c 5px, #b89058 9px, #d0ae74 14px, #c4a06a 18px)';
-const WOOD_EBONY =
-  'repeating-linear-gradient(90deg, #2a221c 0px, #3a3028 4px, #1c1612 8px, #322820 12px, #2a221c 16px)';
+/**
+ * The three wood rails, cut from the same turbulence as the board squares.
+ *
+ * These were `repeating-linear-gradient(90deg, …)` on an 18-pixel period
+ * until 2026-08-19 — a barcode you could count at any board size, and one
+ * that never lined up with the squares. A distinct seed per species so the
+ * three do not share a figure.
+ */
+/**
+ * Brass stringing. The ramp is what makes it metal rather than a gold
+ * line: two highlights at different angles, because a rolled metal edge
+ * catches the light twice — once on the chamfer, once on the face. A
+ * single flat gold reads as paint.
+ */
+const BRASS =
+  'linear-gradient(135deg, #6d5220 0%, #caa64f 14%, #f2e2ab 30%, #bd932f 46%, ' +
+  '#7d5f24 62%, #e3c778 80%, #9c7a33 100%)';
+
+const WOOD_WALNUT = woodRail('#583823', 11);
+const WOOD_OAK = woodRail('#bd9660', 23);
+const WOOD_EBONY = woodRail('#251e18', 37);
 
 export const BOARD_FRAME_DESIGNS: Record<BoardFrame, BoardFrameDesign> = {
   shadow: {
@@ -77,7 +106,9 @@ export const BOARD_FRAME_DESIGNS: Record<BoardFrame, BoardFrameDesign> = {
     radius: 3,
     shadow: '0 6px 16px rgba(0,0,0,0.28), inset 0 1px 0 rgba(255,255,255,0.10)',
     rail: WOOD_WALNUT,
-    piping: '1px solid #c4a06a',
+    piping: '1px solid #2e1d10',
+    inlay: BRASS,
+    inlayWidth: 3,
     coords: 'rim',
     coordsAllSides: false,
     labelColor: '#e8d4b0',
@@ -90,7 +121,9 @@ export const BOARD_FRAME_DESIGNS: Record<BoardFrame, BoardFrameDesign> = {
     radius: 3,
     shadow: '0 6px 16px rgba(0,0,0,0.22), inset 0 1px 0 rgba(255,255,255,0.18)',
     rail: WOOD_OAK,
-    piping: '1px solid #8a6840',
+    piping: '1px solid #4a3418',
+    inlay: BRASS,
+    inlayWidth: 3,
     coords: 'rim',
     coordsAllSides: false,
     labelColor: '#3a2a18',
@@ -103,7 +136,9 @@ export const BOARD_FRAME_DESIGNS: Record<BoardFrame, BoardFrameDesign> = {
     radius: 2,
     shadow: '0 8px 18px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.08)',
     rail: WOOD_EBONY,
-    piping: '1px solid #6a5a48',
+    piping: '1px solid #100c09',
+    inlay: BRASS,
+    inlayWidth: 3,
     coords: 'rim',
     coordsAllSides: false,
     labelColor: '#c8b8a0',
@@ -151,7 +186,9 @@ export const BOARD_FRAME_DESIGNS: Record<BoardFrame, BoardFrameDesign> = {
     radius: 3,
     shadow: '0 5px 14px rgba(0,0,0,0.24)',
     rail: '#243e2c',
-    piping: '3px solid #c4a06a',
+    piping: '1px solid #14261a',
+    inlay: BRASS,
+    inlayWidth: 3,
     coords: 'rim',
     coordsAllSides: false,
     labelColor: '#d8c8a0',

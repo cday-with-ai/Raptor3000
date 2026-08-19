@@ -1463,6 +1463,33 @@ function Board({
           gutter={frame.gutter}
         />
       )}
+    {/* Inlay ring. A separate element rather than a border, because a
+        border cannot carry a gradient and a flat gold outline reads as
+        paint. The board still measures itself for drag maths, so being
+        inset by three pixels changes nothing but the look. */}
+    <div
+      style={
+        frame.inlay
+          ? {
+              width: '100%',
+              height: '100%',
+              boxSizing: 'border-box',
+              padding: frame.inlayWidth ?? 3,
+              background: frame.inlay,
+              // Sized to the RING, not to the board. A 135deg ramp across a
+              // 500px element puts the bright end of the gradient on one
+              // edge and the dark end on the other, so three sides look
+              // like dull paint and the fourth looks like a gold slab.
+              // Tiled, every side gets the whole ramp several times over,
+              // which is what makes it read as rolled metal.
+              backgroundSize: '26px 26px',
+              borderRadius: frame.gutter ? 2 : frame.radius,
+              // seats the metal into the wood instead of floating on it
+              boxShadow: '0 0 0 1px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.25)',
+            }
+          : { width: '100%', height: '100%' }
+      }
+    >
     <div
       ref={rootRef}
       onPointerDown={onPointerDown}
@@ -1550,6 +1577,7 @@ function Board({
           asWhite={promotingAsWhite}
         />
       )}
+    </div>
     </div>
     </div>
   );
