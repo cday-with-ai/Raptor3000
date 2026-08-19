@@ -34,6 +34,7 @@ export const PIECE_SET_LABELS: Record<PieceSet, string> = {
   mpchess: 'MPChess',
   ocisly: 'Of Course I Still Love You',
   subtlety: 'So Much For Subtlety',
+  talon: 'Talon',
   vlgi: 'Very Little Gravitas Indeed',
 };
 

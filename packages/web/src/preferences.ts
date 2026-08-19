@@ -64,6 +64,7 @@ export type PieceSet =
   | 'mpchess'
   | 'ocisly'
   | 'subtlety'
+  | 'talon'
   | 'vlgi';
 
 export const BOARD_THEMES: readonly BoardTheme[] = [
@@ -89,6 +90,7 @@ export const PIECE_SETS: readonly PieceSet[] = [
   'mpchess',
   'ocisly',
   'subtlety',
+  'talon',
   'vlgi',
 ];
 
