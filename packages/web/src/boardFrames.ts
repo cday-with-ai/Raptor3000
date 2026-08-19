@@ -58,14 +58,24 @@ export interface BoardFrameDesign {
  * three do not share a figure.
  */
 /**
- * Brass stringing. The ramp is what makes it metal rather than a gold
- * line: two highlights at different angles, because a rolled metal edge
- * catches the light twice — once on the chamfer, once on the face. A
- * single flat gold reads as paint.
+ * Brass stringing.
+ *
+ * First attempt gave it a seven-stop ramp at 135° and tiled it at 26px so
+ * every side got the whole ramp. Carson, 2026-08-19: "it is the same
+ * pattern over and over and detracts from viewing the board" — which is
+ * exactly the fault the 18px barcode rails had, reintroduced at a smaller
+ * period. Anything that repeats around a 3px ring is countable, and a
+ * countable edge is a distraction, not an inlay.
+ *
+ * So: one vertical ramp across the whole board, never tiled. Vertical
+ * because that is how a lit frame actually reads — the top edge catches
+ * the light, the bottom falls into shadow, and the side rails fade
+ * between the two. The diagonal was arbitrary; this one is a direction
+ * the eye already expects, so it stops being a pattern and goes back to
+ * being an edge. Low contrast for the same reason: at three pixels the
+ * eye should register warm metal, not figure.
  */
-const BRASS =
-  'linear-gradient(135deg, #6d5220 0%, #caa64f 14%, #f2e2ab 30%, #bd932f 46%, ' +
-  '#7d5f24 62%, #e3c778 80%, #9c7a33 100%)';
+const BRASS = 'linear-gradient(180deg, #cda85c 0%, #b08d3f 52%, #8a6a2c 100%)';
 
 const WOOD_WALNUT = woodRail('#583823', 11);
 const WOOD_OAK = woodRail('#bd9660', 23);

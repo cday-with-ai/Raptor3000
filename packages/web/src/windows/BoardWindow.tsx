@@ -1475,14 +1475,10 @@ function Board({
               height: '100%',
               boxSizing: 'border-box',
               padding: frame.inlayWidth ?? 3,
+              // Not tiled, deliberately — see BRASS in boardFrames.ts. One
+              // vertical ramp over the whole board: top edge lit, bottom
+              // edge in shadow, sides fading between.
               background: frame.inlay,
-              // Sized to the RING, not to the board. A 135deg ramp across a
-              // 500px element puts the bright end of the gradient on one
-              // edge and the dark end on the other, so three sides look
-              // like dull paint and the fourth looks like a gold slab.
-              // Tiled, every side gets the whole ramp several times over,
-              // which is what makes it read as rolled metal.
-              backgroundSize: '26px 26px',
               borderRadius: frame.gutter ? 2 : frame.radius,
               // seats the metal into the wood instead of floating on it
               boxShadow: '0 0 0 1px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.25)',
