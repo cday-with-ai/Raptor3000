@@ -12,7 +12,7 @@ import sys
 from pathlib import Path
 
 import numpy as np
-from scipy.signal import butter, sosfilt
+from scipy.signal import butter, fftconvolve, sosfilt
 
 SR = 44100
 ROOT = Path(__file__).resolve().parent
@@ -125,17 +125,135 @@ def place(layer: np.ndarray, at_ms: float, total_ms: float) -> np.ndarray:
     return y
 
 
-def finalize(x: np.ndarray, peak: float) -> np.ndarray:
+#: What every sound is normalised to, as mean |sample| in dBFS. Picked as
+#: felt's level, because that is the palette Carson has been listening to
+#: for a week without asking for it louder or quieter.
+TARGET_DBFS = -24.0
+#: The `weight` argument is relative to this, so weight=0.5 lands exactly on
+#: TARGET_DBFS and the per-event weights keep their intended pecking order.
+REF_WEIGHT = 0.5
+#: Nothing is allowed past this sample value.
+CEILING = 0.94
+
+
+def _rms_dbfs(y: np.ndarray) -> float:
+    """RMS in dBFS — the same statistic ffmpeg's `volumedetect` reports as
+    `mean_volume`, so what this targets is what a measurement of the
+    shipped mp3 reads back. Normalising mean |sample| instead lands 6-7 dB
+    off, because the two differ by the crest factor and these sounds are
+    all transient."""
+    m = float(np.sqrt(np.mean(np.square(y))))
+    return -120.0 if m < 1e-9 else 20.0 * np.log10(m)
+
+
+def finalize(x: np.ndarray, weight: float) -> np.ndarray:
+    """Level a rendered sound to a loudness target, not to a peak.
+
+    This used to normalise to peak, and that is why switching palettes
+    sounded like the audio breaking: peak height says nothing about how
+    loud a sound *is*. Marble is a hard transient over a quiet tail and
+    felt is a soft thud with a fat body, so at the same peak marble
+    measured 8.4 dB quieter — and across every set that shipped, the
+    spread was 20.7 dB (2026-08-19). A sound set is not a volume control.
+
+    So: normalise mean level, then bring the peak back under the ceiling
+    with soft saturation rather than a hard clip (which would strip the
+    transient that makes a click a click), and re-level. Two passes is
+    enough — the second correction is under a tenth of a dB in practice.
+    """
     y = fade(hp(x, 40, order=1))
-    y = np.tanh(y * 1.15)
-    m = np.max(np.abs(y))
-    if m < 1e-9:
+    if float(np.mean(np.abs(y))) < 1e-9:
         return y.astype(np.float32)
-    y = y * (peak / m)
+
+    target = TARGET_DBFS + 20.0 * np.log10(max(weight, 1e-6) / REF_WEIGHT)
+    # Level, then tame the peak, then level again. Each tanh pass lowers the
+    # crest factor, so the loop converges on "at the target and under the
+    # ceiling" instead of the limiter permanently stealing back the gain —
+    # which is what left the peakiest palettes (marble, study) 3.5 dB shy on
+    # the first attempt.
+    for _ in range(4):
+        y = y * 10.0 ** ((target - _rms_dbfs(y)) / 20.0)
+        m = float(np.max(np.abs(y)))
+        if m > CEILING:
+            y = np.tanh(y * (np.arctanh(CEILING) / m))
+
     # 4ms of silence so mp3 encoders don't eat the transient
     pad = int(SR * 0.004)
     y = np.concatenate([np.zeros(pad), y, np.zeros(int(SR * 0.02))])
-    return np.clip(y, -0.98, 0.98).astype(np.float32)
+    return np.clip(y, -CEILING, CEILING).astype(np.float32)
+
+
+#: The four sounds that play under the game-end animation, and how long
+#: that animation actually runs (endShows.ts, 2026-08-19):
+#:
+#:   winner king pump   1.1s x 2  = 2.2s
+#:   whole-team pump    0.7s x 3  = 2.1s
+#:   mater spin         1.3s x 2  = 2.6s
+#:   loser topple       0.9s
+#:   loser vaporize     0.6s
+#:
+#: The verdicts rendered at 0.21-0.42s, so the sound was over before the
+#: show was a fifth done and the ending landed silent. Rather than redraw
+#: 24 hand-tuned sounds, each verdict is put in a room: the same hit,
+#: convolved with a decaying impulse response. The attack is untouched —
+#: what arrives is the tail it was always missing.
+VERDICTS = {"Victory", "Defeat", "Draw", "Explosion"}
+
+#: Per palette: (decay ms, wet). A material that damps in the hand damps in
+#: the room too — felt is a cloth-covered board in a carpeted study, marble
+#: and slate are stone on stone in something with hard walls.
+ROOMS = {
+    "felt":   (900, 0.30),
+    "walnut": (1150, 0.38),
+    "marble": (1600, 0.52),
+    "clock":  (1000, 0.34),
+    "study":  (850, 0.28),
+    "slate":  (1450, 0.48),
+}
+
+
+def room_ir(rng: np.random.Generator, decay_ms: float) -> np.ndarray:
+    """A synthetic impulse response: filtered noise under an exponential.
+
+    Not a real room — a plausible one. The early part is left sparse so the
+    onset does not smear into a wash, and the top is rolled off because a
+    tail that keeps all its treble reads as hiss rather than as space.
+    """
+    n = ms(decay_ms)
+    t = np.arange(n) / SR
+    env = np.exp(-t * (6.0 / (decay_ms / 1000.0)))
+    ir = noise(rng, n) * env
+    # sparse early reflections so the attack keeps its edge
+    ir[: ms(8)] *= np.linspace(0.0, 1.0, ms(8))
+    ir = lp(ir, 3200, order=2)
+    ir[0] += 1.0
+    m = float(np.max(np.abs(ir)))
+    return ir / m if m > 1e-9 else ir
+
+
+def put_in_room(rng: np.random.Generator, x: np.ndarray, decay_ms: float,
+                wet: float) -> np.ndarray:
+    """Convolve, then re-level on the ATTACK rather than on the whole file.
+
+    Levelling the reverbed buffer as a whole would measure the long quiet
+    tail as part of the signal and push the hit up to compensate, so the
+    ending would arrive louder than every other sound in the set. Matching
+    the first 250ms to what it was keeps the hit exactly where the palette
+    put it and adds the room underneath.
+    """
+    head = ms(250)
+    before = float(np.sqrt(np.mean(np.square(x[:head]))))
+    wet_sig = fftconvolve(x, room_ir(rng, decay_ms))[: len(x) + ms(decay_ms)]
+    y = np.zeros(len(wet_sig))
+    y[: len(x)] += x * (1.0 - wet * 0.35)
+    y += wet_sig * wet
+    after = float(np.sqrt(np.mean(np.square(y[:head]))))
+    if after > 1e-9:
+        y = y * (before / after)
+    m = float(np.max(np.abs(y)))
+    if m > CEILING:
+        y = np.tanh(y * (np.arctanh(CEILING) / m))
+    return np.clip(y, -CEILING, CEILING).astype(np.float32)
 
 
 def write_wav(path: Path, x: np.ndarray) -> None:
@@ -550,6 +668,9 @@ def main() -> int:
         rng = np.random.default_rng(meta["seed"])
         for ev in EVENTS:
             audio = meta["fn"](rng, ev)
+            if ev in VERDICTS:
+                decay_ms, wet = ROOMS[sid]
+                audio = put_in_room(rng, audio, decay_ms, wet)
             wav = dest / f"{ev}.wav"
             mp3 = dest / f"{ev}.mp3"
             write_wav(wav, audio)

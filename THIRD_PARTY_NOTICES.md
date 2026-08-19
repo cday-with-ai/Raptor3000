@@ -43,10 +43,23 @@ repository this file ships in.
   this is distributed anywhere the piece-set caveat below would also
   matter.
 
-- **IBM Plex Mono, IBM Plex Sans, Share Tech Mono, Source Serif 4** — loaded
-  at runtime from Google Fonts rather than bundled, so they are not
-  redistributed here. All four are **SIL Open Font License 1.1** upstream.
-  Note this is the app's only outbound request to a third party.
+- **[IBM Plex Mono](https://github.com/IBM/plex)** by IBM, **[Share Tech
+  Mono](https://github.com/vernnobile/ShareTechMono)** by Carrois Type
+  Design, **[Source Serif 4](https://github.com/adobe-fonts/source-serif)**
+  by Adobe — all **SIL Open Font License 1.1**, which permits
+  redistribution, and all now **bundled** (`public/fonts/`, Latin subsets,
+  196 KB; Source Serif is the variable face and covers both weights it is
+  used at).
+
+  They were loaded from `fonts.googleapis.com` until 2026-08-19. That was
+  a render-blocking third-party request on the critical path — and this
+  app opens a real window per board and per chat, so it was one stylesheet
+  fetch, one font-host connection and one disclosure of the user's IP to
+  Google *per window*, every time a game started. The app now makes no
+  off-origin request except the Cloudflare analytics beacon.
+
+  IBM Plex Sans is referenced in a font stack but was never fetched, so it
+  is not bundled; it renders from the system when present.
 
 ## Sounds
 
