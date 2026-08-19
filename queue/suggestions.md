@@ -884,3 +884,49 @@ the only channel until a token is minted with *Account | Account Analytics |
 Read* on that account. The preflight in `bin/usage-digest.sh` is what caught
 this rather than a query silently returning an empty dataset, which is what
 it was built for.
+
+### Follow-up, 04:20 — collection proven working, reading still blocked
+
+Asked to pull the stats. Cannot: **both credentials are refused on every
+analytics endpoint.**
+
+```
+wrangler OAuth   graphql preflight   10000 Authentication error
+wrangler OAuth   rum/site_info/list  10000 Authentication error
+wrangler OAuth   pages/projects      10000 Authentication error   <- stale file copy
+~/.secrets token graphql preflight   authz "not authorized for that account"
+~/.secrets token rum/site_info/list  10000 Authentication error
+```
+
+Note the two failures are different, and the difference is the whole reason
+the preflight exists. The `~/.secrets` token **authenticates fine** — it is
+simply not authorized for this account. Had the query carried an
+`accountTag` filter, it would have come back `{"rumPageloadEventsAdaptive
+Groups":[]}` with `"errors": null` — empty rows, byte-identical to a day
+nobody visited. The unfiltered preflight is what turns that into an honest
+refusal.
+
+The wrangler token failing even on `pages/projects` means the copy in
+`~/.config/.wrangler/config/default.toml` is stale; the CLI itself still
+works (`whoami` and tonight's deploy both succeeded), so it must refresh in
+memory and never writes that back.
+
+**What I could prove instead: the beacon fires.** Loading production in a
+real browser (with `navigator.webdriver` spoofed false, since Cloudflare's
+beacon skips automated ones):
+
+```
+GET  https://static.cloudflareinsights.com/beacon.min.js   -> 200
+POST https://cloudflareinsights.com/cdn-cgi/rum            -> 204
+```
+
+204 is accepted. So collection is working end to end and that page view is
+now sitting in whichever site owns token `2eba1111c8784118ac3b09d5dacda1d7`.
+A dashboard reading zero is therefore not a collection problem — it is
+almost certainly the old orphaned `f4e8c60b…` site being displayed.
+
+**The one action that unblocks reading:** mint a token as
+admin@chessascent.app with *Account | Account Analytics | Read* on
+`ab98801338b2b2fb50627d026f693dda`, and put it in `~/.secrets` as
+`CLOUDFLARE_ANALYTICS_TOKEN`. `bin/usage-digest.sh` already reads that name
+and will start answering the moment it exists.

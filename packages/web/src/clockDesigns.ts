@@ -233,7 +233,12 @@ export const CLOCK_DESIGNS: Record<ClockSet, ClockDesign> = {
     padX: 10,
     tracking: '0.04em',
     minWidth: 100,
-    borderWidth: 1,
+    // The housing, not a hairline. A Chronos is a bone-coloured case with
+    // a dark display window cut into it, so the border IS the box and wants
+    // enough width to read as one at chip size (Carson: "the clock needs
+    // that color as a border around it"). The board frame of the same name
+    // uses the same bone; this is what ties the two together.
+    borderWidth: 3,
     colonBlink: false,
     // The side-to-move indicator. It was switched off with the rest of
     // Chronos's motion (grok's note: "Chronos quieted — no glow/pulse/colon
@@ -256,14 +261,14 @@ export const CLOCK_DESIGNS: Record<ClockSet, ClockDesign> = {
     },
     chip: {
       dark: {
-        active: { bg: '#161618', text: '#d24a4a', border: '#2c2c30' },
-        low: { bg: '#161618', text: '#c45c38', border: '#2c2c30' },
-        idle: { bg: '#161618', text: '#a07878', border: '#2c2c30' },
+        active: { bg: '#161618', text: '#d24a4a', border: '#e6dfd0' },
+        low: { bg: '#161618', text: '#c45c38', border: '#e6dfd0' },
+        idle: { bg: '#161618', text: '#a07878', border: '#cdc5b5' },
       },
       light: {
-        active: { bg: '#1a1a1c', text: '#c84444', border: '#2c2c30' },
-        low: { bg: '#1a1a1c', text: '#b05030', border: '#2c2c30' },
-        idle: { bg: '#1a1a1c', text: '#966868', border: '#2c2c30' },
+        active: { bg: '#1a1a1c', text: '#c84444', border: '#d8d0be' },
+        low: { bg: '#1a1a1c', text: '#b05030', border: '#d8d0be' },
+        idle: { bg: '#1a1a1c', text: '#966868', border: '#bcb4a2' },
       },
     },
   },
