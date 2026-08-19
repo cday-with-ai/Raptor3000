@@ -14,7 +14,7 @@ import { ChatService, ChatEventType, makeChatEvent } from '@raptor3000/shared';
  * are assertable without an AudioContext. The recipe invariants are the
  * design contract: every palette speaks in its own voice, and arrivals
  * rise while departures fall in all of them, so the ear learns one
- * vocabulary, not four.
+ * vocabulary, not ten.
  */
 
 describe('alert recipes', () => {
@@ -48,10 +48,19 @@ describe('alert recipes', () => {
     }
   });
 
-  it('each palette keeps its own oscillator wave — the mechanical half of "its own character"', () => {
-    const waves = MOVE_SOUND_SETS.map(s => ALERT_RECIPES[s].tell.wave);
-    expect(new Set(waves).size).toBe(MOVE_SOUND_SETS.length);
-    // And a palette doesn't switch voices between kinds.
+  it('each palette is its own recipe, and does not switch voices between kinds', () => {
+    const fingerprints = MOVE_SOUND_SETS.map(s => {
+      const r = ALERT_RECIPES[s].tell;
+      return JSON.stringify({
+        wave: r.wave,
+        filterHz: r.filterHz ?? null,
+        vol: r.vol,
+        attack: r.attack,
+        release: r.release,
+        notes: r.notes,
+      });
+    });
+    expect(new Set(fingerprints).size).toBe(MOVE_SOUND_SETS.length);
     for (const set of MOVE_SOUND_SETS) {
       for (const kind of ALERT_KINDS) {
         expect(ALERT_RECIPES[set][kind].wave).toBe(ALERT_RECIPES[set].tell.wave);

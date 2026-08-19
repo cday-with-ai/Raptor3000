@@ -4,6 +4,9 @@ import './index.css';
 import { App } from './App.js';
 import { installThemeSync } from './theme.js';
 import { installLocale } from './i18n/index.js';
+import { installFaviconSync } from './appIcons.js';
+import { loadPreferences } from './preferences.js';
+import { LOCAL_EVENT } from './useLivePreferences.js';
 import { registerAlertPeer, unlockAlertAudio } from './alertSounds.js';
 
 // Apply the saved theme before React mounts so we don't flash the wrong palette,
@@ -15,6 +18,11 @@ installThemeSync();
 // visitor's override) and set <html lang/dir> before the first paint, so
 // a Hebrew visitor never sees an LTR frame flip to RTL.
 installLocale();
+
+// And the app icon, which is a preference now that all sixteen of grok's
+// raptors ship. Same reason it runs here: every popup loads this bundle,
+// so a board window wears the same face as the one that opened it.
+installFaviconSync(() => loadPreferences().appIcon, LOCAL_EVENT);
 
 // Alerts are synthesized through an AudioContext, and a browser only lets
 // one start inside a user gesture. Arm every document to grab its own on

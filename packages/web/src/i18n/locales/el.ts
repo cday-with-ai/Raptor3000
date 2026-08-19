@@ -68,6 +68,9 @@ const el: Messages = {
   'login.shot.seek': 'το ζωντανό γράφημα αναζήτησης αντιπάλου',
 
   // ---- language control --------------------------------------------------
+  'options.session.appIcon': 'Εικονίδιο εφαρμογής',
+  'options.session.appIconNote':
+    'Αλλάζει το εικονίδιο στην καρτέλα του προγράμματος περιήγησης και το σήμα μέσα στην εφαρμογή. Το εικονίδιο του εκκινητή στην επιφάνεια εργασίας ορίζεται εκτός της εφαρμογής.',
   'lang.label': 'Γλώσσα',
   'lang.auto': 'Αυτόματη',
   'lang.note':
@@ -126,18 +129,22 @@ const el: Messages = {
   'options.board.coordinates': 'Εμφάνιση συντεταγμένων',
   'options.board.flipAsBlack': 'Αναστροφή όταν παίζεις με τα μαύρα',
   'options.board.moveList': 'Ορατή λίστα κινήσεων',
+  'options.board.frame': 'Πλαίσιο',
+  'options.board.frameNote':
+    'Το πλαίσιο γύρω από τα τετράγωνα. Το Shadow είναι το αρχικό. Ξύλο και Mat βάζουν τα γράμματα στο πλαίσιο.',
   'boardTheme.brown': 'Καφέ',
   'boardTheme.blue': 'Μπλε',
   'boardTheme.green': 'Πράσινο',
   'boardTheme.purple': 'Μωβ',
   'boardTheme.custom': 'Προσαρμοσμένο',
 
-  'options.clock': 'Χρώματα ρολογιού',
+  'options.clock': 'Ρολόγια',
+  'options.clock.design': 'Σχεδίαση',
   'options.clock.active': 'Ενεργό',
   'options.clock.low': 'Χαμηλός χρόνος',
   'options.clock.idle': 'Αδρανές',
   'options.clock.note':
-    'Αυτόματο ακολουθεί το θέμα της εφαρμογής (αδρανές) και τα τυπικά πράσινα/κόκκινα σήματα (ενεργό, χαμηλός χρόνος). Διάλεξε χρώματα για να τα αντικαταστήσεις — πρώτα το φόντο, μετά το κείμενο.',
+    'Η σχεδίαση είναι όλο το πρόσωπο — γραμματοσειρά, περίβλημα, μέρα και νύχτα. Τα αυτόματα χρώματα ακολουθούν αυτή τη σχεδίαση· διάλεξε χρώματα για να αντικαταστήσεις μια κατάσταση.',
   'options.color.background': 'Φόντο',
   'options.color.text': 'Κείμενο',
   'options.color.hex': '{title} (δεκαεξαδικό)',
@@ -181,7 +188,8 @@ const el: Messages = {
   'options.sound.alertPreviewTitle':
     'παίζει tell, άφιξη και αποχώρηση φίλου στο στυλ του επιλεγμένου σετ',
   'options.sound.note':
-    'Κινήσεις, λήψεις και σαχ χρησιμοποιούν το επιλεγμένο σετ· οι ήχοι λήξης παρτίδας μένουν στο Piano. Όλα τα σετ είναι τα ελεύθερα αδειοδοτημένα του lichess — το διάσημο σετ "standard" δεν έχει ελεύθερη άδεια. Οι ειδοποιήσεις — ένα εισερχόμενο tell, ένας φίλος που φτάνει ή φεύγει — είναι δικές μας συνθετικές νότες στο στυλ του επιλεγμένου σετ.','options.pgnJournal': 'Αυτόματη αποθήκευση PGN',
+    'Κινήσεις, λήψεις και σαχ χρησιμοποιούν το επιλεγμένο σετ. Felt, Walnut, Marble, Clock, Study, Slate και Piano παίζουν και τους δικούς τους ήχους λήξης· Sfx / Futuristic / Nes πέφτουν στο Piano γι’ αυτούς. Οι έξι ονομασμένες παλέτες είναι πρωτότυπες· οι άλλες τέσσερις είναι τα ελεύθερα σετ Enigmahack του lichess — το διάσημο σετ "standard" δεν έχει ελεύθερη άδεια. Οι ειδοποιήσεις — ένα εισερχόμενο tell, ένας φίλος που φτάνει ή φεύγει — είναι δικές μας συνθετικές νότες στο στυλ του επιλεγμένου σετ.',
+  'options.pgnJournal': 'Αυτόματη αποθήκευση PGN',
   'options.pgnJournal.append': 'Προσάρτηση παρτίδων που παίζω',
   'options.pgnJournal.appendNote':
     'Κάθε παρτίδα που ΠΑΙΖΕΙΣ προστίθεται σε ένα αρχείο PGN στο τέλος της — παρτίδες που μόνο παρακολουθείς ή εξετάζεις δεν φτάνουν ποτέ εκεί. Λειτουργεί σε Chrome, Brave και Edge· σε άλλα προγράμματα περιήγησης δεν αποθηκεύεται τίποτα.',
@@ -291,7 +299,7 @@ const el: Messages = {
     '— η σκακιστική βιβλιοθήκη του lichess: SAN, νομιμότητα, αναπαραγωγή (GPL-3.0-or-later).',
   'help.about.openings': '— τα ονόματα των ανοιγμάτων και οι κωδικοί ECO (CC0 δημόσιος τομέας).',
   'help.about.lichess':
-    '— το σετ ήχων πιάνου του Enigmahack (AGPL-3.0+) και τα σετ κομματιών (cburnett του Colin M.L. Burnett και συνεργατών, καθένα με τη δική του άδεια).',
+    '— τα υπόλοιπα σετ piano / sfx / futuristic / nes του Enigmahack (AGPL-3.0+) και τα σετ κομματιών (cburnett του Colin M.L. Burnett και συνεργατών, καθένα με τη δική του άδεια). Οι ήχοι Felt, Walnut, Marble, Clock, Study και Slate, και το σετ κομματιών Of Course I Still Love You, Just Read The Instructions και A Shortfall Of Gravitas, So Much For Subtlety, Very Little Gravitas Indeed, είναι πρωτότυπα του Raptor3000.',
   'help.about.fics':
     '— ο Free Internet Chess Server με τον οποίο υπάρχει ολόκληρη αυτή η εφαρμογή για να μιλάει. Να είσαι ευγενικός στο κανάλι 39.',
   'help.about.outro1': 'Η πλήρης απογραφή με τις ακριβείς άδειες βρίσκεται στο',

@@ -6,18 +6,19 @@ import type { MoveSoundSet } from './sounds.js';
  * Audible alerts for social events — an incoming person tell, a friend
  * arriving, a friend departing (Carson, 2026-08-14). Distinct from the
  * board sounds in sounds.ts in one deliberate way: these are SYNTHESIZED,
- * not sampled. Each of the four shipped sound palettes gets its own alert
- * set rendered in that palette's character — square-wave blips for Nes,
- * soft sine chimes for Piano, a filtered saw for Futuristic, dry triangle
- * taps for Sfx — so no foreign samples ride along and the licensing page
- * stays truthful. The recipes below are the whole sound: pure data, which
- * is also what makes them assertable without an AudioContext.
+ * not sampled. Each shipped sound palette gets its own alert set rendered
+ * in that palette's character — square-wave blips for Nes, soft sine
+ * chimes for Piano, a filtered saw for Futuristic, dry triangle taps for
+ * Sfx, and quieter/darker cousins for the original palettes — so no
+ * foreign samples ride along and the licensing page stays truthful. The
+ * recipes below are the whole sound: pure data, which is also what makes
+ * them assertable without an AudioContext.
  *
  * Two semantic invariants the tests hold down: ARRIVE always rises and
  * DEPART always falls, in every palette — the ear should know the
- * direction of the door without learning four vocabularies. And each
- * palette keeps its own oscillator wave, which is the mechanical half of
- * "its own character".
+ * direction of the door without learning ten vocabularies. And each
+ * palette keeps one oscillator wave across its kinds, so a tell and an
+ * arrival still sound like the same house.
  */
 
 export const ALERT_KINDS = ['tell', 'arrive', 'depart'] as const;
@@ -156,6 +157,156 @@ export const ALERT_RECIPES: Record<
       notes: [
         { freq: D5, at: 0, dur: 0.06 },
         { freq: G4, at: 0.12, dur: 0.08 },
+      ],
+    },
+  },
+  felt: {
+    tell: {
+      wave: 'sine', vol: 0.22, attack: 0.008, release: 0.22, filterHz: 1500,
+      notes: [
+        { freq: 329.63, at: 0, dur: 0.1 },
+        { freq: 392.0, at: 0.12, dur: 0.16 },
+      ],
+    },
+    arrive: {
+      wave: 'sine', vol: 0.22, attack: 0.008, release: 0.22, filterHz: 1500,
+      notes: [
+        { freq: 261.63, at: 0, dur: 0.09 },
+        { freq: 329.63, at: 0.11, dur: 0.09 },
+        { freq: 392.0, at: 0.22, dur: 0.18 },
+      ],
+    },
+    depart: {
+      wave: 'sine', vol: 0.22, attack: 0.008, release: 0.22, filterHz: 1500,
+      notes: [
+        { freq: 392.0, at: 0, dur: 0.09 },
+        { freq: 329.63, at: 0.11, dur: 0.09 },
+        { freq: 261.63, at: 0.22, dur: 0.2 },
+      ],
+    },
+  },
+  walnut: {
+    tell: {
+      wave: 'triangle', vol: 0.26, attack: 0.004, release: 0.09,
+      notes: [
+        { freq: G4, at: 0, dur: 0.05 },
+        { freq: D5, at: 0.1, dur: 0.08 },
+      ],
+    },
+    arrive: {
+      wave: 'triangle', vol: 0.26, attack: 0.004, release: 0.09,
+      notes: [
+        { freq: G4, at: 0, dur: 0.05 },
+        { freq: B4, at: 0.08, dur: 0.05 },
+        { freq: D5, at: 0.16, dur: 0.1 },
+      ],
+    },
+    depart: {
+      wave: 'triangle', vol: 0.26, attack: 0.004, release: 0.09,
+      notes: [
+        { freq: D5, at: 0, dur: 0.05 },
+        { freq: B4, at: 0.08, dur: 0.05 },
+        { freq: G4, at: 0.16, dur: 0.11 },
+      ],
+    },
+  },
+  marble: {
+    tell: {
+      wave: 'sine', vol: 0.18, attack: 0.002, release: 0.07,
+      notes: [
+        { freq: A5, at: 0, dur: 0.05 },
+        { freq: 1318.5, at: 0.08, dur: 0.07 },
+      ],
+    },
+    arrive: {
+      wave: 'sine', vol: 0.18, attack: 0.002, release: 0.07,
+      notes: [
+        { freq: E5, at: 0, dur: 0.04 },
+        { freq: A5, at: 0.07, dur: 0.04 },
+        { freq: 1318.5, at: 0.14, dur: 0.08 },
+      ],
+    },
+    depart: {
+      wave: 'sine', vol: 0.18, attack: 0.002, release: 0.07,
+      notes: [
+        { freq: 1318.5, at: 0, dur: 0.04 },
+        { freq: A5, at: 0.07, dur: 0.04 },
+        { freq: E5, at: 0.14, dur: 0.09 },
+      ],
+    },
+  },
+  clock: {
+    tell: {
+      wave: 'square', vol: 0.12, attack: 0.002, release: 0.035, filterHz: 2400,
+      notes: [
+        { freq: 440.0, at: 0, dur: 0.04 },
+        { freq: 660.0, at: 0.08, dur: 0.05 },
+      ],
+    },
+    arrive: {
+      wave: 'square', vol: 0.12, attack: 0.002, release: 0.035, filterHz: 2400,
+      notes: [
+        { freq: 330.0, at: 0, dur: 0.035 },
+        { freq: 440.0, at: 0.06, dur: 0.035 },
+        { freq: 550.0, at: 0.12, dur: 0.06 },
+      ],
+    },
+    depart: {
+      wave: 'square', vol: 0.12, attack: 0.002, release: 0.035, filterHz: 2400,
+      notes: [
+        { freq: 550.0, at: 0, dur: 0.035 },
+        { freq: 440.0, at: 0.06, dur: 0.035 },
+        { freq: 330.0, at: 0.12, dur: 0.07 },
+      ],
+    },
+  },
+  study: {
+    tell: {
+      wave: 'sine', vol: 0.14, attack: 0.012, release: 0.32,
+      notes: [
+        { freq: 220.0, at: 0, dur: 0.12 },
+        { freq: 261.63, at: 0.14, dur: 0.18 },
+      ],
+    },
+    arrive: {
+      wave: 'sine', vol: 0.14, attack: 0.012, release: 0.32,
+      notes: [
+        { freq: 196.0, at: 0, dur: 0.1 },
+        { freq: 261.63, at: 0.12, dur: 0.1 },
+        { freq: 329.63, at: 0.24, dur: 0.2 },
+      ],
+    },
+    depart: {
+      wave: 'sine', vol: 0.14, attack: 0.012, release: 0.32,
+      notes: [
+        { freq: 329.63, at: 0, dur: 0.1 },
+        { freq: 261.63, at: 0.12, dur: 0.1 },
+        { freq: 196.0, at: 0.24, dur: 0.22 },
+      ],
+    },
+  },
+  slate: {
+    tell: {
+      wave: 'triangle', vol: 0.22, attack: 0.006, release: 0.16, filterHz: 1100,
+      notes: [
+        { freq: 196.0, at: 0, dur: 0.08 },
+        { freq: 293.66, at: 0.12, dur: 0.12 },
+      ],
+    },
+    arrive: {
+      wave: 'triangle', vol: 0.22, attack: 0.006, release: 0.16, filterHz: 1100,
+      notes: [
+        { freq: 146.83, at: 0, dur: 0.08 },
+        { freq: 196.0, at: 0.1, dur: 0.08 },
+        { freq: 293.66, at: 0.2, dur: 0.14 },
+      ],
+    },
+    depart: {
+      wave: 'triangle', vol: 0.22, attack: 0.006, release: 0.16, filterHz: 1100,
+      notes: [
+        { freq: 293.66, at: 0, dur: 0.08 },
+        { freq: 196.0, at: 0.1, dur: 0.08 },
+        { freq: 146.83, at: 0.2, dur: 0.16 },
       ],
     },
   },

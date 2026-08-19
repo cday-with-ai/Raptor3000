@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Raptor3000 — piece sets</title>
+  <style>
+    :root { --bg: #15181d; --raised: #1b1f26; --fg: #e8eaef; --muted: #a0a8b4; --light: #f0d9b5; --dark: #b58863; --border: #2a313c; }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; background: var(--bg); color: var(--fg);
+      font: 14px/1.45 system-ui, "Segoe UI", sans-serif; }
+    body { padding: 28px 32px 64px; }
+    header, section { max-width: 980px; margin: 0 auto 28px; }
+    h1 { font-size: 20px; font-weight: 620; letter-spacing: -0.02em; margin: 0 0 6px; }
+    h2 { font-size: 14px; font-weight: 600; margin: 0 0 10px; color: var(--muted); }
+    .lede { color: var(--muted); max-width: 72ch; margin: 0; }
+    .rank { display: flex; width: min(100%, 720px); border-radius: 6px; overflow: hidden; }
+    .sq { flex: 1; aspect-ratio: 1; display: flex; align-items: center; justify-content: center; }
+    .sq img { width: 88%; height: 88%; display: block; }
+    .sq.lt { background: var(--light); }
+    .sq.dk { background: var(--dark); }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Staunton sets</h1>
+    <p class="lede">
+      Cburnett first. The originals are named like Culture ships.
+      <b>Of Course I Still Love You</b> is his language plus the cleft
+      bishop. The others are cousins. Options → Board. Default stays cburnett.
+    </p>
+  </header>
+  <section>
+    <h2>Cburnett</h2>
+    <div class="rank" id="cb-w"></div>
+    <div class="rank" id="cb-b"></div>
+  </section>
+  <section>
+    <h2>Of Course I Still Love You</h2>
+    <div class="rank" id="ocisly-w"></div>
+    <div class="rank" id="ocisly-b"></div>
+  </section>
+  <section>
+    <h2>Just Read The Instructions</h2>
+    <div class="rank" id="jrti-w"></div>
+    <div class="rank" id="jrti-b"></div>
+  </section>
+  <section>
+    <h2>A Shortfall Of Gravitas</h2>
+    <div class="rank" id="asog-w"></div>
+    <div class="rank" id="asog-b"></div>
+  </section>
+  <section>
+    <h2>So Much For Subtlety</h2>
+    <div class="rank" id="subtlety-w"></div>
+    <div class="rank" id="subtlety-b"></div>
+  </section>
+  <section>
+    <h2>Very Little Gravitas Indeed</h2>
+    <div class="rank" id="vlgi-w"></div>
+    <div class="rank" id="vlgi-b"></div>
+  </section>
+  <script>
+    const white = ['wK','wQ','wR','wB','wN','wP'];
+    const black = ['bK','bQ','bR','bB','bN','bP'];
+    function fillRank(id, set, codes, offset) {
+      const row = document.getElementById(id);
+      codes.forEach((code, i) => {
+        const sq = document.createElement('div');
+        sq.className = 'sq ' + ((i + (offset ? 1 : 0)) % 2 === 0 ? 'lt' : 'dk');
+        const img = document.createElement('img');
+        img.src = `/pieces/${set}/${code}.svg`;
+        img.alt = code;
+        sq.appendChild(img);
+        row.appendChild(sq);
+      });
+    }
+    fillRank('cb-w', 'cburnett', white, false);
+    fillRank('cb-b', 'cburnett', black, true);
+    fillRank('ocisly-w', 'ocisly', white, false);
+    fillRank('ocisly-b', 'ocisly', black, true);
+    fillRank('jrti-w', 'jrti', white, false);
+    fillRank('jrti-b', 'jrti', black, true);
+    fillRank('asog-w', 'asog', white, false);
+    fillRank('asog-b', 'asog', black, true);
+    fillRank('subtlety-w', 'subtlety', white, false);
+    fillRank('subtlety-b', 'subtlety', black, true);
+    fillRank('vlgi-w', 'vlgi', white, false);
+    fillRank('vlgi-b', 'vlgi', black, true);
+  </script>
+</body>
+</html>

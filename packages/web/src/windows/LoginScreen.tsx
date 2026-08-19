@@ -1,4 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
+import { appIconUrl } from '../appIcons.js';
+import { useLivePreferences } from '../useLivePreferences.js';
 import { isMobileDemo, setMobileOverride, shouldBlockMobile } from '../mobile.js';
 import { LanguageSelect, useT } from '../i18n/react.js';
 import type { MessageKey } from '../i18n/index.js';
@@ -50,6 +52,7 @@ export function LoginScreen({
   const [error, setError] = useState<MessageKey | null>(null);
   const handleRef = useRef<HTMLInputElement>(null);
   const { t, rich } = useT();
+  const icon = useLivePreferences().appIcon;
 
   // Switching profile loads its creds. Save the outgoing profile so the
   // user doesn't lose in-flight edits — mirrors the Java ModifyListener.
@@ -122,7 +125,7 @@ export function LoginScreen({
       <div style={{ ...shell, position: 'relative', overflow: 'auto', flexDirection: 'column', justifyContent: 'flex-start' }}>
         <StarField />
         <div style={mobileStop}>
-          <img src="/raptor3000.png" alt="" style={{ width: 88, height: 88, margin: '0 auto 10px', display: 'block' }} />
+          <img src={appIconUrl(icon)} alt="" style={{ width: 88, height: 88, margin: '0 auto 10px', display: 'block' }} />
           <div style={{ fontSize: 22, fontWeight: 700, letterSpacing: '0.02em' }}>
             {t('mobile.title')}
           </div>
@@ -161,7 +164,7 @@ export function LoginScreen({
           submit();
         }}
       >
-        <img src="/raptor3000.png" alt="" style={loginIcon} />
+        <img src={appIconUrl(icon)} alt="" style={loginIcon} />
         <div style={brand}>Raptor3000</div>
         <div style={tagline}>{t('login.tagline')}</div>
 

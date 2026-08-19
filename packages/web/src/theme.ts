@@ -49,6 +49,13 @@ export function resolveTheme(mode: ThemeMode): ResolvedTheme {
   return 'dark';
 }
 
+export function readDocumentTheme(): ResolvedTheme {
+  if (typeof document !== 'undefined' && document.documentElement.dataset.theme === 'light') {
+    return 'light';
+  }
+  return 'dark';
+}
+
 export function applyTheme(mode: ThemeMode): ResolvedTheme {
   const resolved = resolveTheme(mode);
   if (typeof document !== 'undefined') {

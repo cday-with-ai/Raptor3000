@@ -1,0 +1,642 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="google" content="notranslate" />
+  <title>Raptor3000 — clock faces</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=Share+Tech+Mono&family=Source+Serif+4:opsz,wght@8..60,500;8..60,650&display=swap" rel="stylesheet" />
+  <style>
+    @font-face {
+      font-family: DigitalFont;
+      src: url('/fonts/digitalFont.woff2') format('woff2');
+      font-weight: 400;
+      font-style: normal;
+      font-display: swap;
+    }
+    @font-face {
+      font-family: DSEG7Classic;
+      src: url('/fonts/DSEG7Classic-Regular.woff2') format('woff2');
+      font-weight: 400;
+      font-style: normal;
+      font-display: swap;
+    }
+    @font-face {
+      font-family: DSEG7Modern;
+      src: url('/fonts/DSEG7Modern-Regular.woff2') format('woff2');
+      font-weight: 400;
+      font-style: normal;
+      font-display: swap;
+    }
+    :root, html[data-theme="dark"] {
+      --bg: #15181d; --bg-raised: #1b1f26; --bg-sunken: #0e1116;
+      --fg: #e8eaef; --fg-muted: #a0a8b4; --fg-dim: #6a7280;
+      --border: #2a313c; --border-soft: #2a2f38; --border-strong: #3a4150;
+      --accent: #7bb8ff; --ok: #7fd4a8;
+      color-scheme: dark;
+    }
+    html[data-theme="light"] {
+      --bg: #f6f7f9; --bg-raised: #ffffff; --bg-sunken: #eceef2;
+      --fg: #15181d; --fg-muted: #4b5158; --fg-dim: #818792;
+      --border: #d5dae0; --border-soft: #dfe4ea; --border-strong: #b9c0c9;
+      --accent: #2563eb; --ok: #1f7a4d;
+      color-scheme: light;
+    }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; background: var(--bg); color: var(--fg);
+      font: 14px/1.45 system-ui, "Segoe UI", sans-serif; }
+    body { padding: 28px 32px 56px; }
+    header { max-width: 1240px; margin: 0 auto 18px; }
+    h1 { font-size: 20px; font-weight: 620; letter-spacing: -0.02em; margin: 0 0 6px; }
+    .lede { color: var(--fg-muted); max-width: 72ch; margin: 0; }
+    .toolbar {
+      max-width: 1240px; margin: 16px auto 22px;
+      display: flex; gap: 10px; flex-wrap: wrap; align-items: center;
+    }
+    .seg { display: inline-flex; border: 1px solid var(--border-strong); border-radius: 8px; overflow: hidden; }
+    .seg button {
+      background: var(--bg-raised); color: var(--fg-muted);
+      border: 0; border-inline-end: 1px solid var(--border);
+      padding: 6px 12px; font: 13px/1.2 system-ui, sans-serif; cursor: pointer;
+    }
+    .seg button:last-child { border-inline-end: 0; }
+    .seg button.on { background: var(--accent); color: #0e1116; font-weight: 650; }
+    .hint { color: var(--fg-dim); font-size: 12px; }
+    .grid {
+      max-width: 1240px; margin: 0 auto;
+      display: grid; grid-template-columns: repeat(2, 1fr); gap: 18px;
+    }
+    @media (max-width: 900px) { .grid { grid-template-columns: 1fr; } }
+    .card {
+      background: var(--bg-raised); border: 1px solid var(--border);
+      border-radius: 12px; padding: 16px; display: flex; flex-direction: column; gap: 12px;
+    }
+    .card.picked { border-color: var(--accent); box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent) 40%, transparent); }
+    .card h2 { margin: 0; font-size: 16px; }
+    .blurb { margin: 0; color: var(--fg-muted); font-size: 13px; min-height: 2.6em; }
+    .mock {
+      background: var(--bg); border: 1px solid var(--border-soft);
+      border-radius: 8px; padding: 10px; display: flex; flex-direction: column; gap: 6px;
+    }
+    .board {
+      aspect-ratio: 8 / 5; border-radius: 2px;
+      background:
+        repeating-conic-gradient(#b58863 0% 25%, #f0d9b5 0% 50%)
+        0 0 / 12.5% 20%;
+    }
+    .bar {
+      display: flex; align-items: center; justify-content: space-between; gap: 12px;
+    }
+    .who { display: flex; align-items: baseline; gap: 8px; min-width: 0; }
+    .who strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .chip {
+      display: inline-flex; align-items: center; justify-content: center;
+      font-variant-numeric: tabular-nums; line-height: 1.15; white-space: nowrap;
+    }
+    .lamp { width: 7px; height: 7px; border-radius: 50%; flex: 0 0 auto; }
+    .states { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+    .states figure { margin: 0; text-align: center; }
+    .states figcaption { color: var(--fg-dim); font-size: 11px; margin-top: 4px; }
+    button.use {
+      background: transparent; color: var(--accent);
+      border: 1px solid var(--border-strong); border-radius: 7px;
+      padding: 7px 12px; font: 13px/1.2 system-ui, sans-serif; cursor: pointer;
+    }
+    button.use:hover { border-color: var(--accent); }
+    button.use.picked { background: var(--accent); color: #0e1116; font-weight: 650; }
+    footer { max-width: 1240px; margin: 28px auto 0; color: var(--fg-dim); font-size: 12px; }
+    .toast {
+      position: fixed; bottom: 22px; left: 50%; transform: translateX(-50%);
+      background: var(--bg-raised); border: 1px solid var(--accent); color: var(--ok);
+      padding: 10px 16px; border-radius: 8px; display: none;
+      box-shadow: 0 10px 30px rgba(0,0,0,.35);
+    }
+    .toast.show { display: block; }
+    @keyframes colon { 0%, 49% { opacity: 1; } 50%, 100% { opacity: 0.22; } }
+    .colon-blink { animation: colon 1s steps(1) infinite; }
+    @keyframes lowpulse { 0%, 100% { filter: brightness(1); } 50% { filter: brightness(1.18); } }
+    .low-pulse { animation: lowpulse 1.1s ease-in-out infinite; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Clock faces</h1>
+    <p class="lede">
+      Alpha and Digital are yours. LCD is the seven-segment cell. Chronos is the
+      metal tournament box with red LEDs. Use one and the live boards pick it up.
+    </p>
+  </header>
+  <div class="toolbar">
+    <div class="seg" id="themeSeg"></div>
+    <div class="seg" id="modeSeg"></div>
+    <span class="hint">Playing puts your clock on the bottom. Observing is two other people. Examining freezes both.</span>
+  </div>
+  <div class="grid" id="grid"></div>
+  <footer>
+    Day/Night on this page is just the demo. The app’s own theme toggle still owns real windows.
+    Applying a design writes <code>pref.clockSet</code>.
+  </footer>
+  <div class="toast" id="toast"></div>
+
+<script>
+const SETS = {
+  alpha: {
+    label: "Alpha", blurb: "Yours, from Simple FICS. Teal capsule, digital font, the one that already knew how to sit on a board.",
+    digitFont: 'DigitalFont, "Share Tech Mono", "Courier New", monospace',
+    nameFont: 'system-ui, "Segoe UI", sans-serif',
+    digitWeight: 400, digitWeightLow: 400, digitSize: 22, digitSizeLow: 22,
+    radius: 10, padY: 4, padX: 12, tracking: "0.1em", minWidth: 88, borderWidth: 3,
+    colonBlink: true, lamp: false,
+    bar: {
+      dark: { bg: "var(--bg-raised)", border: "var(--border-soft)", radius: 6, padY: 6, padX: 10, nameSize: 13, nameWeight: 700, nameColor: "var(--fg)", ratingColor: "var(--fg-muted)" },
+      light: { bg: "var(--bg-raised)", border: "var(--border-soft)", radius: 6, padY: 6, padX: 10, nameSize: 13, nameWeight: 700, nameColor: "var(--fg)", ratingColor: "var(--fg-muted)" },
+    },
+    chip: {
+      dark: {
+        active: { bg: "#1a4d5c", text: "#a3e9ec", border: "#2d7a84" },
+        low: { bg: "#1a4d5c", text: "#ff6b6b", border: "#c04040" },
+        idle: { bg: "#2a3038", text: "#8a929c", border: "#3a424c" },
+      },
+      light: {
+        active: { bg: "#e0f7fa", text: "#006064", border: "#006064" },
+        low: { bg: "#e0f7fa", text: "#c62828", border: "#c62828" },
+        idle: { bg: "#eceef2", text: "var(--fg-dim)", border: "#d5dae0" },
+      },
+    },
+  },
+  lcd: {
+    label: "LCD", blurb: "Seven-segment module. Unused 8s sit behind the time, the way a real cell does.",
+    digitFont: 'DSEG7Classic, DigitalFont, "Courier New", monospace',
+    digits: 'seven',
+    nameFont: 'system-ui, "Segoe UI", sans-serif',
+    digitWeight: 400, digitWeightLow: 400, digitSize: 22, digitSizeLow: 22,
+    radius: 4, padY: 6, padX: 10, tracking: "0.06em", minWidth: 96, borderWidth: 2,
+    colonBlink: true, lamp: false, ghost: true,
+    bar: {
+      dark: { bg: "var(--bg-raised)", border: "var(--border-soft)", radius: 6, padY: 6, padX: 10, nameSize: 13, nameWeight: 700, nameColor: "var(--fg)", ratingColor: "var(--fg-muted)" },
+      light: { bg: "var(--bg-raised)", border: "var(--border-soft)", radius: 6, padY: 6, padX: 10, nameSize: 13, nameWeight: 700, nameColor: "var(--fg)", ratingColor: "var(--fg-muted)" },
+    },
+    chip: {
+      dark: {
+        active: { bg: "#141810", text: "#b8d46a", border: "#2a3220", glow: "inset 0 1px 0 #b8d46a22" },
+        low: { bg: "#181410", text: "#e0a040", border: "#5a3a14" },
+        idle: { bg: "#141810", text: "#4a5830", border: "#2a3220" },
+      },
+      light: {
+        active: { bg: "#c4c8b0", text: "#2c3218", border: "#9aa088" },
+        low: { bg: "#c8b8a8", text: "#8a2018", border: "#a88878" },
+        idle: { bg: "#c4c8b0", text: "#8a9078", border: "#9aa088" },
+      },
+    },
+  },
+  chronos: {
+    label: "Chronos", blurb: "The metal tournament box. Numbers, a colon, a tenth when it matters.",
+    digitFont: 'DSEG7Modern, DSEG7Classic, DigitalFont, "Courier New", monospace',
+    digits: 'seven',
+    nameFont: 'system-ui, "Segoe UI", sans-serif',
+    digitWeight: 400, digitWeightLow: 400, digitSize: 24, digitSizeLow: 24,
+    radius: 2, padY: 5, padX: 10, tracking: "0.04em", minWidth: 100, borderWidth: 1,
+    colonBlink: false, lamp: false, lampGlow: false, lowPulse: false, ghost: false,
+    bar: {
+      dark: { bg: "var(--bg-raised)", border: "var(--border-soft)", radius: 6, padY: 6, padX: 10, nameSize: 13, nameWeight: 700, nameColor: "var(--fg)", ratingColor: "var(--fg-muted)" },
+      light: { bg: "var(--bg-raised)", border: "var(--border-soft)", radius: 6, padY: 6, padX: 10, nameSize: 13, nameWeight: 700, nameColor: "var(--fg)", ratingColor: "var(--fg-muted)" },
+    },
+    chip: {
+      dark: {
+        active: { bg: "#161618", text: "#d24a4a", border: "#2c2c30" },
+        low: { bg: "#161618", text: "#c45c38", border: "#2c2c30" },
+        idle: { bg: "#161618", text: "#a07878", border: "#2c2c30" },
+      },
+      light: {
+        active: { bg: "#1a1a1c", text: "#c84444", border: "#2c2c30" },
+        low: { bg: "#1a1a1c", text: "#b05030", border: "#2c2c30" },
+        idle: { bg: "#1a1a1c", text: "#966868", border: "#2c2c30" },
+      },
+    },
+  },
+  digital: {
+    label: "Digital", blurb: "The quieter Simple FICS face. Same font, thinner chrome, error-red when the flag is close.",
+    digitFont: 'DigitalFont, "Share Tech Mono", "Courier New", monospace',
+    nameFont: 'system-ui, "Segoe UI", sans-serif',
+    digitWeight: 400, digitWeightLow: 400, digitSize: 18, digitSizeLow: 20,
+    radius: 6, padY: 4, padX: 10, tracking: "0.1em", minWidth: 80, borderWidth: 2,
+    colonBlink: true, lamp: false,
+    bar: {
+      dark: { bg: "var(--bg-raised)", border: "var(--border-soft)", radius: 6, padY: 4, padX: 10, nameSize: 13, nameWeight: 700, nameColor: "var(--fg)", ratingColor: "var(--fg-muted)" },
+      light: { bg: "var(--bg-raised)", border: "var(--border-soft)", radius: 6, padY: 4, padX: 10, nameSize: 13, nameWeight: 700, nameColor: "var(--fg)", ratingColor: "var(--fg-muted)" },
+    },
+    chip: {
+      dark: {
+        active: { bg: "var(--bg-sunken)", text: "var(--fg)", border: "var(--border-strong)" },
+        low: { bg: "var(--bg-sunken)", text: "#ff6b6b", border: "#c04040" },
+        idle: { bg: "var(--bg-sunken)", text: "var(--fg-muted)", border: "var(--border-soft)" },
+      },
+    },
+  },
+  classic: {
+    label: "Classic", blurb: "The original pills, tightened. Tabular digits, same green and red.",
+    digitFont: '"SF Mono", Consolas, ui-monospace, monospace',
+    nameFont: 'system-ui, "Segoe UI", sans-serif',
+    digitWeight: 500, digitWeightLow: 700, digitSize: 18, digitSizeLow: 20,
+    radius: 4, padY: 2, padX: 10, tracking: "0.02em", minWidth: 76, borderWidth: 1,
+    colonBlink: false, lamp: false,
+    bar: {
+      dark: { bg: "var(--bg-raised)", border: "var(--border-soft)", radius: 6, padY: 4, padX: 10, nameSize: 13, nameWeight: 700, nameColor: "var(--fg)", ratingColor: "var(--fg-muted)" },
+      light: { bg: "var(--bg-raised)", border: "var(--border-soft)", radius: 6, padY: 4, padX: 10, nameSize: 13, nameWeight: 700, nameColor: "var(--fg)", ratingColor: "var(--fg-muted)" },
+    },
+    chip: {
+      dark: {
+        active: { bg: "#2a4a2a", text: "#ffffff", border: "#3a6a3a" },
+        low: { bg: "#5a2a2a", text: "#ffd9d9", border: "#a04040" },
+        idle: { bg: "var(--bg-sunken)", text: "inherit", border: "var(--border-soft)" },
+      },
+    },
+  },
+  dgt: {
+    label: "DGT", blurb: "Tournament housing. Amber LEDs on a black module. Always a physical clock.",
+    digitFont: '"Share Tech Mono", "IBM Plex Mono", Consolas, monospace',
+    nameFont: 'system-ui, "Segoe UI", sans-serif',
+    digitWeight: 400, digitWeightLow: 400, digitSize: 22, digitSizeLow: 22,
+    radius: 3, padY: 5, padX: 12, tracking: "0.08em", minWidth: 92, borderWidth: 1,
+    colonBlink: true, lamp: true,
+    bar: {
+      dark: { bg: "color-mix(in srgb, var(--bg-raised) 82%, #000)", border: "var(--border-soft)", radius: 6, padY: 6, padX: 10, nameSize: 13, nameWeight: 700, nameColor: "var(--fg)", ratingColor: "var(--fg-muted)" },
+      light: { bg: "color-mix(in srgb, var(--bg-raised) 88%, #1a1814)", border: "var(--border-soft)", radius: 6, padY: 6, padX: 10, nameSize: 13, nameWeight: 700, nameColor: "var(--fg)", ratingColor: "var(--fg-muted)" },
+    },
+    chip: {
+      dark: {
+        active: { bg: "#141410", text: "#f5b942", border: "#3a3424", glow: "0 0 10px #f5b94244" },
+        low: { bg: "#1a0c0a", text: "#ff6a3d", border: "#6a2818", glow: "0 0 12px #ff6a3d55" },
+        idle: { bg: "#141410", text: "#8a6a28", border: "#2a2820" },
+      },
+      light: {
+        active: { bg: "#16140f", text: "#e8a830", border: "#3a3424", glow: "0 0 8px #e8a83033" },
+        low: { bg: "#1c0e0c", text: "#ee5a30", border: "#6a2818" },
+        idle: { bg: "#16140f", text: "#7a5e24", border: "#2a2820" },
+      },
+    },
+  },
+  flag: {
+    label: "Flag", blurb: "Club clock. Cream face, ink digits, a wooden-table quiet.",
+    digitFont: '"IBM Plex Mono", "SF Mono", Consolas, monospace',
+    nameFont: '"Source Serif 4", Georgia, serif',
+    digitWeight: 600, digitWeightLow: 700, digitSize: 19, digitSizeLow: 20,
+    radius: 5, padY: 4, padX: 12, tracking: "0.04em", minWidth: 84, borderWidth: 1,
+    colonBlink: false, lamp: false,
+    bar: {
+      dark: { bg: "#2c261c", border: "#4a4030", radius: 6, padY: 4, padX: 10, nameSize: 13, nameWeight: 700, nameColor: "#efe6d2", ratingColor: "#b4a890" },
+      light: { bg: "#f4eee0", border: "#d4cbb4", radius: 6, padY: 4, padX: 10, nameSize: 13, nameWeight: 700, nameColor: "#2a2218", ratingColor: "#6a5e4c" },
+    },
+    chip: {
+      dark: {
+        active: { bg: "#3a3226", text: "#efe6d2", border: "#6a5a38" },
+        low: { bg: "#5a281c", text: "#f4d0c0", border: "#a04028" },
+        idle: { bg: "#241e16", text: "#b4a890", border: "#3a3226" },
+      },
+      light: {
+        active: { bg: "#e8d9b4", text: "#2a2218", border: "#c4b48a" },
+        low: { bg: "#c44a2a", text: "#fff4ea", border: "#a03820" },
+        idle: { bg: "#f7f1e4", text: "#5a5040", border: "#d4cbb4" },
+      },
+    },
+  },
+  terminal: {
+    label: "Terminal", blurb: "Phosphor on a sunken well. The FICS client that lived in a tty.",
+    digitFont: '"IBM Plex Mono", Consolas, monospace',
+    nameFont: '"IBM Plex Mono", Consolas, monospace',
+    digitWeight: 500, digitWeightLow: 600, digitSize: 18, digitSizeLow: 19,
+    radius: 2, padY: 4, padX: 10, tracking: "0.06em", minWidth: 84, borderWidth: 1,
+    colonBlink: true, lamp: false,
+    bar: {
+      dark: { bg: "#071108", border: "#1a3320", radius: 2, padY: 4, padX: 10, nameSize: 12, nameWeight: 500, nameColor: "#4dff7a", ratingColor: "#2a7a42" },
+      light: { bg: "#e8f0e8", border: "#b4c8b4", radius: 2, padY: 4, padX: 10, nameSize: 12, nameWeight: 500, nameColor: "#145028", ratingColor: "#3a6a48" },
+    },
+    chip: {
+      dark: {
+        active: { bg: "#0a160c", text: "#4dff7a", border: "#1e4a28", glow: "0 0 8px #4dff7a33" },
+        low: { bg: "#160808", text: "#ff5555", border: "#6a2020" },
+        idle: { bg: "#0c1810", text: "#2a7a42", border: "#1a3320" },
+      },
+      light: {
+        active: { bg: "#dcecdc", text: "#146028", border: "#8ab490" },
+        low: { bg: "#f0d4d4", text: "#a01818", border: "#d08080" },
+        idle: { bg: "#e4ece4", text: "#3a6a48", border: "#b4c8b4" },
+      },
+    },
+  },
+  glass: {
+    label: "Glass", blurb: "Almost no chrome. Large type, a thin edge, the board does the talking.",
+    digitFont: '"IBM Plex Mono", Consolas, monospace',
+    nameFont: 'system-ui, "Segoe UI", sans-serif',
+    digitWeight: 500, digitWeightLow: 700, digitSize: 22, digitSizeLow: 24,
+    radius: 8, padY: 3, padX: 8, tracking: "0.01em", minWidth: 80, borderWidth: 1,
+    colonBlink: false, lamp: false,
+    bar: {
+      dark: { bg: "transparent", border: "transparent", radius: 6, padY: 6, padX: 4, nameSize: 13, nameWeight: 700, nameColor: "var(--fg)", ratingColor: "var(--fg-muted)" },
+      light: { bg: "transparent", border: "transparent", radius: 6, padY: 6, padX: 4, nameSize: 13, nameWeight: 700, nameColor: "var(--fg)", ratingColor: "var(--fg-muted)" },
+    },
+    chip: {
+      dark: {
+        active: { bg: "transparent", text: "#d8ecff", border: "transparent" },
+        low: { bg: "transparent", text: "#ff8a7a", border: "transparent" },
+        idle: { bg: "transparent", text: "var(--fg-muted)", border: "transparent" },
+      },
+      light: {
+        active: { bg: "transparent", text: "#1a4a8a", border: "transparent" },
+        low: { bg: "transparent", text: "#b02018", border: "transparent" },
+        idle: { bg: "transparent", text: "var(--fg-muted)", border: "transparent" },
+      },
+    },
+  },
+  bronze: {
+    label: "Bronze", blurb: "Warm metal bezel, dark face, cream digits. A study clock.",
+    digitFont: '"IBM Plex Mono", Consolas, monospace',
+    nameFont: '"Source Serif 4", Georgia, serif',
+    digitWeight: 600, digitWeightLow: 700, digitSize: 19, digitSizeLow: 20,
+    radius: 4, padY: 4, padX: 11, tracking: "0.05em", minWidth: 86, borderWidth: 1,
+    colonBlink: true, lamp: false,
+    bar: {
+      dark: { bg: "#221c16", border: "#4a3c2c", radius: 6, padY: 4, padX: 10, nameSize: 13, nameWeight: 700, nameColor: "#e2b87a", ratingColor: "#8a7350" },
+      light: { bg: "#efe4d2", border: "#c8b090", radius: 6, padY: 4, padX: 10, nameSize: 13, nameWeight: 700, nameColor: "#3a2e22", ratingColor: "#7a6850" },
+    },
+    chip: {
+      dark: {
+        active: { bg: "#1f1812", text: "#e2b87a", border: "#6a5438", glow: "inset 0 1px 0 #e2b87a22" },
+        low: { bg: "#3a1810", text: "#ffb08a", border: "#8a4030" },
+        idle: { bg: "#16120e", text: "#8a7350", border: "#3a2e22" },
+      },
+      light: {
+        active: { bg: "#3a2e22", text: "#f0d4a8", border: "#6a5438" },
+        low: { bg: "#6a2818", text: "#ffe0d0", border: "#8a4030" },
+        idle: { bg: "#e6d8c4", text: "#5a4a38", border: "#c8b090" },
+      },
+    },
+  },
+};
+SETS.classic.chip.light = SETS.classic.chip.dark;
+SETS.digital.chip.light = SETS.digital.chip.dark;
+
+const ORDER = ["alpha", "digital", "lcd", "chronos", "dgt", "flag", "glass", "bronze", "terminal", "classic"];
+
+function formatClock(ms) {
+  const total = Math.max(0, ms);
+  const low = total < 10_000;
+  const sec = Math.floor(total / 1000);
+  const h = Math.floor(sec / 3600);
+  const m = Math.floor((sec % 3600) / 60);
+  const s = sec % 60;
+  const tenths = low ? Math.floor((total % 1000) / 100) : null;
+  const mm = h > 0 ? String(m).padStart(2, "0") : String(m);
+  const ss = String(s).padStart(2, "0");
+  return { main: h > 0 ? `${h}:${mm}:${ss}` : `${mm}:${ss}`, tenths, low };
+}
+
+function chipEl(set, theme, ms, ticking, liveOffset) {
+  const d = SETS[set];
+  const { main, tenths, low } = formatClock(ms);
+  const state = ticking ? (low ? "low" : "active") : "idle";
+  const c = d.chip[theme][state];
+  const wrap = document.createElement("span");
+  wrap.className = "chip" + (low && ticking && d.lowPulse !== false ? " low-pulse" : "");
+  wrap.style.cssText = `
+    font-family:${d.digitFont}; font-size:${low ? d.digitSizeLow : d.digitSize}px;
+    font-weight:${low ? d.digitWeightLow : d.digitWeight}; letter-spacing:${d.tracking};
+    padding:${d.padY}px ${d.padX}px; background:${c.bg}; border:${d.borderWidth || 1}px solid ${c.border};
+    color:${c.text}; border-radius:${d.radius}px; min-width:${d.minWidth}px;
+    box-shadow:${c.glow || "none"}; gap:${d.lamp ? 8 : 0}px;
+  `;
+  if (d.lamp) {
+    const lamp = document.createElement("span");
+    lamp.className = "lamp";
+    const on = d.lampOn || "#5adf6a";
+    const lowC = d.lampLow || "#ff6a3d";
+    const off = d.lampOff || "#2a2a24";
+    lamp.style.background = ticking ? (low ? lowC : on) : off;
+    lamp.style.boxShadow = ticking && d.lampGlow !== false ? `0 0 6px ${low ? lowC : on}` : "none";
+    wrap.appendChild(lamp);
+  }
+  const SEG = {
+    0: "abcdef".split(""), 1: ["b","c"], 2: "abged".split(""), 3: "abcdg".split(""),
+    4: "bcfg".split(""), 5: "acdfg".split(""), 6: "acdefg".split(""), 7: "abc".split(""),
+    8: "abcdefg".split(""), 9: "abcdfg".split(""),
+  };
+  const PATH = {
+    a: "M 2.4 1.2 L 9.6 1.2 L 8.5 2.5 L 3.5 2.5 Z",
+    g: "M 3.4 9.3 L 8.6 9.3 L 9.5 10 L 8.6 10.7 L 3.4 10.7 L 2.5 10 Z",
+    d: "M 3.5 17.5 L 8.5 17.5 L 9.6 18.8 L 2.4 18.8 Z",
+    f: "M 1.2 2.4 L 2.5 3.5 L 2.5 8.4 L 1.2 9.2 L 1.2 2.4 Z",
+    b: "M 10.8 2.4 L 10.8 9.2 L 9.5 8.4 L 9.5 3.5 Z",
+    e: "M 1.2 10.8 L 2.5 11.6 L 2.5 16.5 L 1.2 17.6 L 1.2 10.8 Z",
+    c: "M 10.8 10.8 L 10.8 17.6 L 9.5 16.5 L 9.5 11.6 Z",
+  };
+  function sevenSvg(text, color, h, ghost, blink) {
+    const ids = "abcdefg".split("");
+    let x = 0;
+    const parts = [];
+    for (const ch of text) {
+      if (ch === ":") {
+        const cls = blink ? ' class="colon-blink"' : "";
+        parts.push(`<g transform="translate(${x} 0)" fill="${color}"${cls}><rect x="1.6" y="5.2" width="1.8" height="1.8" rx="0.2"/><rect x="1.6" y="13" width="1.8" height="1.8" rx="0.2"/></g>`);
+        x += 5;
+      } else if (ch === ".") {
+        parts.push(`<rect x="${x + 1}" y="16.6" width="1.8" height="1.8" rx="0.2" fill="${color}"/>`);
+        x += 4;
+      } else {
+        const on = new Set(SEG[ch] || []);
+        const bars = ids.map(id => `<path d="${PATH[id]}" fill="${color}" opacity="${on.has(id) ? 1 : ghost ? 0.14 : 0}"/>`).join("");
+        parts.push(`<g transform="translate(${x} 0)">${bars}</g>`);
+        x += 13;
+      }
+    }
+    const w = x * (h / 20);
+    const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+    svg.setAttribute("width", String(w));
+    svg.setAttribute("height", String(h));
+    svg.setAttribute("viewBox", `0 0 ${x} 20`);
+    svg.style.display = "block";
+    svg.innerHTML = parts.join("");
+    return svg;
+  }
+  function fillDigits(into, text, frac, blink) {
+    const parts = text.split(":");
+    parts.forEach((p, i) => {
+      if (i) {
+        const col = document.createElement("span");
+        col.textContent = ":";
+        col.style.cssText = "display:inline-block;width:0.55em;text-align:center";
+        if (blink) col.className = "colon-blink";
+        into.appendChild(col);
+      }
+      into.appendChild(document.createTextNode(p));
+    });
+    if (frac !== null) {
+      const t = document.createElement("span");
+      t.style.opacity = "0.8";
+      t.textContent = "." + frac;
+      into.appendChild(t);
+    }
+  }
+  const stack = document.createElement("span");
+  stack.style.cssText = "position:relative;display:inline-block";
+  const shown = tenths === null ? main : `${main}.${tenths}`;
+  if (d.digits === "seven") {
+    stack.appendChild(sevenSvg(shown, c.text, low ? d.digitSizeLow : d.digitSize, !!d.ghost, ticking && d.colonBlink));
+  } else {
+    if (d.ghost) {
+      const g = document.createElement("span");
+      g.style.cssText = "position:absolute;inset:0;opacity:0.16;pointer-events:none";
+      fillDigits(g, main.replace(/\d/g, "8"), tenths !== null ? "8" : null, false);
+      stack.appendChild(g);
+    }
+    const digits = document.createElement("span");
+    digits.style.position = "relative";
+    fillDigits(digits, main, tenths === null ? null : String(tenths), ticking && d.colonBlink);
+    stack.appendChild(digits);
+  }
+  wrap.appendChild(stack);
+  if (liveOffset !== undefined) {
+    wrap.dataset.live = "1";
+    wrap.dataset.set = set;
+    wrap.dataset.ticking = ticking ? "1" : "0";
+    wrap.dataset.base = String(liveOffset);
+  }
+  return wrap;
+}
+
+function barEl(set, theme, name, rating, ms, ticking, liveOffset) {
+  const b = SETS[set].bar[theme];
+  const row = document.createElement("div");
+  row.className = "bar";
+  row.style.cssText = `
+    padding:${b.padY}px ${b.padX}px; background:${b.bg}; border:1px solid ${b.border};
+    border-radius:${b.radius}px; font-family:${SETS[set].nameFont}; font-size:${b.nameSize}px;
+    color:${b.nameColor};
+  `;
+  const who = document.createElement("span");
+  who.className = "who";
+  who.innerHTML = `<strong style="font-weight:${b.nameWeight}">${name}</strong>` +
+    (rating ? `<span style="color:${b.ratingColor};font-weight:400">(${rating})</span>` : "");
+  row.append(who, chipEl(set, theme, ms, ticking, liveOffset));
+  return row;
+}
+
+let theme = "dark";
+let mode = "playing";
+let picked = localStorage.getItem("pref.clockSet") || "alpha";
+let live = 3 * 60 * 1000 + 42 * 1000;
+
+function scene() {
+  if (mode === "playing") {
+    return {
+      top: { name: "danme", rating: "1575", ms: 10 * 60 * 1000 + 6 * 1000, ticking: false },
+      bot: { name: "You", rating: "1841", ms: live, ticking: true },
+    };
+  }
+  if (mode === "observing") {
+    return {
+      top: { name: "danme", rating: "1575", ms: live + 90_000, ticking: false },
+      bot: { name: "Rtan", rating: "1841", ms: live, ticking: true },
+    };
+  }
+  return {
+    top: { name: "White", rating: "—", ms: 15 * 60 * 1000, ticking: false },
+    bot: { name: "Black", rating: "—", ms: 15 * 60 * 1000, ticking: false },
+  };
+}
+
+function paint() {
+  document.documentElement.dataset.theme = theme;
+  const grid = document.getElementById("grid");
+  grid.innerHTML = "";
+  const sc = scene();
+  for (const id of ORDER) {
+    const d = SETS[id];
+    const card = document.createElement("article");
+    card.className = "card" + (picked === id ? " picked" : "");
+    card.innerHTML = `<div><h2>${d.label}</h2><p class="blurb">${d.blurb}</p></div>`;
+    const mock = document.createElement("div");
+    mock.className = "mock";
+    mock.append(
+      barEl(id, theme, sc.top.name, sc.top.rating, sc.top.ms, sc.top.ticking, sc.top.ticking ? 90_000 : undefined),
+      Object.assign(document.createElement("div"), { className: "board" }),
+      barEl(id, theme, sc.bot.name, sc.bot.rating, sc.bot.ms, sc.bot.ticking, sc.bot.ticking ? 0 : undefined),
+    );
+    const states = document.createElement("div");
+    states.className = "states";
+    const samples = [
+      ["Idle", 10 * 60 * 1000 + 8 * 1000, false],
+      ["Active", live, true],
+      ["Low", 7300, true],
+      ["Hours", 90 * 60 * 1000, false],
+    ];
+    for (const [cap, ms, tick] of samples) {
+      const fig = document.createElement("figure");
+      fig.append(chipEl(id, theme, ms, tick, cap === "Active" ? 0 : undefined));
+      const fc = document.createElement("figcaption");
+      fc.textContent = cap;
+      fig.append(fc);
+      states.append(fig);
+    }
+    const use = document.createElement("button");
+    use.className = "use" + (picked === id ? " picked" : "");
+    use.textContent = picked === id ? "This is the one" : "Use this design";
+    use.onclick = () => {
+      picked = id;
+      localStorage.setItem("pref.clockSet", id);
+      toast(`Applied “${d.label}”. Live boards on this origin will pick it up.`);
+      paint();
+    };
+    card.append(mock, states, use);
+    grid.append(card);
+  }
+}
+
+function seg(el, items, current, onPick) {
+  el.innerHTML = "";
+  for (const [id, label] of items) {
+    const b = document.createElement("button");
+    b.textContent = label;
+    b.className = id === current ? "on" : "";
+    b.onclick = () => onPick(id);
+    el.append(b);
+  }
+}
+
+function toast(msg) {
+  const el = document.getElementById("toast");
+  el.textContent = msg;
+  el.classList.add("show");
+  clearTimeout(toast._t);
+  toast._t = setTimeout(() => el.classList.remove("show"), 2800);
+}
+
+function chrome() {
+  seg(document.getElementById("themeSeg"), [["dark", "Night"], ["light", "Day"]], theme, t => { theme = t; chrome(); paint(); });
+  seg(document.getElementById("modeSeg"), [["playing", "Playing"], ["observing", "Observing"], ["examining", "Examining"]], mode, m => { mode = m; chrome(); paint(); });
+}
+
+function tickFaces() {
+  document.querySelectorAll("[data-live]").forEach(node => {
+    const set = node.getAttribute("data-set");
+    const ticking = node.getAttribute("data-ticking") === "1";
+    const base = Number(node.getAttribute("data-base"));
+    const next = chipEl(set, theme, ticking ? live + base : base, ticking);
+    next.dataset.live = "1";
+    next.dataset.set = set;
+    next.dataset.ticking = ticking ? "1" : "0";
+    next.dataset.base = String(base);
+    node.replaceWith(next);
+  });
+}
+
+chrome();
+paint();
+setInterval(() => {
+  if (mode !== "examining") live = Math.max(0, live - 100);
+  tickFaces();
+}, 100);
+</script>
+</body>
+</html>

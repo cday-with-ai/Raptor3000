@@ -77,6 +77,13 @@ describe('migration from the pre-port roster', () => {
     localStorage.setItem('pref.boardTheme', 'blue');
     expect(loadPreferences().boardTheme).toBe('blue');
   });
+
+  it("renames the stored 'spire' and 'grokton' piece sets to 'asog'", () => {
+    localStorage.setItem('pref.pieceSet', 'spire');
+    expect(loadPreferences().pieceSet).toBe('asog');
+    localStorage.setItem('pref.pieceSet', 'grokton');
+    expect(loadPreferences().pieceSet).toBe('asog');
+  });
 });
 
 describe('custom colors', () => {
@@ -115,6 +122,10 @@ describe('the color table is Chess Ascent, to the hex', () => {
     purple: { light: '#e8dff5', dark: '#9b7ebd' },
     ic: { light: '#ececec', dark: '#c1c18e' },
     horsey: { light: '#f0d9b5', dark: '#946f51' },
+    walnut: { light: '#e4c9a0', dark: '#7a4a28' },
+    maple: { light: '#f3e2c4', dark: '#c49a62' },
+    mat: { light: '#efe4c4', dark: '#4a7a4e' },
+    rosewood: { light: '#e8c8b0', dark: '#6a3228' },
   } as const;
 
   for (const [theme, colors] of Object.entries(expected)) {
@@ -146,12 +157,19 @@ describe('the color table is Chess Ascent, to the hex', () => {
 });
 
 describe('clock chip colors', () => {
-  it('auto resolves per state: idle themed, active/low stock chips', () => {
-    const p = DEFAULT_PREFERENCES;
+  it('classic auto resolves per state: idle themed, active/low stock chips', () => {
+    const p = { ...DEFAULT_PREFERENCES, clockSet: 'classic' as const };
     expect(clockChipColors(p, false, false)).toEqual(CLOCK_AUTO.idle);
     expect(clockChipColors(p, false, true)).toEqual(CLOCK_AUTO.idle); // low but not ticking = idle chip
     expect(clockChipColors(p, true, false)).toEqual(CLOCK_AUTO.active);
     expect(clockChipColors(p, true, true)).toEqual(CLOCK_AUTO.low);
+  });
+
+  it('alpha is the default face — the Simple FICS teal capsule', () => {
+    expect(DEFAULT_PREFERENCES.clockSet).toBe('alpha');
+    const chip = clockChipColors(DEFAULT_PREFERENCES, true, false, 'dark');
+    expect(chip.text).toBe('#a3e9ec');
+    expect(chip.bg).toBe('#1a4d5c');
   });
 
   it('the active auto text is light — the 2026-08-12 contrast rule', () => {
@@ -162,6 +180,7 @@ describe('clock chip colors', () => {
   it('custom values override per channel, border derives from custom bg', () => {
     const p = {
       ...DEFAULT_PREFERENCES,
+      clockSet: 'classic' as const,
       clockActiveBg: '#123456',
       clockActiveText: 'auto' as const,
     };

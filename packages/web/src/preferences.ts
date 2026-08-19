@@ -1,4 +1,15 @@
 import { DEFAULT_LOGIN_SCRIPT } from '@raptor3000/shared';
+import type { MoveSoundSet } from './sounds.js';
+import {
+  CLOCK_DESIGNS,
+  CLOCK_SETS,
+  CLASSIC_CHIPS,
+  type ClockSet,
+  type ClockTheme,
+} from './clockDesigns.js';
+import { readDocumentTheme } from './theme.js';
+import { APP_ICONS, type AppIcon } from './appIcons.js';
+import { BOARD_FRAMES, type BoardFrame } from './boardFrames.js';
 /**
  * App-wide preferences — non-credential settings the user can change
  * from the post-login options page on `/`. Kept separate from
@@ -17,6 +28,10 @@ export type BoardTheme =
   | 'purple'
   | 'ic'
   | 'horsey'
+  | 'walnut'
+  | 'maple'
+  | 'mat'
+  | 'rosewood'
   | 'custom';
 export type SoundMode = 'on' | 'off';
 
@@ -39,7 +54,17 @@ export const AUTO_PROMOTE_VALUES: readonly AutoPromote[] = [
   'off',
   ...AUTO_PROMOTE_PIECES,
 ];
-export type PieceSet = 'alpha' | 'cardinal' | 'cburnett' | 'leipzig' | 'mpchess';
+export type PieceSet =
+  | 'alpha'
+  | 'asog'
+  | 'cardinal'
+  | 'cburnett'
+  | 'jrti'
+  | 'leipzig'
+  | 'mpchess'
+  | 'ocisly'
+  | 'subtlety'
+  | 'vlgi';
 
 export const BOARD_THEMES: readonly BoardTheme[] = [
   'brown',
@@ -48,14 +73,23 @@ export const BOARD_THEMES: readonly BoardTheme[] = [
   'purple',
   'ic',
   'horsey',
+  'walnut',
+  'maple',
+  'mat',
+  'rosewood',
   'custom',
 ];
 export const PIECE_SETS: readonly PieceSet[] = [
   'alpha',
+  'asog',
   'cardinal',
   'cburnett',
+  'jrti',
   'leipzig',
   'mpchess',
+  'ocisly',
+  'subtlety',
+  'vlgi',
 ];
 
 /**
@@ -109,14 +143,25 @@ const RENAMED_LAYOUTS: Readonly<Record<string, ChatLayout>> = {
   seek: 'seeks',
 };
 
+const RENAMED_PIECE_SETS: Readonly<Record<string, PieceSet>> = {
+  spire: 'asog',
+  grokton: 'asog',
+  club: 'ocisly',
+  match: 'jrti',
+};
+
 export interface AppPreferences {
   boardTheme: BoardTheme;
   /** Only consulted when boardTheme === 'custom'. */
   customLightSquareColor: string;
   customDarkSquareColor: string;
+  /** Rail around the 8×8. Shadow is the original Chess Ascent chrome. */
+  boardFrame: BoardFrame;
   pieceSet: PieceSet;
   /** Animate incoming moves (the Chess Ascent slide). */
   boardAnimations: boolean;
+  clockSet: ClockSet;
+  appIcon: AppIcon;
   clockActiveBg: ClockColor;
   clockActiveText: ClockColor;
   clockLowBg: ClockColor;
@@ -157,7 +202,7 @@ export interface AppPreferences {
   chatColorInternal: ClockColor;
   chatColorOutbound: ClockColor;
   soundMode: SoundMode;
-  moveSoundSet: 'sfx' | 'piano' | 'futuristic' | 'nes';
+  moveSoundSet: MoveSoundSet;
   /** Synthesized alerts for tells / friend arrivals / departures —
    *  gated under the master soundMode, styled by moveSoundSet. */
   alertSounds: SoundMode;
@@ -193,8 +238,11 @@ export const DEFAULT_PREFERENCES: AppPreferences = {
   boardTheme: 'brown',
   customLightSquareColor: '#f0d9b5',
   customDarkSquareColor: '#b58863',
+  boardFrame: 'chronos',
   pieceSet: 'cburnett',
   boardAnimations: true,
+  clockSet: 'alpha',
+  appIcon: 'industrial',
   clockActiveBg: 'auto',
   clockActiveText: 'auto',
   clockLowBg: 'auto',
@@ -220,7 +268,7 @@ export const DEFAULT_PREFERENCES: AppPreferences = {
   chatColorOutbound: 'auto',
   soundMode: 'on',
   alertSounds: 'on',
-  moveSoundSet: 'sfx',
+  moveSoundSet: 'felt',
   // ON by default since 2026-08-15. FICS logs out an idle session after
   // 60 minutes, and watching a channel does not count as activity — so a
   // lurker's client that ships this off dies on the hour, every hour,
@@ -263,6 +311,10 @@ export function boardColors(prefs: AppPreferences): { light: string; dark: strin
     purple: { light: '#e8dff5', dark: '#9b7ebd' },
     ic: { light: '#ececec', dark: '#c1c18e' },
     horsey: { light: '#f0d9b5', dark: '#946f51' },
+    walnut: { light: '#e4c9a0', dark: '#7a4a28' },
+    maple: { light: '#f3e2c4', dark: '#c49a62' },
+    mat: { light: '#efe4c4', dark: '#4a7a4e' },
+    rosewood: { light: '#e8c8b0', dark: '#6a3228' },
   };
   return themes[prefs.boardTheme];
 }
@@ -337,34 +389,35 @@ function readClockColor(k: string): ClockColor {
 /** Clock chip states, in the order the UI lists them. */
 export type ClockState = 'active' | 'low' | 'idle';
 
-/** The stock chip looks — what 'auto' resolves to. The idle chip follows
- *  the theme via CSS variables; active/low are dark in both themes (which
- *  is why their auto text is light — see 2026-08-12 clock-contrast fix). */
-export const CLOCK_AUTO: Record<ClockState, { bg: string; text: string; border: string }> = {
-  active: { bg: '#2a4a2a', text: '#ffffff', border: '#3a6a3a' },
-  low: { bg: '#5a2a2a', text: '#ffd9d9', border: '#a04040' },
-  idle: { bg: 'var(--bg-sunken)', text: 'inherit', border: 'var(--border-soft)' },
-};
+/** The stock chip looks — Classic's dark tokens, what 'auto' resolved
+ *  to before there were designs. The idle chip follows the theme via
+ *  CSS variables; active/low are dark in both themes (which is why
+ *  their auto text is light — see 2026-08-12 clock-contrast fix). */
+export const CLOCK_AUTO = CLASSIC_CHIPS;
 
 /**
- * Resolve the chip colors for a clock in the given state. Custom values
- * override per channel; the border follows the background it sits on
- * (stock border for stock background, a derived tint for a custom one).
+ * Resolve the chip colors for a clock in the given state. The selected
+ * design supplies the auto look (per theme); custom values override per
+ * channel. The border follows the background it sits on (stock border
+ * for stock background, a derived tint for a custom one).
  */
 export function clockChipColors(
   prefs: AppPreferences,
   ticking: boolean,
   lowTime: boolean,
-): { bg: string; text: string; border: string } {
+  theme: ClockTheme = readDocumentTheme(),
+): { bg: string; text: string; border: string; glow?: string } {
   const state: ClockState = ticking ? (lowTime ? 'low' : 'active') : 'idle';
-  const auto = CLOCK_AUTO[state];
+  const design = CLOCK_DESIGNS[prefs.clockSet] ?? CLOCK_DESIGNS.classic;
+  const auto = design.chip[theme][state];
   const bgPref = prefs[`clock${cap(state)}Bg` as const];
   const textPref = prefs[`clock${cap(state)}Text` as const];
   const bg = bgPref === 'auto' ? auto.bg : bgPref;
   const text = textPref === 'auto' ? auto.text : textPref;
   const border =
     bgPref === 'auto' ? auto.border : `color-mix(in srgb, ${bg} 65%, #808080)`;
-  return { bg, text, border };
+  const glow = bgPref === 'auto' ? auto.glow : undefined;
+  return glow ? { bg, text, border, glow } : { bg, text, border };
 }
 
 function cap(s: ClockState): 'Active' | 'Low' | 'Idle' {
@@ -381,6 +434,13 @@ function readChatLayout(): ChatLayout {
   return readString('chatLayout', DEFAULT_PREFERENCES.chatLayout, CHAT_LAYOUTS);
 }
 
+function readPieceSet(): PieceSet {
+  const raw = getRaw('pieceSet');
+  const renamed = raw != null ? RENAMED_PIECE_SETS[raw] : undefined;
+  if (renamed) return renamed;
+  return readString('pieceSet', DEFAULT_PREFERENCES.pieceSet, PIECE_SETS);
+}
+
 export function loadPreferences(): AppPreferences {
   return {
     // Stored values from the pre-port themes ('slate', 'wood') and piece
@@ -395,8 +455,11 @@ export function loadPreferences(): AppPreferences {
       'customDarkSquareColor',
       DEFAULT_PREFERENCES.customDarkSquareColor,
     ),
-    pieceSet: readString('pieceSet', DEFAULT_PREFERENCES.pieceSet, PIECE_SETS),
+    boardFrame: readString('boardFrame', DEFAULT_PREFERENCES.boardFrame, BOARD_FRAMES),
+    pieceSet: readPieceSet(),
     boardAnimations: readBool('boardAnimations', DEFAULT_PREFERENCES.boardAnimations),
+    clockSet: readString('clockSet', DEFAULT_PREFERENCES.clockSet, CLOCK_SETS),
+    appIcon: readString('appIcon', DEFAULT_PREFERENCES.appIcon, APP_ICONS),
     clockActiveBg: readClockColor('clockActiveBg'),
     clockActiveText: readClockColor('clockActiveText'),
     clockLowBg: readClockColor('clockLowBg'),
@@ -422,7 +485,18 @@ export function loadPreferences(): AppPreferences {
     chatColorOutbound: readClockColor('chatColorOutbound'),
     soundMode: readString('soundMode', DEFAULT_PREFERENCES.soundMode, ['on', 'off']),
     alertSounds: readString('alertSounds', DEFAULT_PREFERENCES.alertSounds, ['on', 'off']),
-    moveSoundSet: readString('moveSoundSet', DEFAULT_PREFERENCES.moveSoundSet, ['sfx', 'piano', 'futuristic', 'nes']),
+    moveSoundSet: readString('moveSoundSet', DEFAULT_PREFERENCES.moveSoundSet, [
+      'felt',
+      'walnut',
+      'marble',
+      'clock',
+      'study',
+      'slate',
+      'sfx',
+      'piano',
+      'futuristic',
+      'nes',
+    ]),
     keepAlive: readString('keepAlive', DEFAULT_PREFERENCES.keepAlive, ['on', 'off']),
     keepAliveCommand: getRaw('keepAliveCommand') ?? DEFAULT_PREFERENCES.keepAliveCommand,
     loginScript: getRaw('loginScript') ?? DEFAULT_PREFERENCES.loginScript,
@@ -462,8 +536,11 @@ export function savePreferences(prefs: AppPreferences): void {
   setRaw('boardTheme', prefs.boardTheme);
   setRaw('customLightSquareColor', prefs.customLightSquareColor);
   setRaw('customDarkSquareColor', prefs.customDarkSquareColor);
+  setRaw('boardFrame', prefs.boardFrame);
   setRaw('pieceSet', prefs.pieceSet);
   setRaw('boardAnimations', String(prefs.boardAnimations));
+  setRaw('clockSet', prefs.clockSet);
+  setRaw('appIcon', prefs.appIcon);
   setRaw('clockActiveBg', prefs.clockActiveBg);
   setRaw('clockActiveText', prefs.clockActiveText);
   setRaw('clockLowBg', prefs.clockLowBg);

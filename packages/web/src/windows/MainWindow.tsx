@@ -15,10 +15,10 @@ import { loadProfile, loadSelection, saveSelection } from '../loginProfiles.js';
 import { LanguageSelect, useT } from '../i18n/react.js';
 import type { MessageKey } from '../i18n/index.js';
 import { armRelaunchToLogin, consumeRelaunchToLogin } from '../relaunch.js';
-import { playSound } from '../sounds.js';
+import { playSound, MOVE_SOUND_SETS, MOVE_SOUND_SET_LABELS } from '../sounds.js';
 import { playAlert } from '../alertSounds.js';
 import { chooseJournalFile, loadJournalHandle, supportsSavePicker } from './pgnJournal.js';
-import { useLivePreferences } from '../useLivePreferences.js';
+import { useLivePreferences, saveLivePreference } from '../useLivePreferences.js';
 import { CHAT_COLOR_AUTO, type ChatColorKey } from '../chatFormat.js';
 import {
   applyTheme,
@@ -27,17 +27,41 @@ import {
   type ThemeMode,
 } from '../theme.js';
 import {
-  boardColors,
-  CLOCK_AUTO,
   DEFAULT_PREFERENCES,
   loadPreferences,
   savePreferences,
   type AppPreferences,
   type BoardTheme,
   type ClockState,
-  type PieceSet,
   type SoundMode,
 } from '../preferences.js';
+import { CLOCK_DESIGNS } from '../clockDesigns.js';
+import { useResolvedTheme } from '../components/ClockChip.js';
+import { ClockDesignPicker } from '../components/ClockDesignPicker.js';
+import { PieceSetPicker } from '../components/PieceSetPicker.js';
+import { BoardFramePicker } from '../components/BoardFramePicker.js';
+import { BoardColorPicker } from '../components/BoardColorPicker.js';
+import { PreviewSelect } from '../components/PreviewSelect.js';
+import {
+  appIconUrl,
+  appIconThumbUrl,
+  APP_ICONS,
+  APP_ICON_LABELS,
+  type AppIcon,
+} from '../appIcons.js';
+
+/** Theme names that are proper nouns — lichess's set names and the wood
+ *  species. They read the same in every language, so only the four
+ *  descriptive ones (brown/blue/green/purple) plus custom go through the
+ *  message table. */
+const BOARD_THEME_FIXED: Partial<Record<BoardTheme, string>> = {
+  ic: 'IC',
+  horsey: 'Horsey',
+  walnut: 'Walnut',
+  maple: 'Maple',
+  mat: 'Mat',
+  rosewood: 'Rosewood',
+};
 
 /**
  * Launcher window — minimal anchor that owns the RaptorContext and spawns
@@ -192,7 +216,7 @@ function PostLoginShell({
       <header style={pageHeader}>
         <div style={headerRow}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-            <img src="/raptor3000.png" alt="" style={{ width: 40, height: 40 }} />
+            <img src={appIconUrl(shellPrefs.appIcon)} alt="" style={{ width: 40, height: 40 }} />
             <div>
               <div style={brand}>Raptor3000</div>
               <div style={tagline}>
@@ -363,13 +387,17 @@ function OptionsPage({
   // which mid-game is a real cost.
   const [relaunchArmed, setRelaunchArmed] = useState(false);
   const { t } = useT();
+  const theme = useResolvedTheme();
 
   function update<K extends keyof AppPreferences>(k: K, v: AppPreferences[K]) {
-    setPrefs(p => {
-      const next = { ...p, [k]: v };
-      savePreferences(next);
-      return next;
-    });
+    // `saveLivePreference` persists AND fires the local change event, which
+    // `savePreferences` alone does not. Without the event nothing outside
+    // this component hears a change made here: a window gets no `storage`
+    // event for its own write, so the header badge, the favicon and every
+    // other open window all kept rendering the previous value until reload.
+    // Found when picking an app icon updated the grid but not the tab.
+    saveLivePreference(k, v);
+    setPrefs(loadPreferences());
   }
 
   function resetToDefaults() {
@@ -407,30 +435,57 @@ function OptionsPage({
             <Note>{t('options.session.relaunchNote')}</Note>
           </Row>
           <AutoLoginRow />
+          <div>
+            <div style={rowLabel}>{t('options.session.appIcon')}</div>
+            <div style={{ marginTop: 6 }}>
+              <PreviewSelect<AppIcon>
+                value={prefs.appIcon}
+                options={APP_ICONS}
+                label={id => APP_ICON_LABELS[id]}
+                groupLabel={APP_ICON_LABELS[prefs.appIcon]}
+                columnWidth={96}
+                onChange={v => update('appIcon', v)}
+                preview={(id, compact) => (
+                  <img
+                    src={appIconThumbUrl(id)}
+                    alt=""
+                    width={compact ? 26 : 64}
+                    height={compact ? 26 : 64}
+                    loading="lazy"
+                    style={{ display: 'block', borderRadius: 6 }}
+                  />
+                )}
+              />
+            </div>
+            <Note>{t('options.session.appIconNote')}</Note>
+          </div>
           <Row label={t('lang.label')}>
             <LanguageSelect style={selectStyle} />
             <Note>{t('lang.note')}</Note>
           </Row>
         </Section>
 
-        <Section title={t('options.board')}>
-          <Row label={t('options.board.colors')}>
-            <Select<BoardTheme>
-              value={prefs.boardTheme}
-              onChange={v => update('boardTheme', v)}
-              options={[
-                ['brown', t('boardTheme.brown')],
-                ['blue', t('boardTheme.blue')],
-                ['green', t('boardTheme.green')],
-                ['purple', t('boardTheme.purple')],
-                // Names, not colors — lichess's, and the same everywhere.
-                ['ic', 'IC'],
-                ['horsey', 'Horsey'],
-                ['custom', t('boardTheme.custom')],
-              ]}
-            />
-            <BoardPreview prefs={prefs} />
-          </Row>
+        <Section title={t('options.board')} wide>
+          <div>
+            <div style={rowLabel}>{t('options.board.colors')}</div>
+            <div style={{ marginTop: 6 }}>
+              <BoardColorPicker
+                prefs={prefs}
+                label={id => BOARD_THEME_FIXED[id] ?? t(`boardTheme.${id}` as MessageKey)}
+                onChange={v => update('boardTheme', v)}
+              />
+            </div>
+          </div>
+          <div>
+            <div style={rowLabel}>{t('options.board.frame')}</div>
+            <div style={{ marginTop: 6 }}>
+              <BoardFramePicker
+                prefs={prefs}
+                onChange={id => update('boardFrame', id)}
+              />
+            </div>
+            <Note>{t('options.board.frameNote')}</Note>
+          </div>
           {prefs.boardTheme === 'custom' && (
             <>
               <Row label={t('options.board.lightSquares')}>
@@ -449,19 +504,15 @@ function OptionsPage({
               </Row>
             </>
           )}
-          <Row label={t('options.board.pieceSet')}>
-            <Select<PieceSet>
-              value={prefs.pieceSet}
-              onChange={v => update('pieceSet', v)}
-              options={[
-                ['alpha', 'Alpha'],
-                ['cardinal', 'Cardinal'],
-                ['cburnett', 'Cburnett'],
-                ['leipzig', 'Leipzig'],
-                ['mpchess', 'MPChess'],
-              ]}
-            />
-          </Row>
+          <div>
+            <div style={rowLabel}>{t('options.board.pieceSet')}</div>
+            <div style={{ marginTop: 6 }}>
+              <PieceSetPicker
+                prefs={prefs}
+                onChange={v => update('pieceSet', v)}
+              />
+            </div>
+          </div>
           <Row label={t('options.board.animations')}>
             <Toggle
               checked={prefs.boardAnimations}
@@ -488,7 +539,17 @@ function OptionsPage({
           </Row>
         </Section>
 
-        <Section title={t('options.clock')}>
+        <Section title={t('options.clock')} wide>
+          <div>
+            <div style={rowLabel}>{t('options.clock.design')}</div>
+            <div style={{ marginTop: 6 }}>
+              <ClockDesignPicker
+                prefs={prefs}
+                theme={theme}
+                onChange={id => update('clockSet', id)}
+              />
+            </div>
+          </div>
           <ClockColorRow labelKey="options.clock.active" state="active" prefs={prefs} update={update} />
           <ClockColorRow labelKey="options.clock.low" state="low" prefs={prefs} update={update} />
           <ClockColorRow labelKey="options.clock.idle" state="idle" prefs={prefs} update={update} />
@@ -600,10 +661,9 @@ function OptionsPage({
               value={prefs.moveSoundSet}
               onChange={e => update('moveSoundSet', e.target.value as AppPreferences['moveSoundSet'])}
             >
-              <option value="sfx">Sfx</option>
-              <option value="piano">Piano</option>
-              <option value="futuristic">Futuristic</option>
-              <option value="nes">Nes (8-bit)</option>
+              {MOVE_SOUND_SETS.map(id => (
+                <option key={id} value={id}>{MOVE_SOUND_SET_LABELS[id]}</option>
+              ))}
             </select>
             <button
               style={{ ...linkBtn, marginInlineStart: 8 }}
@@ -1019,12 +1079,14 @@ const MACOS_SHELL_CHROME =
 function Section({
   title,
   children,
+  wide,
 }: {
   title: string;
   children: React.ReactNode;
+  wide?: boolean;
 }) {
   return (
-    <section style={sectionStyle}>
+    <section style={{ ...sectionStyle, ...(wide ? { gridColumn: '1 / -1' } : {}) }}>
       <h3 style={sectionTitle}>{title}</h3>
       <div style={sectionBody}>{children}</div>
     </section>
@@ -1158,35 +1220,6 @@ function Select<T extends string>({
   );
 }
 
-/** Four-square strip showing the current colors and piece set together. */
-function BoardPreview({ prefs }: { prefs: AppPreferences }) {
-  const { light, dark } = boardColors(prefs);
-  const cell = 22;
-  return (
-    <div
-      style={{
-        display: 'inline-flex',
-        borderRadius: 3,
-        overflow: 'hidden',
-        border: '1px solid var(--border-soft)',
-        marginInlineStart: 10,
-        verticalAlign: 'middle',
-      }}
-    >
-      {[0, 1, 2, 3].map(i => (
-        <div key={i} style={{ width: cell, height: cell, background: i % 2 === 0 ? light : dark }}>
-          {i === 1 && (
-            <img src={`/pieces/${prefs.pieceSet}/wN.svg`} alt="" width={cell} height={cell} draggable={false} />
-          )}
-          {i === 2 && (
-            <img src={`/pieces/${prefs.pieceSet}/bQ.svg`} alt="" width={cell} height={cell} draggable={false} />
-          )}
-        </div>
-      ))}
-    </div>
-  );
-}
-
 const colorInput = {
   width: 44,
   height: 26,
@@ -1285,8 +1318,8 @@ function ClockColorRow({
       update(bgKey, 'auto');
       update(textKey, 'auto');
     } else {
-      update(bgKey, stockHex(state, 'bg'));
-      update(textKey, stockHex(state, 'text'));
+      update(bgKey, stockHex(state, 'bg', prefs));
+      update(textKey, stockHex(state, 'text', prefs));
     }
   };
 
@@ -1304,12 +1337,12 @@ function ClockColorRow({
         <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8, marginInlineStart: 10 }}>
           <ColorField
             title={t('options.color.background')}
-            value={bg === 'auto' ? stockHex(state, 'bg') : bg}
+            value={bg === 'auto' ? stockHex(state, 'bg', prefs) : bg}
             onChange={hex => update(bgKey, hex)}
           />
           <ColorField
             title={t('options.color.text')}
-            value={text === 'auto' ? stockHex(state, 'text') : text}
+            value={text === 'auto' ? stockHex(state, 'text', prefs) : text}
             onChange={hex => update(textKey, hex)}
           />
         </span>
@@ -1393,16 +1426,21 @@ function capState(s: ClockState): 'Active' | 'Low' | 'Idle' {
 
 /** What 'auto' resolves to, as a hex a color input can hold. The idle
  *  chip's auto look is CSS variables — read them from the live theme. */
-function stockHex(state: ClockState, channel: 'bg' | 'text'): string {
-  const raw = CLOCK_AUTO[state][channel];
+function stockHex(state: ClockState, channel: 'bg' | 'text', prefs: AppPreferences): string {
+  const theme = document.documentElement.dataset.theme === 'light' ? 'light' : 'dark';
+  const raw = CLOCK_DESIGNS[prefs.clockSet].chip[theme][state][channel];
   if (raw.startsWith('#')) return raw;
-  const cs = getComputedStyle(document.documentElement);
-  const resolved =
-    raw === 'inherit'
-      ? cs.getPropertyValue('--fg')
-      : cs.getPropertyValue(raw.slice('var('.length, -1));
-  const hex = resolved.trim();
-  return /^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/.test(hex) ? hex : '#808080';
+  if (raw === 'inherit' || raw === 'transparent') {
+    const cs = getComputedStyle(document.documentElement);
+    const hex = (raw === 'inherit' ? cs.getPropertyValue('--fg') : cs.getPropertyValue('--bg')).trim();
+    return /^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/.test(hex) ? hex : '#808080';
+  }
+  if (raw.startsWith('var(')) {
+    const cs = getComputedStyle(document.documentElement);
+    const hex = cs.getPropertyValue(raw.slice('var('.length, -1)).trim();
+    return /^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/.test(hex) ? hex : '#808080';
+  }
+  return '#808080';
 }
 
 function hydrateAutoLogin(): LoginSubmission | null {

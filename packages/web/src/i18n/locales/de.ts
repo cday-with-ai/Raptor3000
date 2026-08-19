@@ -76,6 +76,9 @@ const de: Messages = {
   'login.shot.seek': 'der Live-Seek-Graph',
 
   // ---- language control --------------------------------------------------
+  'options.session.appIcon': 'App-Symbol',
+  'options.session.appIconNote':
+    'Ändert das Symbol im Browser-Tab und das Abzeichen in dieser App. Das Symbol des Desktop-Starters wird außerhalb der App festgelegt.',
   'lang.label': 'Sprache',
   'lang.auto': 'Automatisch',
   'lang.note':
@@ -134,6 +137,9 @@ const de: Messages = {
   'options.board.coordinates': 'Koordinaten anzeigen',
   'options.board.flipAsBlack': 'Brett drehen, wenn du Schwarz spielst',
   'options.board.moveList': 'Zugliste sichtbar',
+  'options.board.frame': 'Rahmen',
+  'options.board.frameNote':
+    'Die Leiste um die Felder. Shadow ist das Original. Holz und Mat setzen die Buchstaben auf die Leiste.',
   // Board palettes: the four plain colors translate, IC and Horsey are
   // names (lichess's), and Custom is the escape hatch.
   'boardTheme.brown': 'Braun',
@@ -142,12 +148,13 @@ const de: Messages = {
   'boardTheme.purple': 'Lila',
   'boardTheme.custom': 'Eigene',
 
-  'options.clock': 'Uhrenfarben',
+  'options.clock': 'Uhren',
+  'options.clock.design': 'Design',
   'options.clock.active': 'Aktiv',
   'options.clock.low': 'Wenig Zeit',
   'options.clock.idle': 'Inaktiv',
   'options.clock.note':
-    'Auto folgt dem App-Design (Inaktiv) und den mitgelieferten grünen/roten Chips (Aktiv, Wenig Zeit). Wähle eigene Farben zum Überschreiben — erst Hintergrund, dann Text.',
+    'Ein Design ist das ganze Gesicht — Schrift, Gehäuse, Tag und Nacht. Auto-Farben folgen diesem Design; eigene Farben überschreiben einen Zustand.',
   'options.color.background': 'Hintergrund',
   'options.color.text': 'Text',
   'options.color.hex': '{title} (Hex)',
@@ -192,7 +199,7 @@ const de: Messages = {
   'options.sound.alertPreviewTitle':
     'spielt Tell, Freund-kommt und Freund-geht im Stil des gewählten Satzes',
   'options.sound.note':
-    'Züge, Schläge und Schachgebote nutzen den gewählten Satz; Partieende-Sounds bleiben auf Piano. Alle Sätze sind die frei lizenzierten von lichess — der berühmte "standard"-Satz ist nicht frei lizenziert. Hinweise — ein eingehendes Tell, ein Freund kommt oder geht — sind unsere eigenen synthetisierten Töne im Stil des gewählten Satzes.',
+    'Züge, Schläge und Schachgebote nutzen den gewählten Satz. Felt, Walnut, Marble, Clock, Study, Slate und Piano spielen auch die eigenen Partieende-Sounds; Sfx / Futuristic / Nes fallen dafür auf Piano zurück. Die sechs genannten Paletten sind original; die anderen vier sind lichess’ frei lizenzierte Enigmahack-Sätze — der berühmte "standard"-Satz ist nicht frei lizenziert. Hinweise — ein eingehendes Tell, ein Freund kommt oder geht — sind unsere eigenen synthetisierten Töne im Stil des gewählten Satzes.',
 
   'options.pgnJournal': 'PGN-Autospeicherung',
   'options.pgnJournal.append': 'Gespiele Partien anhängen',
@@ -304,7 +311,7 @@ const de: Messages = {
     '— die Schachbibliothek von lichess: SAN, Zuglegalität, Replay (GPL-3.0-or-later).',
   'help.about.openings': '— die Eröffnungsnamen und ECO-Codes (CC0, Public Domain).',
   'help.about.lichess':
-    '— der Piano-Soundsatz von Enigmahack (AGPL-3.0+) und die Figurensätze (cburnett von Colin M.L. Burnett und weitere, jeder unter eigener Lizenz).',
+    '— die übrigen piano- / sfx- / futuristic- / nes-Sätze von Enigmahack (AGPL-3.0+) und die Figurensätze (cburnett von Colin M.L. Burnett und weitere, jeder unter eigener Lizenz). Felt-, Walnut-, Marble-, Clock-, Study- und Slate-Klänge sowie der Figurensätze Of Course I Still Love You, Just Read The Instructions und A Shortfall Of Gravitas, So Much For Subtlety, Very Little Gravitas Indeed sind original in Raptor3000.',
   'help.about.fics':
     '— der Free Internet Chess Server, für den diese ganze App überhaupt existiert. Sei nett in Channel 39.',
   'help.about.outro1': 'Das vollständige Inventar mit den exakten Lizenzen liegt in',

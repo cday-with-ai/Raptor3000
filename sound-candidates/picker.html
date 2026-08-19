@@ -1,0 +1,346 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="google" content="notranslate" />
+  <title>Raptor3000 — sound palettes</title>
+  <style>
+    :root {
+      --bg: #15181d;
+      --bg-raised: #1b1f26;
+      --bg-sunken: #0e1116;
+      --bg-input: #2c3340;
+      --fg: #e8eaef;
+      --fg-muted: #a0a8b4;
+      --fg-dim: #6a7280;
+      --border: #2a313c;
+      --border-soft: #2a2f38;
+      --border-strong: #3a4150;
+      --accent: #7bb8ff;
+      --accent-soft: #3a5474;
+      --ok: #7fd4a8;
+    }
+    * { box-sizing: border-box; }
+    html, body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--fg);
+      font: 14px/1.45 system-ui, "Segoe UI", sans-serif;
+    }
+    body { padding: 28px 32px 48px; }
+    header { max-width: 1180px; margin: 0 auto 22px; }
+    h1 {
+      font-size: 20px;
+      font-weight: 620;
+      letter-spacing: -0.02em;
+      margin: 0 0 6px;
+    }
+    .lede {
+      color: var(--fg-muted);
+      max-width: 68ch;
+      margin: 0;
+    }
+    .toolbar {
+      max-width: 1180px;
+      margin: 18px auto 22px;
+      display: flex;
+      align-items: center;
+      gap: 18px;
+      flex-wrap: wrap;
+    }
+    .vol {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      color: var(--fg-muted);
+    }
+    input[type="range"] { accent-color: var(--accent); width: 140px; }
+    kbd {
+      font: 11px/1.2 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      border: 1px solid var(--border-strong);
+      background: var(--bg-sunken);
+      padding: 1px 5px;
+      border-radius: 4px;
+      color: var(--fg-muted);
+    }
+    .hint { color: var(--fg-dim); font-size: 12px; }
+    .grid {
+      max-width: 1180px;
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 16px;
+    }
+    @media (max-width: 980px) { .grid { grid-template-columns: 1fr 1fr; } }
+    @media (max-width: 640px) { .grid { grid-template-columns: 1fr; } }
+    .card {
+      background: var(--bg-raised);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 16px 16px 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      min-height: 100%;
+    }
+    .card.picked {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 1px var(--accent-soft);
+    }
+    .name {
+      width: 100%;
+      background: var(--bg-input);
+      border: 1px solid var(--border-strong);
+      color: var(--fg);
+      font: 600 16px/1.3 system-ui, sans-serif;
+      padding: 7px 10px;
+      border-radius: 7px;
+    }
+    .name:focus { outline: 2px solid var(--accent-soft); border-color: var(--accent); }
+    .blurb { color: var(--fg-muted); margin: 0; font-size: 13px; min-height: 2.7em; }
+    .row { display: flex; gap: 8px; flex-wrap: wrap; }
+    button {
+      background: var(--bg-sunken);
+      color: var(--fg);
+      border: 1px solid var(--border-strong);
+      border-radius: 7px;
+      padding: 6px 10px;
+      font: 13px/1.2 system-ui, sans-serif;
+      cursor: pointer;
+    }
+    button:hover { border-color: var(--accent); color: #fff; }
+    button:active { transform: translateY(1px); }
+    button.primary {
+      background: var(--accent-soft);
+      border-color: var(--accent);
+      color: #fff;
+      font-weight: 600;
+    }
+    button.use {
+      background: transparent;
+      color: var(--accent);
+    }
+    button.use.picked {
+      background: var(--accent);
+      color: #0e1116;
+      font-weight: 650;
+    }
+    .events {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 6px;
+    }
+    .events button {
+      text-align: left;
+      padding: 6px 9px;
+      color: var(--fg-muted);
+      font-size: 12px;
+    }
+    .events button .k {
+      display: block;
+      color: var(--fg);
+      font-size: 13px;
+    }
+    footer {
+      max-width: 1180px;
+      margin: 28px auto 0;
+      color: var(--fg-dim);
+      font-size: 12px;
+    }
+    footer code { color: var(--fg-muted); }
+    .toast {
+      position: fixed;
+      bottom: 22px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: var(--bg-raised);
+      border: 1px solid var(--accent);
+      color: var(--ok);
+      padding: 10px 16px;
+      border-radius: 8px;
+      display: none;
+      box-shadow: 0 10px 30px rgba(0,0,0,.4);
+    }
+    .toast.show { display: block; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Sound palettes</h1>
+    <p class="lede">
+      Six original sets for Raptor. Physical, short, no tunes — wood, stone,
+      a clock plunger, a quiet room. Play a game on each, rename the one that
+      belongs, and pick it. I’ll ship the one you name.
+    </p>
+  </header>
+
+  <div class="toolbar">
+    <label class="vol">Volume
+      <input id="vol" type="range" min="0" max="100" value="70" />
+    </label>
+    <span class="hint">Keys <kbd>1</kbd>–<kbd>6</kbd> play that set’s game · <kbd>Esc</kbd> stops</span>
+  </div>
+
+  <div class="grid" id="grid"></div>
+
+  <footer>
+    Originals, not the lichess piano / nes / futuristic / sfx set.
+    Files live in <code>sound-candidates/</code> until you pick one.
+  </footer>
+  <div class="toast" id="toast"></div>
+
+<script>
+const SETS = [
+  { id: "felt",   label: "Felt",   blurb: "Wood on tournament cloth. Soft thud, almost no ring." },
+  { id: "walnut", label: "Walnut", blurb: "Dry wood on a wooden table. A real home-set tap." },
+  { id: "marble", label: "Marble", blurb: "Cool stone. Short bright click, dies immediately." },
+  { id: "clock",  label: "Clock",  blurb: "Analog plunger. Plastic click, bakelite body, no chime." },
+  { id: "study",  label: "Study",  blurb: "Late night. Leather and paper. Almost nothing." },
+  { id: "slate",  label: "Slate",  blurb: "Dense dark stone. Heavier than marble, no sparkle." },
+];
+
+const EVENTS = [
+  ["Move", "Move"],
+  ["Capture", "Capture"],
+  ["Check", "Check"],
+  ["GenericNotify", "Notify"],
+  ["Victory", "Victory"],
+  ["Defeat", "Defeat"],
+  ["Draw", "Draw"],
+  ["Explosion", "End-show"],
+];
+
+const GAME = ["Move", "Move", "Capture", "Check", "GenericNotify", "Victory"];
+
+const cache = new Map();
+let current = [];
+let picked = localStorage.getItem("raptor.soundPick.id") || "";
+
+function vol() {
+  return Number(document.getElementById("vol").value) / 100;
+}
+
+function src(set, ev) {
+  return `${set}/${ev}.mp3`;
+}
+
+function audioFor(set, ev) {
+  const key = `${set}/${ev}`;
+  let a = cache.get(key);
+  if (!a) {
+    a = new Audio(src(set, ev));
+    cache.set(key, a);
+  }
+  a.volume = vol();
+  a.currentTime = 0;
+  return a;
+}
+
+function stopAll() {
+  for (const t of current) clearTimeout(t);
+  current = [];
+  for (const a of cache.values()) {
+    a.pause();
+    a.currentTime = 0;
+  }
+}
+
+function play(set, ev) {
+  const a = audioFor(set, ev);
+  return a.play().catch(() => {});
+}
+
+function playGame(set) {
+  stopAll();
+  GAME.forEach((ev, i) => {
+    current.push(setTimeout(() => play(set, ev), i * 620));
+  });
+}
+
+function toast(msg) {
+  const el = document.getElementById("toast");
+  el.textContent = msg;
+  el.classList.add("show");
+  clearTimeout(toast._t);
+  toast._t = setTimeout(() => el.classList.remove("show"), 3200);
+}
+
+function pick(id) {
+  const name = document.querySelector(`[data-name="${id}"]`).value.trim() || id;
+  picked = id;
+  localStorage.setItem("raptor.soundPick.id", id);
+  localStorage.setItem("raptor.soundPick.name", name);
+  const payload = {
+    id,
+    name,
+    pickedAt: new Date().toISOString(),
+    events: EVENTS.map(([e]) => e),
+  };
+  const text = JSON.stringify(payload, null, 2);
+  navigator.clipboard?.writeText(text).catch(() => {});
+  const blob = new Blob([text], { type: "application/json" });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = `raptor-sound-pick-${id}.json`;
+  a.click();
+  URL.revokeObjectURL(a.href);
+  paintPicked();
+  toast(`Picked “${name}”. Tell grok that name and I’ll ship it.`);
+}
+
+function paintPicked() {
+  document.querySelectorAll(".card").forEach(c => {
+    c.classList.toggle("picked", c.dataset.id === picked);
+  });
+  document.querySelectorAll("button.use").forEach(b => {
+    const on = b.dataset.id === picked;
+    b.classList.toggle("picked", on);
+    b.textContent = on ? "This is the one" : "Use this set";
+  });
+}
+
+function card(s, i) {
+  const saved = localStorage.getItem("raptor.soundPick.name");
+  const name = (picked === s.id && saved) ? saved : s.label;
+  const evBtns = EVENTS.map(([ev, label]) =>
+    `<button type="button" data-play="${s.id}:${ev}"><span class="k">${label}</span>${ev === "GenericNotify" ? "game / observe start" : ev === "Explosion" ? "the extra at the end" : "&nbsp;"}</button>`
+  ).join("");
+  return `
+    <article class="card" data-id="${s.id}">
+      <div>
+        <input class="name" data-name="${s.id}" value="${name}" spellcheck="false" />
+        <p class="blurb">${s.blurb}</p>
+      </div>
+      <div class="row">
+        <button type="button" class="primary" data-game="${s.id}">Play a game  <kbd>${i + 1}</kbd></button>
+        <button type="button" class="use" data-id="${s.id}" data-use="${s.id}">Use this set</button>
+      </div>
+      <div class="events">${evBtns}</div>
+    </article>`;
+}
+
+document.getElementById("grid").innerHTML = SETS.map(card).join("");
+paintPicked();
+
+document.body.addEventListener("click", (e) => {
+  const t = e.target.closest("[data-game], [data-play], [data-use]");
+  if (!t) return;
+  if (t.dataset.game) playGame(t.dataset.game);
+  else if (t.dataset.play) {
+    const [set, ev] = t.dataset.play.split(":");
+    stopAll();
+    play(set, ev);
+  } else if (t.dataset.use) pick(t.dataset.use);
+});
+
+document.addEventListener("keydown", (e) => {
+  if (e.key === "Escape") stopAll();
+  const n = Number(e.key);
+  if (n >= 1 && n <= SETS.length && !/input|textarea/i.test(e.target.tagName)) {
+    playGame(SETS[n - 1].id);
+  }
+});
+</script>
+</body>
+</html>

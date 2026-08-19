@@ -5,11 +5,14 @@ import { loadPreferences } from './preferences.js';
  * Board sounds (Carson, 2026-08-12): "move sound, capture sound, game
  * start, game end, observe start ends etc. subtle."
  *
- * The set is lichess's PIANO set by Enigmahack — soft single notes, the
- * most subtle of the four lila sound sets that are actually free
- * (AGPLv3+: futuristic, nes, piano, sfx). The famous "standard" lichess
- * sounds are in lila's COPYING.md "Exceptions (non-free)" list, so they
- * can't come along. Attribution ships with the licensing page.
+ * Six original palettes (Felt, Walnut, Marble, Clock, Study, Slate)
+ * ship the full board language — move, capture, check, notify, and the
+ * four endings. The four free lichess/Enigmahack sets (AGPLv3+:
+ * futuristic, nes, piano, sfx) stay available; those only have
+ * move/capture/check (piano has the endings too), so a verdict on sfx /
+ * futuristic / nes still falls back to piano. The famous "standard"
+ * lichess sounds are in lila's COPYING.md "Exceptions (non-free)" list
+ * and do not ship. Attribution is on the licensing page.
  *
  * Every play is gated on the existing soundMode preference and wrapped
  * against autoplay policy: a popup the user hasn't touched yet may
@@ -26,12 +29,43 @@ export type SoundName =
   | 'draw'
   | 'explosion'; // the boom end-show's extra
 
-/** The free Enigmahack sets that ship (AGPLv3+, see the notices). The
- *  MOVE sounds (move/capture/check) follow the moveSoundSet preference
- *  — Carson found the piano notes "kind of strange" for moves but kept
- *  them for verdicts, so everything else stays piano. */
-export const MOVE_SOUND_SETS = ['sfx', 'piano', 'futuristic', 'nes'] as const;
+/** Original palettes — full board language, physical, no tunes. */
+export const ORIGINAL_SOUND_SETS = [
+  'felt',
+  'walnut',
+  'marble',
+  'clock',
+  'study',
+  'slate',
+] as const;
+
+/** The free Enigmahack sets that still ship (AGPLv3+, see the notices). */
+export const LEGACY_SOUND_SETS = ['sfx', 'piano', 'futuristic', 'nes'] as const;
+
+export const MOVE_SOUND_SETS = [
+  ...ORIGINAL_SOUND_SETS,
+  ...LEGACY_SOUND_SETS,
+] as const;
 export type MoveSoundSet = (typeof MOVE_SOUND_SETS)[number];
+
+export const MOVE_SOUND_SET_LABELS: Record<MoveSoundSet, string> = {
+  felt: 'Felt',
+  walnut: 'Walnut',
+  marble: 'Marble',
+  clock: 'Clock',
+  study: 'Study',
+  slate: 'Slate',
+  sfx: 'Sfx',
+  piano: 'Piano',
+  futuristic: 'Futuristic',
+  nes: 'Nes (8-bit)',
+};
+
+/** Sets that have notify + verdict + explosion samples of their own. */
+const FULL_BOARD_SETS: ReadonlySet<MoveSoundSet> = new Set([
+  ...ORIGINAL_SOUND_SETS,
+  'piano',
+]);
 
 const MOVE_CLASS: ReadonlySet<SoundName> = new Set(['move', 'capture', 'check']);
 
@@ -72,6 +106,13 @@ const PITCH: Record<SoundName, number> = {
   draw: 0.85,
   explosion: 0.7,
 };
+
+/** Which folder a sound plays from. Moves follow the preference;
+ *  endings use that same folder when it has them, else piano. */
+export function setForSound(name: SoundName, moveSet: MoveSoundSet): MoveSoundSet {
+  if (MOVE_CLASS.has(name) || FULL_BOARD_SETS.has(moveSet)) return moveSet;
+  return 'piano';
+}
 
 /** Which sound a just-played SAN deserves; null for "none played". */
 export function soundForSan(san: string): SoundName | null {
@@ -114,7 +155,7 @@ const cache = new Map<string, HTMLAudioElement>();
 
 /** Play in THIS window's document; rejects under autoplay policy. */
 function playHere(name: SoundName): Promise<void> {
-  const set = MOVE_CLASS.has(name) ? loadPreferences().moveSoundSet : 'piano';
+  const set = setForSound(name, loadPreferences().moveSoundSet);
   const key = `${set}/${name}`;
   let a = cache.get(key);
   if (!a) {
@@ -122,7 +163,10 @@ function playHere(name: SoundName): Promise<void> {
     cache.set(key, a);
   }
   a.volume = VOLUME[name];
-  a.playbackRate = PITCH[name];
+  // Piano verdicts were pitched down because the notes sounded thin
+  // (Carson, 2026-08-18). The original palettes are physical taps —
+  // slowing them just makes a thud last too long.
+  a.playbackRate = set === 'piano' ? PITCH[name] : 1;
   a.currentTime = 0;
   return a.play();
 }

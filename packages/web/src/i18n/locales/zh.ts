@@ -69,6 +69,9 @@ const zh: Messages = {
   'login.shot.seek': '实时求战图',
 
   // ---- language control --------------------------------------------------
+  'options.session.appIcon': '应用图标',
+  'options.session.appIconNote':
+    '更改浏览器标签页的图标和应用内的徽标。桌面启动器的图标在应用之外设置。',
   'lang.label': '语言',
   'lang.auto': '自动',
   'lang.note':
@@ -127,6 +130,9 @@ const zh: Messages = {
   'options.board.coordinates': '显示坐标',
   'options.board.flipAsBlack': '执黑时翻转棋盘',
   'options.board.moveList': '显示着法列表',
+  'options.board.frame': '边框',
+  'options.board.frameNote':
+    '格子周围的边框。Shadow 是原来的样子。木框和垫面把坐标写在边上。',
   // Board palettes: the four plain colors translate, IC and Horsey are
   // names (lichess's), and Custom is the escape hatch.
   'boardTheme.brown': '棕色',
@@ -135,12 +141,13 @@ const zh: Messages = {
   'boardTheme.purple': '紫色',
   'boardTheme.custom': '自定义',
 
-  'options.clock': '时钟颜色',
+  'options.clock': '时钟',
+  'options.clock.design': '样式',
   'options.clock.active': '行棋中',
   'options.clock.low': '时间告急',
   'options.clock.idle': '空闲',
   'options.clock.note':
-    '“自动”即空闲时跟随应用主题，行棋中与时间告急用内置的绿/红色块。想覆盖就自选颜色——先背景，后文字。',
+    '样式是整块表盘——字体、外壳、日间与夜间。自动颜色跟随该样式；自选颜色可覆盖某一状态。',
   'options.color.background': '背景',
   'options.color.text': '文字',
   'options.color.hex': '{title}（十六进制）',
@@ -181,7 +188,7 @@ const zh: Messages = {
   'options.sound.alertPreviewTitle': '按所选音效组的风格试听私聊、好友上线、好友下线',
   'options.sound.alerts': '提醒',
   'options.sound.note':
-    '走子、吃子和将军使用所选音效组；对局结束音固定用 Piano。所有音效组都来自 lichess 的自由授权音效——那套著名的 “standard” 并非自由授权。提醒音——收到私聊、好友上线或下线——是我们自己合成的音符，风格向所选音效组看齐。',
+    '走子、吃子和将军使用所选音效组。Felt、Walnut、Marble、Clock、Study、Slate 和 Piano 也播放各自的终局音；Sfx / Futuristic / Nes 的终局音回退到 Piano。这六套具名音效是原创的；另外四套是 lichess 上 Enigmahack 的自由授权音效——那套著名的 “standard” 并非自由授权。提醒音——收到私聊、好友上线或下线——是我们自己合成的音符，风格向所选音效组看齐。',
 
   'options.pgnJournal': 'PGN 自动保存',
   'options.pgnJournal.append': '追加我下过的对局',
@@ -291,7 +298,7 @@ const zh: Messages = {
     '——lichess 的国际象棋程序库：SAN、合法性判断、复盘（GPL-3.0-or-later）。',
   'help.about.openings': '——开局名称与 ECO 编码（CC0，公有领域）。',
   'help.about.lichess':
-    '——Enigmahack 制作的钢琴音效组（AGPL-3.0+），以及各套棋子样式（cburnett 出自 Colin M.L. Burnett 及诸位作者之手，各自遵循自己的许可证）。',
+    '——Enigmahack 留下的 piano / sfx / futuristic / nes 音效组（AGPL-3.0+），以及各套棋子样式（cburnett 出自 Colin M.L. Burnett 及诸位作者之手，各自遵循自己的许可证）。Felt、Walnut、Marble、Clock、Study 与 Slate 音效以及 Of Course I Still Love You、Just Read The Instructions、A Shortfall Of Gravitas, So Much For Subtlety, Very Little Gravitas Indeed 棋子套装为 Raptor3000 原创。',
   'help.about.fics':
     '——Free Internet Chess Server，这个应用存在的意义就是和它对话。在 39 频道友善一点。',
   'help.about.outro1': '完整清单和各自的确切许可证记录在',

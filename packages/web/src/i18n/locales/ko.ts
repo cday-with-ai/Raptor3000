@@ -76,6 +76,9 @@ const ko: Messages = {
   'login.shot.seek': '실시간 시크 그래프',
 
   // ---- language control --------------------------------------------------
+  'options.session.appIcon': '앱 아이콘',
+  'options.session.appIconNote':
+    '브라우저 탭 아이콘과 앱 안의 배지를 바꿉니다. 데스크톱 실행 아이콘은 앱 밖에서 설정합니다.',
   'lang.label': '언어',
   'lang.auto': '자동',
   'lang.note':
@@ -134,6 +137,9 @@ const ko: Messages = {
   'options.board.coordinates': '좌표 표시',
   'options.board.flipAsBlack': '흑으로 둘 때 체스판 뒤집기',
   'options.board.moveList': '기보 목록 표시',
+  'options.board.frame': '테두리',
+  'options.board.frameNote':
+    '칸 둘레의 테두리입니다. Shadow가 원래 모습입니다. 나무와 매트는 좌표를 테두리에 둡니다.',
   // Board palettes: the four plain colors translate, IC and Horsey are
   // names (lichess's), and Custom is the escape hatch.
   'boardTheme.brown': '갈색',
@@ -142,12 +148,13 @@ const ko: Messages = {
   'boardTheme.purple': '보라',
   'boardTheme.custom': '직접 지정',
 
-  'options.clock': '시계 색상',
+  'options.clock': '시계',
+  'options.clock.design': '디자인',
   'options.clock.active': '진행 중',
   'options.clock.low': '시간 부족',
   'options.clock.idle': '대기',
   'options.clock.note':
-    '자동은 대기일 때 앱 테마를, 진행 중과 시간 부족일 때 기본 초록/빨강 칩을 따릅니다. 직접 정하려면 색을 고르세요 — 배경을 먼저, 그다음 글자색입니다.',
+    '디자인은 시계 전체입니다. 글꼴, 하우징, 낮과 밤. 자동 색은 그 디자인을 따르고, 색을 고르면 상태를 덮어씁니다.',
   'options.color.background': '배경',
   'options.color.text': '글자',
   'options.color.hex': '{title} (16진수)',
@@ -192,7 +199,7 @@ const ko: Messages = {
   'options.sound.alertPreviewTitle':
     '선택한 세트의 분위기로 텔, 친구 접속, 친구 접속 종료 소리를 들려줍니다',
   'options.sound.note':
-    '이동과 잡기, 체크는 선택한 세트를 쓰고, 대국 종료 소리는 Piano로 고정입니다. 모든 세트는 lichess가 자유 라이선스로 공개한 것입니다 — 정작 유명한 "standard" 세트는 자유 라이선스가 아닙니다. 알림음(들어온 텔, 친구의 접속과 접속 종료)은 선택한 세트의 분위기에 맞춰 저희가 직접 합성한 소리입니다.',
+    '이동과 잡기, 체크는 선택한 세트를 씁니다. Felt, Walnut, Marble, Clock, Study, Slate, Piano는 종료음도 자기 것이고, Sfx / Futuristic / Nes의 종료음은 Piano로 돌아갑니다. 이름 붙은 여섯 팔레트는 오리지널이고, 나머지 넷은 lichess의 자유 라이선스 Enigmahack 세트입니다 — 정작 유명한 "standard" 세트는 자유 라이선스가 아닙니다. 알림음(들어온 텔, 친구의 접속과 접속 종료)은 선택한 세트의 분위기에 맞춰 저희가 직접 합성한 소리입니다.',
 
   'options.pgnJournal': 'PGN 자동 저장',
   'options.pgnJournal.append': '내가 둔 기보 추가',
@@ -304,7 +311,7 @@ const ko: Messages = {
     '— lichess의 체스 라이브러리입니다. SAN, 합법 수 판정, 기보 재생 (GPL-3.0-or-later).',
   'help.about.openings': '— 오프닝 이름과 ECO 코드 (CC0 퍼블릭 도메인).',
   'help.about.lichess':
-    '— Enigmahack이 만든 피아노 사운드 세트(AGPL-3.0+)와 기물 세트(Colin M.L. Burnett과 동료들의 cburnett 등, 각각 자체 라이선스).',
+    '— Enigmahack이 남긴 piano / sfx / futuristic / nes 세트(AGPL-3.0+)와 기물 세트(Colin M.L. Burnett과 동료들의 cburnett 등, 각각 자체 라이선스). Felt, Walnut, Marble, Clock, Study, Slate 효과음과 Of Course I Still Love You, Just Read The Instructions, A Shortfall Of Gravitas, So Much For Subtlety, Very Little Gravitas Indeed 기물 세트는 Raptor3000 오리지널입니다.',
   'help.about.fics':
     '— 이 앱이 존재하는 이유인 Free Internet Chess Server입니다. 39번 채널에서는 상냥하게 굴어 주세요.',
   'help.about.outro1': '정확한 라이선스까지 빠짐없이 적은 전체 목록은',

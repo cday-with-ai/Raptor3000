@@ -68,6 +68,9 @@ const it: Messages = {
   'login.shot.seek': 'il grafico delle sfide in tempo reale',
 
   // ---- language control --------------------------------------------------
+  'options.session.appIcon': 'Icona dell’app',
+  'options.session.appIconNote':
+    'Cambia l’icona nella scheda del browser e il badge dentro l’app. L’icona del lanciatore sul desktop si imposta fuori dall’app.',
   'lang.label': 'Lingua',
   'lang.auto': 'Automatica',
   'lang.note':
@@ -126,18 +129,22 @@ const it: Messages = {
   'options.board.coordinates': 'Mostra coordinate',
   'options.board.flipAsBlack': 'Ruota quando giochi col nero',
   'options.board.moveList': 'Elenco mosse visibile',
+  'options.board.frame': 'Cornice',
+  'options.board.frameNote':
+    'Il bordo intorno alle case. Shadow è l’originale. Legno e Mat mettono le lettere sul bordo.',
   'boardTheme.brown': 'Marrone',
   'boardTheme.blue': 'Blu',
   'boardTheme.green': 'Verde',
   'boardTheme.purple': 'Viola',
   'boardTheme.custom': 'Personalizzato',
 
-  'options.clock': 'Colori dell\u2019orologio',
+  'options.clock': 'Orologi',
+  'options.clock.design': 'Aspetto',
   'options.clock.active': 'Attivo',
   'options.clock.low': 'Tempo basso',
   'options.clock.idle': 'Inattivo',
   'options.clock.note':
-    'Auto segue il tema dell\u2019app (inattivo) e i chip verdi/rossi predefiniti (attivo, tempo basso). Scegli i colori per sostituirli: prima lo sfondo, poi il testo.',
+    'Un aspetto è tutto il quadrante: carattere, cassa, giorno e notte. I colori Auto seguono quell\u2019aspetto; scegli i colori per sostituire uno stato.',
   'options.color.background': 'Sfondo',
   'options.color.text': 'Testo',
   'options.color.hex': '{title} (esadecimale)',
@@ -182,7 +189,7 @@ const it: Messages = {
   'options.sound.alertPreviewTitle':
     'riproduce tell, arrivo e partenza di un amico nello stile del set selezionato',
   'options.sound.note':
-    'Mosse, catture e scacchi usano il set selezionato; i suoni di fine partita restano su Piano. Tutti i set sono quelli di lichess con licenza libera — il famoso set "standard" non ha licenza libera. Gli avvisi — un tell in arrivo, un amico che arriva o parte — sono nostre note sintetizzate nello stile del set selezionato.',
+    'Mosse, catture e scacchi usano il set selezionato. Felt, Walnut, Marble, Clock, Study, Slate e Piano suonano anche i propri finali; Sfx / Futuristic / Nes tornano a Piano per quelli. Le sei palette col nome sono originali; le altre quattro sono i set liberi di Enigmahack su lichess — il famoso set "standard" non ha licenza libera. Gli avvisi — un tell in arrivo, un amico che arriva o parte — sono nostre note sintetizzate nello stile del set selezionato.',
 
   'options.pgnJournal': 'Salvataggio PGN automatico',
   'options.pgnJournal.append': 'Aggiungi le partite che gioco',
@@ -294,7 +301,7 @@ const it: Messages = {
     '— la libreria scacchistica di lichess: SAN, legalità, replay (GPL-3.0-or-later).',
   'help.about.openings': '— i nomi delle aperture e i codici ECO (CC0 pubblico dominio).',
   'help.about.lichess':
-    '— il set di suoni piano di Enigmahack (AGPL-3.0+) e i set di pezzi (cburnett di Colin M.L. Burnett e collaboratori, ciascuno con la propria licenza).',
+    '— i set restanti piano / sfx / futuristic / nes di Enigmahack (AGPL-3.0+) e i set di pezzi (cburnett di Colin M.L. Burnett e collaboratori, ciascuno con la propria licenza). I suoni Felt, Walnut, Marble, Clock, Study e Slate, e il set di pezzi Of Course I Still Love You, Just Read The Instructions e A Shortfall Of Gravitas, So Much For Subtlety, Very Little Gravitas Indeed, sono originali di Raptor3000.',
   'help.about.fics':
     '— il Free Internet Chess Server con cui questa app intera esiste per parlare. Sii gentile nel canale 39.',
   'help.about.outro1': 'L\u2019inventario completo con le licenze esatte sta in',

@@ -74,6 +74,9 @@ const nb: Messages = {
   'login.shot.seek': 'seek-grafen i sanntid',
 
   // ---- språkvelgeren ------------------------------------------------------
+  'options.session.appIcon': 'Appikon',
+  'options.session.appIconNote':
+    'Endrer ikonet i nettleserfanen og merket inne i appen. Ikonet til skrivebordssnarveien settes utenfor appen.',
   'lang.label': 'Språk',
   'lang.auto': 'Automatisk',
   'lang.note':
@@ -132,6 +135,9 @@ const nb: Messages = {
   'options.board.coordinates': 'Vis koordinater',
   'options.board.flipAsBlack': 'Snu brettet når du spiller svart',
   'options.board.moveList': 'Trekkliste synlig',
+  'options.board.frame': 'Ramme',
+  'options.board.frameNote':
+    'Listen rundt rutene. Shadow er originalen. Tre og Mat legger bokstavene på listen.',
   // Brettpaletter: de fire rene fargene oversettes, IC og Horsey er navn
   // (lichess sine), og Egendefinert er nødutgangen.
   'boardTheme.brown': 'Brun',
@@ -140,12 +146,13 @@ const nb: Messages = {
   'boardTheme.purple': 'Lilla',
   'boardTheme.custom': 'Egendefinert',
 
-  'options.clock': 'Klokkefarger',
+  'options.clock': 'Klokker',
+  'options.clock.design': 'Utseende',
   'options.clock.active': 'Aktiv',
   'options.clock.low': 'Tidsnød',
   'options.clock.idle': 'Inaktiv',
   'options.clock.note':
-    'Auto følger apptemaet (inaktiv) og de innebygde grønne/røde merkene (aktiv, tidsnød). Velg farger for å overstyre — bakgrunn, deretter tekst.',
+    'Et utseende er hele skiven — skrift, hus, dag og natt. Auto-farger følger det utseendet; velg farger for å overstyre en tilstand.',
   'options.color.background': 'Bakgrunn',
   'options.color.text': 'Tekst',
   'options.color.hex': '{title} (hex)',
@@ -190,7 +197,7 @@ const nb: Messages = {
   'options.sound.alertPreviewTitle':
     'spill tell, venn ankommer og venn drar i stilen til det valgte settet',
   'options.sound.note':
-    'Trekk, slag og sjakk bruker det valgte settet; lydene ved partislutt holder seg til Piano. Alle settene er lichess sine fritt lisensierte — det berømte «standard»-settet er ikke fritt lisensiert. Varsler — en innkommende tell, en venn som kommer eller går — er våre egne syntetiserte toner i stil med det valgte settet.',
+    'Trekk, slag og sjakk bruker det valgte settet. Felt, Walnut, Marble, Clock, Study, Slate og Piano spiller også sine egne sluttlyder; Sfx / Futuristic / Nes faller tilbake på Piano der. De seks navngitte palettene er originale; de fire andre er lichess sine fritt lisensierte Enigmahack-sett — det berømte «standard»-settet er ikke fritt lisensiert. Varsler — en innkommende tell, en venn som kommer eller går — er våre egne syntetiserte toner i stil med det valgte settet.',
 
   'options.pgnJournal': 'PGN-autolagring',
   'options.pgnJournal.append': 'Legg til partier jeg spiller',
@@ -302,7 +309,7 @@ const nb: Messages = {
     '— lichess sitt sjakkbibliotek: SAN, lovlighet, gjennomspilling (GPL-3.0-or-later).',
   'help.about.openings': '— åpningsnavnene og ECO-kodene (CC0, i det fri).',
   'help.about.lichess':
-    '— pianolydsettet av Enigmahack (AGPL-3.0+) og brikkesettene (cburnett av Colin M.L. Burnett med flere, hvert under sin egen lisens).',
+    '— de gjenværende piano- / sfx- / futuristic- / nes-settene av Enigmahack (AGPL-3.0+) og brikkesettene (cburnett av Colin M.L. Burnett med flere, hvert under sin egen lisens). Felt-, Walnut-, Marble-, Clock-, Study- og Slate-lydene og brikkesettene Of Course I Still Love You, Just Read The Instructions og A Shortfall Of Gravitas, So Much For Subtlety, Very Little Gravitas Indeed er originale i Raptor3000.',
   'help.about.fics':
     '— Free Internet Chess Server, serveren hele denne appen finnes for å snakke med. Vær grei i kanal 39.',
   'help.about.outro1': 'Den fullstendige oversikten med nøyaktige lisenser ligger i',

@@ -76,6 +76,9 @@ const pt: Messages = {
   'login.shot.seek': 'o gráfico de seeks ao vivo',
 
   // ---- language control --------------------------------------------------
+  'options.session.appIcon': 'Ícone da aplicação',
+  'options.session.appIconNote':
+    'Muda o ícone do separador do navegador e o emblema dentro da aplicação. O ícone do atalho no ambiente de trabalho é definido fora da aplicação.',
   'lang.label': 'Idioma',
   'lang.auto': 'Automático',
   'lang.note':
@@ -134,6 +137,9 @@ const pt: Messages = {
   'options.board.coordinates': 'Mostrar coordenadas',
   'options.board.flipAsBlack': 'Girar o tabuleiro ao jogar de pretas',
   'options.board.moveList': 'Lista de lances visível',
+  'options.board.frame': 'Moldura',
+  'options.board.frameNote':
+    'A faixa em volta das casas. Shadow é o original. Madeira e Mat põem as letras na faixa.',
   // Board palettes: the four plain colors translate, IC and Horsey are
   // names (lichess's), and Custom is the escape hatch.
   'boardTheme.brown': 'Marrom',
@@ -142,12 +148,13 @@ const pt: Messages = {
   'boardTheme.purple': 'Roxo',
   'boardTheme.custom': 'Personalizado',
 
-  'options.clock': 'Cores do relógio',
+  'options.clock': 'Relógios',
+  'options.clock.design': 'Visual',
   'options.clock.active': 'Ativo',
   'options.clock.low': 'Pouco tempo',
   'options.clock.idle': 'Parado',
   'options.clock.note':
-    'Auto segue o tema do app (parado) e o verde/vermelho de fábrica (ativo, pouco tempo). Escolha cores para substituir — fundo, depois texto.',
+    'Um visual é o relógio inteiro — letra, caixa, dia e noite. As cores Auto seguem esse visual; escolha cores para substituir um estado.',
   'options.color.background': 'Fundo',
   'options.color.text': 'Texto',
   'options.color.hex': '{title} (hex)',
@@ -192,7 +199,7 @@ const pt: Messages = {
   'options.sound.alertPreviewTitle':
     'toca tell, chegada e saída de amigo no estilo do conjunto selecionado',
   'options.sound.note':
-    'Lances, capturas e xeques usam o conjunto selecionado; os sons de fim de partida ficam no Piano. Todos os conjuntos são os de licença livre do lichess — o famoso conjunto "standard" não tem licença livre. Os alertas — um tell chegando, um amigo entrando ou saindo — são notas sintetizadas por nós no estilo do conjunto selecionado.',
+    'Lances, capturas e xeques usam o conjunto selecionado. Felt, Walnut, Marble, Clock, Study, Slate e Piano também tocam os próprios sons de fim de partida; Sfx / Futuristic / Nes recuam para Piano nisso. As seis paletas nomeadas são originais; as outras quatro são os conjuntos livres do Enigmahack no lichess — o famoso conjunto "standard" não tem licença livre. Os alertas — um tell chegando, um amigo entrando ou saindo — são notas sintetizadas por nós no estilo do conjunto selecionado.',
 
   'options.pgnJournal': 'Salvamento automático de PGN',
   'options.pgnJournal.append': 'Adicionar as partidas que eu jogo',
@@ -304,7 +311,7 @@ const pt: Messages = {
     '— a biblioteca de xadrez do lichess: SAN, legalidade, replay (GPL-3.0-or-later).',
   'help.about.openings': '— os nomes das aberturas e os códigos ECO (CC0, domínio público).',
   'help.about.lichess':
-    '— o conjunto de sons de piano de Enigmahack (AGPL-3.0+) e os conjuntos de peças (cburnett, de Colin M.L. Burnett, e companhia, cada um sob a própria licença).',
+    '— os conjuntos restantes piano / sfx / futuristic / nes de Enigmahack (AGPL-3.0+) e os conjuntos de peças (cburnett, de Colin M.L. Burnett, e companhia, cada um sob a própria licença). Os sons Felt, Walnut, Marble, Clock, Study e Slate, e o conjuntos de peças Of Course I Still Love You, Just Read The Instructions e A Shortfall Of Gravitas, So Much For Subtlety, Very Little Gravitas Indeed, são originais do Raptor3000.',
   'help.about.fics':
     '— o Free Internet Chess Server, com quem este app inteiro existe para conversar. Seja gentil no canal 39.',
   'help.about.outro1': 'O inventário completo, com as licenças exatas, fica em',

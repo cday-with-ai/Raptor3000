@@ -90,6 +90,9 @@ export const en = {
   'login.shot.seek': 'the live seek graph',
 
   // ---- language control --------------------------------------------------
+  'options.session.appIcon': 'App icon',
+  'options.session.appIconNote':
+    'Changes the browser-tab icon and the badge inside the app. The desktop launcher icon is set outside the app.',
   'lang.label': 'Language',
   'lang.auto': 'Automatic',
   'lang.note':
@@ -156,12 +159,17 @@ export const en = {
   'boardTheme.purple': 'Purple',
   'boardTheme.custom': 'Custom',
 
-  'options.clock': 'Clock colors',
+  'options.board.frame': 'Frame',
+  'options.board.frameNote':
+    'The rail around the squares. Shadow is the original. Wood and Mat put the file/rank letters on the rail.',
+
+  'options.clock': 'Clocks',
+  'options.clock.design': 'Design',
   'options.clock.active': 'Active',
   'options.clock.low': 'Low on time',
   'options.clock.idle': 'Idle',
   'options.clock.note':
-    'Auto follows the app theme (idle) and the stock green/red chips (active, low). Pick colors to override — background, then text.',
+    'A design is the whole face — font, housing, Day and Night. Auto colors follow that design; pick colors to override a state.',
   'options.color.background': 'Background',
   'options.color.text': 'Text',
   'options.color.hex': '{title} (hex)',
@@ -206,7 +214,7 @@ export const en = {
   'options.sound.alertPreviewTitle':
     'play tell, friend-arrives, friend-departs in the selected set’s style',
   'options.sound.note':
-    'Moves, captures and checks use the selected set; game-end sounds stay on Piano. All sets are lichess’s freely licensed ones — the famous "standard" set is not freely licensed. Alerts — an incoming tell, a friend arriving or departing — are our own synthesized notes styled after the selected set.',
+    'Moves, captures and checks use the selected set. Felt, Walnut, Marble, Clock, Study, Slate and Piano also play their own game-end sounds; Sfx / Futuristic / Nes fall back to Piano for those. The six named palettes are original; the other four are lichess’s freely licensed Enigmahack sets — the famous "standard" set is not freely licensed. Alerts — an incoming tell, a friend arriving or departing — are our own synthesized notes styled after the selected set.',
 
   'options.pgnJournal': 'PGN auto-save',
   'options.pgnJournal.append': 'Append games I play',
@@ -318,7 +326,7 @@ export const en = {
     '— lichess’s chess library: SAN, legality, replay (GPL-3.0-or-later).',
   'help.about.openings': '— the opening names and ECO codes (CC0 public domain).',
   'help.about.lichess':
-    '— the piano sound set by Enigmahack (AGPL-3.0+) and the piece sets (cburnett by Colin M.L. Burnett and friends, each under its own license).',
+    '— the remaining piano / sfx / futuristic / nes sets by Enigmahack (AGPL-3.0+) and the piece sets (cburnett by Colin M.L. Burnett and friends, each under its own license). Felt, Walnut, Marble, Clock, Study and Slate sounds, and the Culture-named piece sets (Of Course I Still Love You, Just Read The Instructions, A Shortfall Of Gravitas, So Much For Subtlety, Very Little Gravitas Indeed), are original to Raptor3000.',
   'help.about.fics':
     '— the Free Internet Chess Server this whole app exists to talk to. Be nice in channel 39.',
   'help.about.outro1': 'The complete inventory with exact licenses lives in',

@@ -76,6 +76,9 @@ const pl: Messages = {
   'login.shot.seek': 'wykres ofert gry na żywo',
 
   // ---- language control --------------------------------------------------
+  'options.session.appIcon': 'Ikona aplikacji',
+  'options.session.appIconNote':
+    'Zmienia ikonę na karcie przeglądarki i znaczek w aplikacji. Ikonę skrótu na pulpicie ustawia się poza aplikacją.',
   'lang.label': 'Język',
   'lang.auto': 'Automatycznie',
   'lang.note':
@@ -134,6 +137,9 @@ const pl: Messages = {
   'options.board.coordinates': 'Pokaż współrzędne',
   'options.board.flipAsBlack': 'Obróć, gdy grasz czarnymi',
   'options.board.moveList': 'Lista ruchów widoczna',
+  'options.board.frame': 'Obramowanie',
+  'options.board.frameNote':
+    'Listwa wokół pól. Shadow to oryginał. Drewno i Mat kładą litery na listwie.',
   // Board palettes: the four plain colors translate, IC and Horsey are
   // names (lichess's), and Custom is the escape hatch.
   'boardTheme.brown': 'Brązowa',
@@ -142,12 +148,13 @@ const pl: Messages = {
   'boardTheme.purple': 'Fioletowa',
   'boardTheme.custom': 'Własna',
 
-  'options.clock': 'Kolory zegara',
+  'options.clock': 'Zegary',
+  'options.clock.design': 'Wygląd',
   'options.clock.active': 'Aktywny',
   'options.clock.low': 'Mało czasu',
   'options.clock.idle': 'Nieaktywny',
   'options.clock.note':
-    'Auto idzie za motywem aplikacji (Nieaktywny) i fabrycznymi zielonymi/czerwonymi polami (Aktywny, Mało czasu). Wybierz kolory, aby to nadpisać — najpierw tło, potem tekst.',
+    'Wygląd to cała tarcza — krój, obudowa, dzień i noc. Kolory Auto idą za tym wyglądem; wybierz kolory, by nadpisać stan.',
   'options.color.background': 'Tło',
   'options.color.text': 'Tekst',
   'options.color.hex': '{title} (hex)',
@@ -192,7 +199,7 @@ const pl: Messages = {
   'options.sound.alertPreviewTitle':
     'odtwarza tell, przyjście i odejście znajomego w stylu wybranego zestawu',
   'options.sound.note':
-    'Ruchy, bicia i szachy używają wybranego zestawu; dźwięki końca partii zostają na Piano. Wszystkie zestawy pochodzą z lichess i mają wolne licencje — słynny zestaw „standard” wolnej licencji nie ma. Powiadomienia — przychodzący tell, przyjście albo odejście znajomego — to nasze własne syntezowane dźwięki w stylu wybranego zestawu.',
+    'Ruchy, bicia i szachy używają wybranego zestawu. Felt, Walnut, Marble, Clock, Study, Slate i Piano grają też własne dźwięki końca partii; Sfx / Futuristic / Nes spadają wtedy na Piano. Sześć nazwanych palet jest oryginalnych; pozostałe cztery to wolne zestawy Enigmahack z lichess — słynny zestaw „standard” wolnej licencji nie ma. Powiadomienia — przychodzący tell, przyjście albo odejście znajomego — to nasze własne syntezowane dźwięki w stylu wybranego zestawu.',
 
   'options.pgnJournal': 'Autozapis PGN',
   'options.pgnJournal.append': 'Dodawaj partie, które gram',
@@ -304,7 +311,7 @@ const pl: Messages = {
     '— biblioteka szachowa od lichess: SAN, legalność ruchów, odtwarzanie partii (GPL-3.0-or-later).',
   'help.about.openings': '— nazwy debiutów i kody ECO (CC0, domena publiczna).',
   'help.about.lichess':
-    '— zestaw dźwięków Piano od Enigmahack (AGPL-3.0+) i zestawy bierek (cburnett: Colin M.L. Burnett i przyjaciele; każdy na własnej licencji).',
+    '— pozostałe zestawy piano / sfx / futuristic / nes od Enigmahack (AGPL-3.0+) i zestawy bierek (cburnett: Colin M.L. Burnett i przyjaciele; każdy na własnej licencji). Dźwięki Felt, Walnut, Marble, Clock, Study i Slate oraz zestawy bierek Of Course I Still Love You, Just Read The Instructions i A Shortfall Of Gravitas, So Much For Subtlety, Very Little Gravitas Indeed są oryginalne w Raptor3000.',
   'help.about.fics':
     '— Free Internet Chess Server, dla którego ta cała aplikacja w ogóle istnieje. Bądź miły na kanale 39.',
   'help.about.outro1': 'Pełny spis z dokładnymi licencjami leży w pliku',

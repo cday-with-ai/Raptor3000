@@ -74,6 +74,9 @@ const ru: Messages = {
   'login.shot.seek': 'живой график заявок',
 
   // ---- language control --------------------------------------------------
+  'options.session.appIcon': 'Значок приложения',
+  'options.session.appIconNote':
+    'Меняет значок на вкладке браузера и эмблему внутри приложения. Значок ярлыка на рабочем столе задаётся вне приложения.',
   'lang.label': 'Язык',
   'lang.auto': 'Автоматически',
   'lang.note':
@@ -132,6 +135,9 @@ const ru: Messages = {
   'options.board.coordinates': 'Показывать координаты',
   'options.board.flipAsBlack': 'Переворачивать при игре чёрными',
   'options.board.moveList': 'Показывать список ходов',
+  'options.board.frame': 'Рамка',
+  'options.board.frameNote':
+    'Кромка вокруг полей. Shadow — исходный вид. Дерево и Mat ставят буквы на кромку.',
   // Board palettes: the four plain colors translate, IC and Horsey are
   // names (lichess's), and Custom is the escape hatch.
   'boardTheme.brown': 'Коричневая',
@@ -140,12 +146,13 @@ const ru: Messages = {
   'boardTheme.purple': 'Фиолетовая',
   'boardTheme.custom': 'Своя',
 
-  'options.clock': 'Цвета часов',
+  'options.clock': 'Часы',
+  'options.clock.design': 'Оформление',
   'options.clock.active': 'Активные',
   'options.clock.low': 'Мало времени',
   'options.clock.idle': 'Неактивные',
   'options.clock.note':
-    '«Авто» следует теме приложения (неактивные) и стандартным зелёной/красной плашкам (активные, мало времени). Выберите цвета, чтобы переопределить, — сначала фон, затем текст.',
+    'Оформление — это всё лицо: шрифт, корпус, день и ночь. Цвета «Авто» следуют оформлению; выберите цвета, чтобы переопределить состояние.',
   'options.color.background': 'Фон',
   'options.color.text': 'Текст',
   'options.color.hex': '{title} (hex)',
@@ -190,7 +197,7 @@ const ru: Messages = {
   'options.sound.alertPreviewTitle':
     'проиграть личное сообщение, приход и уход друга в стиле выбранного набора',
   'options.sound.note':
-    'Ходы, взятия и шахи используют выбранный набор; звуки конца партии всегда из набора Piano. Все наборы — свободно лицензированные наборы lichess: у знаменитого набора «standard» свободной лицензии нет. Оповещения — входящее личное сообщение, приход или уход друга — наши собственные синтезированные ноты, стилизованные под выбранный набор.',
+    'Ходы, взятия и шахи используют выбранный набор. Felt, Walnut, Marble, Clock, Study, Slate и Piano также играют свои звуки конца партии; Sfx / Futuristic / Nes для них отступают к Piano. Шесть названных палитр оригинальны; остальные четыре — свободно лицензированные наборы Enigmahack на lichess: у знаменитого набора «standard» свободной лицензии нет. Оповещения — входящее личное сообщение, приход или уход друга — наши собственные синтезированные ноты, стилизованные под выбранный набор.',
 
   'options.pgnJournal': 'Автосохранение PGN',
   'options.pgnJournal.append': 'Добавлять сыгранные партии',
@@ -302,7 +309,7 @@ const ru: Messages = {
     '— шахматная библиотека lichess: SAN, проверка легальности ходов, воспроизведение партий (GPL-3.0-or-later).',
   'help.about.openings': '— названия дебютов и коды ECO (CC0, общественное достояние).',
   'help.about.lichess':
-    '— звуковой набор Piano от Enigmahack (AGPL-3.0+) и наборы фигур (cburnett от Colin M.L. Burnett и другие, каждый под своей лицензией).',
+    '— оставшиеся наборы piano / sfx / futuristic / nes от Enigmahack (AGPL-3.0+) и наборы фигур (cburnett от Colin M.L. Burnett и другие, каждый под своей лицензией). Звуки Felt, Walnut, Marble, Clock, Study и Slate, а также наборы фигур Of Course I Still Love You, Just Read The Instructions и A Shortfall Of Gravitas, So Much For Subtlety, Very Little Gravitas Indeed оригинальны для Raptor3000.',
   'help.about.fics':
     '— Free Internet Chess Server, ради разговора с которым всё это приложение и существует. Будьте вежливы в 39-м канале.',
   'help.about.outro1': 'Полный перечень с точными лицензиями находится в',

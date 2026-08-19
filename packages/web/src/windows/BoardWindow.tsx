@@ -1,5 +1,5 @@
 import { observer } from 'mobx-react-lite';
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from 'react';
 import {
   BoardMode,
   engineAnalysisAllowed,
@@ -51,10 +51,15 @@ import type { EngineAnalysis } from '../engine/EngineService.js';
 import {
   AUTO_PROMOTE_PIECES,
   boardColors,
-  clockChipColors,
   type AppPreferences,
   type AutoPromote,
 } from '../preferences.js';
+import { BOARD_FRAME_DESIGNS } from '../boardFrames.js';
+import { inSquareInk } from '../boardLabels.js';
+import { isWoodTheme, woodGrainFor } from '../woodGrain.js';
+import { WoodSquare } from '../components/WoodSquare.js';
+import { CLOCK_DESIGNS } from '../clockDesigns.js';
+import { ClockChip, useResolvedTheme } from '../components/ClockChip.js';
 import {
   loadBoardLayout,
   saveBoardLayoutField,
@@ -766,68 +771,47 @@ function InfoBar(props: {
   ticking: boolean;
   prefs: AppPreferences;
 }) {
+  const theme = useResolvedTheme();
+  const design = CLOCK_DESIGNS[props.prefs.clockSet];
+  const bar = design.bar[theme];
   return (
     <div
       style={{
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
-        padding: '4px 10px',
-        background: 'var(--bg-raised)',
-        border: '1px solid var(--border-soft)',
-        borderRadius: 6,
+        padding: `${bar.padY}px ${bar.padX}px`,
+        background: bar.bg,
+        border: `1px solid ${bar.border}`,
+        borderRadius: bar.radius,
         gap: 12,
-        fontSize: 13,
+        fontSize: bar.nameSize,
+        fontFamily: design.nameFont,
+        color: bar.nameColor,
       }}
     >
       <span style={{ display: 'flex', alignItems: 'baseline', gap: 8, minWidth: 0 }}>
-        <strong style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+        <strong
+          style={{
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            whiteSpace: 'nowrap',
+            fontWeight: bar.nameWeight,
+          }}
+        >
           {props.name}
         </strong>
-        {props.rating && <span style={{ opacity: 0.7 }}>({props.rating})</span>}
+        {props.rating && (
+          <span style={{ color: bar.ratingColor, fontWeight: 400 }}>({props.rating})</span>
+        )}
       </span>
-      <Clock ms={props.clockMs} ticking={props.ticking} prefs={props.prefs} />
+      <ClockChip
+        ms={props.clockMs}
+        ticking={props.ticking}
+        prefs={props.prefs}
+        theme={theme}
+      />
     </div>
-  );
-}
-
-function Clock({
-  ms,
-  ticking,
-  prefs,
-}: {
-  ms: number;
-  ticking: boolean;
-  prefs: AppPreferences;
-}) {
-  const total = Math.max(0, ms);
-  const totalSeconds = Math.floor(total / 1000);
-  const m = Math.floor(totalSeconds / 60);
-  const s = totalSeconds % 60;
-  const lowTime = total < 10_000;
-  const tenths = lowTime ? Math.floor((total % 1000) / 100) : null;
-  // Per-state colors are preferences (Options → Board → Clock colors);
-  // 'auto' resolves to the stock look, including the 2026-08-12 rule
-  // that a dark ticking chip gets light text in both themes.
-  const chip = clockChipColors(prefs, ticking, lowTime);
-  return (
-    <span
-      style={{
-        fontFamily: '"SF Mono", Consolas, monospace',
-        fontSize: lowTime ? 20 : 18,
-        padding: '2px 10px',
-        background: chip.bg,
-        border: `1px solid ${chip.border}`,
-        color: chip.text,
-        borderRadius: 4,
-        minWidth: 72,
-        textAlign: 'center',
-        fontWeight: lowTime ? 700 : 400,
-      }}
-    >
-      {m}:{s.toString().padStart(2, '0')}
-      {tenths !== null && <span style={{ opacity: 0.8 }}>.{tenths}</span>}
-    </span>
   );
 }
 
@@ -977,6 +961,7 @@ function Board({
   // options page in the main window via storage events.
   const prefs = useLivePreferences();
   const { light: lightColor, dark: darkColor } = boardColors(prefs);
+  const wood = isWoodTheme(prefs.boardTheme);
 
   // Measured square size in px: drives coordinate-label font scaling and
   // all drag math. The board root is a perfect square (BoardLayout).
@@ -1318,10 +1303,16 @@ function Board({
 
       // In-square coordinates: rank in the top-right of the rendered
       // rightmost column, file letter in the bottom-left of the rendered
-      // bottom row, colored with the OPPOSITE square shade for contrast.
-      const coordColor = isLight ? darkColor : lightColor;
-      const showRankLabel = prefs.boardCoordinates && fi === 7;
-      const showFileLabel = prefs.boardCoordinates && ri === 7;
+      // bottom row. The ink is the OPPOSITE square's shade — except where a
+      // theme overrides it, because that rule is conventional rather than
+      // always legible: `ic` puts khaki on near-white and `maple` two warm
+      // mid-tones, and neither has enough separation to read. See
+      // boardLabels.ts; `custom` always resolves by the derived rule, since
+      // its colours exist only in the preference object.
+      const coordColor = inSquareInk(prefs.boardTheme, !isLight, lightColor, darkColor);
+      const inSquare = BOARD_FRAME_DESIGNS[prefs.boardFrame].coords === 'in-square';
+      const showRankLabel = prefs.boardCoordinates && inSquare && fi === 7;
+      const showFileLabel = prefs.boardCoordinates && inSquare && ri === 7;
 
       cols.push(
         <div
@@ -1334,7 +1325,7 @@ function Board({
           // wrong in exactly the cases worth testing.
           data-square={sq}
           style={{
-            background: highlight ?? baseBg,
+            background: wood ? undefined : (highlight ?? baseBg),
             aspectRatio: '1',
             flex: 1,
             display: 'flex',
@@ -1345,6 +1336,19 @@ function Board({
             position: 'relative',
           }}
         >
+          {wood && <WoodSquare grain={woodGrainFor(sq)} base={baseBg} />}
+          {wood && highlight && (
+            <span
+              style={{
+                position: 'absolute',
+                inset: 0,
+                background: highlight,
+                opacity: isCheck ? 0.62 : 0.48,
+                pointerEvents: 'none',
+                zIndex: 0,
+              }}
+            />
+          )}
           {lastMoveTint && (
             <span
               key={`lm-${s12 ? plyOf(s12) : 0}`}
@@ -1434,7 +1438,31 @@ function Board({
     );
   }
 
+  const frame = BOARD_FRAME_DESIGNS[prefs.boardFrame];
+  const padPct = `${(frame.gutter * 100).toFixed(2)}%`;
+
   return (
+    <div
+      style={{
+        width: '100%',
+        height: '100%',
+        boxSizing: 'border-box',
+        padding: frame.gutter ? padPct : 0,
+        background: frame.rail,
+        borderRadius: frame.radius,
+        boxShadow: frame.shadow,
+        position: 'relative',
+      }}
+    >
+      {prefs.boardCoordinates && frame.coords === 'rim' && (
+        <RimCoords
+          flipped={flipped}
+          allSides={frame.coordsAllSides}
+          color={frame.labelColor}
+          fontSize={coordFontSize}
+          gutter={frame.gutter}
+        />
+      )}
     <div
       ref={rootRef}
       onPointerDown={onPointerDown}
@@ -1455,11 +1483,10 @@ function Board({
         display: 'flex',
         flexDirection: 'column',
         position: 'relative',
-        // Chess Ascent board chrome: 4px rounding, theme-gated shadow
-        // (declared in index.css: light mode only, like the original).
-        borderRadius: 4,
+        borderRadius: frame.gutter ? 1 : frame.radius,
         overflow: 'hidden',
-        boxShadow: 'var(--board-shadow)',
+        outline: frame.piping === 'none' ? undefined : frame.piping,
+        outlineOffset: frame.piping === 'none' ? undefined : -1,
         // Without this, mobile browsers claim the drag for scrolling.
         touchAction: 'none',
       }}
@@ -1524,7 +1551,74 @@ function Board({
         />
       )}
     </div>
+    </div>
   );
+}
+
+function RimCoords({
+  flipped,
+  allSides,
+  color,
+  fontSize,
+  gutter,
+}: {
+  flipped: boolean;
+  allSides: boolean;
+  color: string;
+  fontSize: number;
+  gutter: number;
+}) {
+  const files = flipped ? 'hgfedcba' : 'abcdefgh';
+  const ranksTopToBottom = flipped ? '12345678' : '87654321';
+  const inner = 1 - 2 * gutter;
+  const slot = (i: number) => `${(gutter + inner * ((i + 0.5) / 8)) * 100}%`;
+  // How far in from the OUTER edge of the rail a label sits, as a percentage
+  // of the whole board. The rail is only ~7% wide, so the old fixed 1.5% put
+  // every label out at the far edge of the wood with a gap of grain between
+  // it and the squares it names (Carson: "they also should be closer to the
+  // board"). 0.62 of the rail rides just inside the midline — against the
+  // board, still clear of the piping.
+  const lane = `${gutter * 62}%`;
+  // A coordinate printed on wood grain is competing with the grain. The
+  // colour was picked against the rail's average, which the grain is not, so
+  // a halo in the opposite direction does the separating instead of asking
+  // the colour to do it alone.
+  const halo = isLightColor(color)
+    ? '0 1px 2px rgba(0,0,0,0.6)'
+    : '0 1px 2px rgba(255,255,255,0.55)';
+  const label: CSSProperties = {
+    position: 'absolute',
+    fontSize,
+    lineHeight: 1,
+    color,
+    fontFamily: 'system-ui, sans-serif',
+    fontWeight: 700,
+    textShadow: halo,
+    pointerEvents: 'none',
+    userSelect: 'none',
+  };
+  const marks: ReactNode[] = [];
+  for (let i = 0; i < 8; i++) {
+    marks.push(
+      <span key={`fb${i}`} style={{ ...label, bottom: lane, left: slot(i), transform: 'translate(-50%, 50%)' }}>
+        {files[i]}
+      </span>,
+      <span key={`rl${i}`} style={{ ...label, left: lane, top: slot(i), transform: 'translate(-50%, -50%)' }}>
+        {ranksTopToBottom[i]}
+      </span>,
+    );
+    if (allSides) {
+      marks.push(
+        <span key={`ft${i}`} style={{ ...label, top: lane, left: slot(i), transform: 'translate(-50%, -50%)' }}>
+          {files[i]}
+        </span>,
+        <span key={`rr${i}`} style={{ ...label, right: lane, top: slot(i), transform: 'translate(50%, -50%)' }}>
+          {ranksTopToBottom[i]}
+        </span>,
+      );
+    }
+  }
+  return <>{marks}</>;
 }
 
 const premoveStrip = {
@@ -2754,4 +2848,15 @@ function modeLabel(m: BoardModeCode): string {
     case BoardMode.BUGHOUSE_SUGGEST: return 'Bughouse (partner)';
     default: return m;
   }
+}
+
+/** Rough luminance test, enough to choose which way a halo should go. */
+function isLightColor(hex: string): boolean {
+  const m = /^#?([0-9a-f]{6})$/i.exec(hex.trim());
+  if (!m) return true;
+  const n = parseInt(m[1], 16);
+  const r = (n >> 16) & 255;
+  const g = (n >> 8) & 255;
+  const b = n & 255;
+  return (0.299 * r + 0.587 * g + 0.114 * b) / 255 > 0.55;
 }

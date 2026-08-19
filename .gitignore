@@ -13,3 +13,16 @@ status.html
 # typecheck between nightlies left the tree dirty and stood the 02:30 run down.
 *.tsbuildinfo
 queue/.lock.dev
+
+# The sound-palette workshop. `render.py` is deterministic — same seed, same
+# files — so the 96 candidate .wav/.mp3 renders (1.3MB) are output, not
+# source, and the 32KB of generator plus its audition page reproduces them.
+# Tracking the renders would put a megabyte of regenerable audio in the
+# history permanently the first time somebody ran `git add -A`.
+sound-candidates/**/*.wav
+sound-candidates/**/*.mp3
+
+# Which engine `openroom` launches this room on (claude / opencode / grok).
+# Machine-local: no other room commits its own, and the pick-engine skill
+# treats the file as per-checkout state discovered by grep, not as source.
+room.engine

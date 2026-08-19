@@ -74,6 +74,9 @@ const he: Messages = {
   'login.shot.seek': 'גרף חיפושי המשחק בזמן אמת',
 
   // ---- בחירת שפה ---------------------------------------------------------
+  'options.session.appIcon': 'סמל היישום',
+  'options.session.appIconNote':
+    'משנה את הסמל בלשונית הדפדפן ואת התג בתוך היישום. סמל המשגר בשולחן העבודה נקבע מחוץ ליישום.',
   'lang.label': 'שפה',
   'lang.auto': 'אוטומטית',
   'lang.note':
@@ -132,6 +135,9 @@ const he: Messages = {
   'options.board.coordinates': 'הצגת קואורדינטות',
   'options.board.flipAsBlack': 'היפוך הלוח כשמשחקים בשחור',
   'options.board.moveList': 'רשימת מהלכים גלויה',
+  'options.board.frame': 'מסגרת',
+  'options.board.frameNote':
+    'המסגרת סביב המשבצות. Shadow הוא המקור. עץ ו־Mat שמים את האותיות על המסגרת.',
   // ערכות הלוח: ארבעת הצבעים מתורגמים, והשאר שמות שנשארים כמו שהם.
   'boardTheme.brown': 'חום',
   'boardTheme.blue': 'כחול',
@@ -139,12 +145,13 @@ const he: Messages = {
   'boardTheme.purple': 'סגול',
   'boardTheme.custom': 'מותאם אישית',
 
-  'options.clock': 'צבעי השעון',
+  'options.clock': 'שעונים',
+  'options.clock.design': 'עיצוב',
   'options.clock.active': 'פעיל',
   'options.clock.low': 'הזמן אוזל',
   'options.clock.idle': 'לא פעיל',
   'options.clock.note':
-    '"אוטומטי" הולך לפי ערכת הנושא של האפליקציה (לא פעיל) ולפי הירוק/אדום המובנים (פעיל, הזמן אוזל). בחרו צבעים כדי לדרוס — קודם רקע, אחר כך טקסט.',
+    'עיצוב הוא כל הפנים — גופן, בית, יום ולילה. צבעי אוטומטי הולכים אחרי העיצוב; בחרו צבעים כדי לדרוס מצב.',
   'options.color.background': 'רקע',
   'options.color.text': 'טקסט',
   'options.color.hex': '{title} (⁦hex⁩)',
@@ -189,7 +196,7 @@ const he: Messages = {
   'options.sound.alertPreviewTitle':
     'משמיע הודעה נכנסת, חבר מגיע וחבר עוזב, בסגנון הערכה שנבחרה',
   'options.sound.note':
-    'מהלכים, הכאות ושחים משתמשים בערכה שנבחרה; צלילי סיום המשחק נשארים על ⁦Piano⁩. כל הערכות הן הערכות ברישיון חופשי של ⁦lichess⁩ — ערכת "⁦standard⁩" המפורסמת אינה ברישיון חופשי. ההתראות — הודעה נכנסת, חבר שמגיע או עוזב — הן תווים שסינתזנו בעצמנו, בהשראת הערכה שנבחרה.',
+    'מהלכים, הכאות ושחים משתמשים בערכה שנבחרה. Felt, Walnut, Marble, Clock, Study, Slate ו־⁦Piano⁩ מנגנים גם את צלילי הסיום של עצמם; Sfx / Futuristic / Nes חוזרים ל־⁦Piano⁩ לשם כך. שש הפלטות בעלות השם מקוריות; ארבע האחרות הן ערכות ⁦Enigmahack⁩ החופשיות ב־⁦lichess⁩ — ערכת "⁦standard⁩" המפורסמת אינה ברישיון חופשי. ההתראות — הודעה נכנסת, חבר שמגיע או עוזב — הן תווים שסינתזנו בעצמנו, בהשראת הערכה שנבחרה.',
 
   'options.pgnJournal': 'שמירה אוטומטית של PGN',
   'options.pgnJournal.append': 'הוספת משחקים שאני משחק',
@@ -301,7 +308,7 @@ const he: Messages = {
     '— ספריית השחמט של ⁦lichess⁩: ⁦SAN⁩, בדיקת חוקיות, שחזור משחקים (⁦GPL-3.0-or-later⁩).',
   'help.about.openings': '— שמות הפתיחות וקודי ⁦ECO⁩ (⁦CC0⁩, נחלת הכלל).',
   'help.about.lichess':
-    '— ערכת צלילי הפסנתר מאת ⁦Enigmahack⁩ (⁦AGPL-3.0+⁩) וערכות הכלים (⁦cburnett⁩ מאת ⁦Colin M.L. Burnett⁩ וחברים, כל אחת ברישיון משלה).',
+    '— ערכות ⁦piano / sfx / futuristic / nes⁩ שנותרו מאת ⁦Enigmahack⁩ (⁦AGPL-3.0+⁩) וערכות הכלים (⁦cburnett⁩ מאת ⁦Colin M.L. Burnett⁩ וחברים, כל אחת ברישיון משלה). צלילי Felt, Walnut, Marble, Clock, Study ו־Slate, וערכות הכלים Of Course I Still Love You, Just Read The Instructions ו־A Shortfall Of Gravitas, So Much For Subtlety, Very Little Gravitas Indeed, מקוריים ל־Raptor3000.',
   'help.about.fics':
     '— שרת השחמט החינמי באינטרנט שכל האפליקציה הזאת קיימת כדי לדבר איתו. תהיו נחמדים בערוץ 39.',
   'help.about.outro1': 'הרשימה המלאה, עם הרישיונות המדויקים, נמצאת בקובץ',

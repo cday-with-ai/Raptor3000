@@ -76,6 +76,9 @@ const es: Messages = {
   'login.shot.seek': 'el gráfico de seeks en vivo',
 
   // ---- language control --------------------------------------------------
+  'options.session.appIcon': 'Icono de la aplicación',
+  'options.session.appIconNote':
+    'Cambia el icono de la pestaña del navegador y el distintivo dentro de la aplicación. El icono del lanzador del escritorio se configura fuera de la aplicación.',
   'lang.label': 'Idioma',
   'lang.auto': 'Automático',
   'lang.note':
@@ -134,6 +137,9 @@ const es: Messages = {
   'options.board.coordinates': 'Mostrar coordenadas',
   'options.board.flipAsBlack': 'Girar el tablero al jugar con negras',
   'options.board.moveList': 'Lista de jugadas visible',
+  'options.board.frame': 'Marco',
+  'options.board.frameNote':
+    'El borde alrededor de las casillas. Shadow es el original. Madera y Mat ponen las letras en el borde.',
   // Board palettes: the four plain colors translate, IC and Horsey are
   // names (lichess's), and Custom is the escape hatch.
   'boardTheme.brown': 'Marrón',
@@ -142,12 +148,13 @@ const es: Messages = {
   'boardTheme.purple': 'Morado',
   'boardTheme.custom': 'Personalizado',
 
-  'options.clock': 'Colores del reloj',
+  'options.clock': 'Relojes',
+  'options.clock.design': 'Diseño',
   'options.clock.active': 'Activo',
   'options.clock.low': 'Poco tiempo',
   'options.clock.idle': 'Inactivo',
   'options.clock.note':
-    'Auto sigue el tema de la app (inactivo) y los chips verde/rojo de serie (activo, poco tiempo). Elige colores para anularlos — primero el fondo, luego el texto.',
+    'Un diseño es toda la cara: tipografía, caja, día y noche. Los colores Auto siguen ese diseño; elige colores para anular un estado.',
   'options.color.background': 'Fondo',
   'options.color.text': 'Texto',
   'options.color.hex': '{title} (hex)',
@@ -192,7 +199,7 @@ const es: Messages = {
   'options.sound.alertPreviewTitle':
     'reproduce tell, llegada de amigo y salida de amigo al estilo del conjunto seleccionado',
   'options.sound.note':
-    'Las jugadas, capturas y jaques usan el conjunto seleccionado; los sonidos de fin de partida se quedan en Piano. Todos los conjuntos son los de lichess con licencia libre — el famoso conjunto "standard" no tiene licencia libre. Las alertas — un tell entrante, un amigo que llega o que se va — son notas sintetizadas propias, al estilo del conjunto seleccionado.',
+    'Las jugadas, capturas y jaques usan el conjunto seleccionado. Felt, Walnut, Marble, Clock, Study, Slate y Piano también ponen sus propios sonidos de fin de partida; Sfx / Futuristic / Nes caen en Piano para eso. Las seis paletas con nombre son originales; las otras cuatro son los conjuntos libres de Enigmahack en lichess — el famoso conjunto "standard" no tiene licencia libre. Las alertas — un tell entrante, un amigo que llega o que se va — son notas sintetizadas propias, al estilo del conjunto seleccionado.',
 
   'options.pgnJournal': 'Autoguardado de PGN',
   'options.pgnJournal.append': 'Añadir las partidas que juego',
@@ -304,7 +311,7 @@ const es: Messages = {
     '— la biblioteca de ajedrez de lichess: SAN, legalidad, reproducción de partidas (GPL-3.0-or-later).',
   'help.about.openings': '— los nombres de las aperturas y los códigos ECO (CC0, dominio público).',
   'help.about.lichess':
-    '— el conjunto de sonidos de piano de Enigmahack (AGPL-3.0+) y los conjuntos de piezas (cburnett, de Colin M.L. Burnett y compañía, cada uno con su propia licencia).',
+    '— los conjuntos restantes piano / sfx / futuristic / nes de Enigmahack (AGPL-3.0+) y los conjuntos de piezas (cburnett, de Colin M.L. Burnett y compañía, cada uno con su propia licencia). Los sonidos Felt, Walnut, Marble, Clock, Study y Slate, y el conjuntos de piezas Of Course I Still Love You, Just Read The Instructions y A Shortfall Of Gravitas, So Much For Subtlety, Very Little Gravitas Indeed, son originales de Raptor3000.',
   'help.about.fics':
     '— el Free Internet Chess Server con el que esta app entera existe para hablar. Pórtate bien en el canal 39.',
   'help.about.outro1': 'El inventario completo con las licencias exactas está en',

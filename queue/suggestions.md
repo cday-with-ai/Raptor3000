@@ -848,3 +848,39 @@ before they wrap. It wraps now.
 
 Queue is empty again. Nothing here is deployed — commits are local, as
 always.
+
+---
+
+## 2026-08-19 — answer to "why does raptor web analytics still show 0 users?"
+
+**The beacon is fine. You are probably reading the wrong site.**
+
+Production HTML carries an injected Cloudflare beacon right now:
+
+```
+<script defer src='https://static.cloudflareinsights.com/beacon.min.js'
+        data-cf-beacon='{"token": "2eba1111c8784118ac3b09d5dacda1d7"}'>
+```
+
+So Pages auto-injection is on and doing its job. The thing to notice is the
+token: **`2eba1111c8784118ac3b09d5dacda1d7`**, which is *not* the old
+hardcoded `f4e8c60b70ec4fad9fc757f436ce6549` that was removed on 2026-08-16.
+Those are two different Web Analytics sites. A dashboard reading zero is
+most likely the old, orphaned one — the site production actually reports to
+is the `2eba1111…` one.
+
+**To check:** Web Analytics → pick the site whose token is `2eba1111…`.
+
+### One correction to CLAUDE.md
+
+It says wrangler's OAuth token "works for GraphQL reads". That is no longer
+true. `wrangler whoami` succeeds and sees account
+`ab98801338b2b2fb50627d026f693dda`, but the same token against
+`api.cloudflare.com/client/v4/graphql` returns `code 10000, Authentication
+error` — its scope list is `account (read)` with no analytics scope at all.
+
+So **neither** credential can read RUM at the moment, and the dashboard is
+the only channel until a token is minted with *Account | Account Analytics |
+Read* on that account. The preflight in `bin/usage-digest.sh` is what caught
+this rather than a query silently returning an empty dataset, which is what
+it was built for.

@@ -29,11 +29,35 @@ repository this file ships in.
   **CC0 public domain** ("as a collection of facts, this data set is in
   the public domain").
 
+## Fonts
+
+- **[DSEG7 Classic and DSEG7 Modern](https://github.com/keshikan/DSEG)** by
+  keshikan — the seven-segment faces. Both ship
+  (`DSEG7Classic-Regular.woff2`, `DSEG7Modern-Regular.woff2`); Classic draws
+  the LCD design, Modern the LED one. **SIL Open Font License 1.1.**
+
+- **`digitalFont.woff2`** — the Alpha and Digital clock face, carried over
+  from Carson's own Simple FICS Interface, where it renders the same teal
+  capsule. Its own upstream origin is not recorded here, so **treat its
+  license as unverified**: confirm it against Simple FICS Interface before
+  this is distributed anywhere the piece-set caveat below would also
+  matter.
+
+- **IBM Plex Mono, IBM Plex Sans, Share Tech Mono, Source Serif 4** — loaded
+  at runtime from Google Fonts rather than bundled, so they are not
+  redistributed here. All four are **SIL Open Font License 1.1** upstream.
+  Note this is the app's only outbound request to a third party.
+
 ## Sounds
 
-- The board sounds are lichess's **piano** sound set by **Enigmahack**,
-  from [lichess-org/lila](https://github.com/lichess-org/lila)
-  `public/sound/piano/`. **AGPL-3.0-or-later.**
+- **Felt, Walnut, Marble, Clock, Study, Slate** — original board
+  palettes, synthesized for Raptor3000. Same license as the app
+  (**MIT**).
+- The leftover lichess sets (**piano**, **sfx**, **futuristic**,
+  **nes**) are by **Enigmahack**, from
+  [lichess-org/lila](https://github.com/lichess-org/lila)
+  `public/sound/`. **AGPL-3.0-or-later.** Piano still supplies the
+  endings when a leftover set has none.
   (Deliberately not the famous "standard" lichess sounds — those are in
   lila `COPYING.md`'s "Exceptions (non-free)" list.)
 
@@ -49,6 +73,11 @@ set keeps its own license:
 - **leipzig** — Armando Hernández Marroquín. **GPL.**
 - **cardinal** — sadsnake1. **CC BY-NC-SA 4.0** (non-commercial).
 - **mpchess** — Maxime Chupin. **GPLv3+.**
+- **ocisly**, **jrti**, **asog**, **subtlety**, **vlgi** — original to
+  Raptor3000. **MIT.** Staunton variations named after Iain M. Banks
+  Culture ships (Of Course I Still Love You, Just Read The Instructions,
+  A Shortfall Of Gravitas, So Much For Subtlety, Very Little Gravitas
+  Indeed).
 
 Raptor3000 is free and non-commercial, which is what the NC-restricted
 sets require. If that ever changes, drop `cardinal` and `alpha` first.

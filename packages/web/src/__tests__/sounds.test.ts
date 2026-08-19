@@ -1,13 +1,13 @@
 import { describe, it, expect } from 'vitest';
 import { GameEndType, type GameEndMessage } from '@raptor3000/shared';
-import { MOVE_SOUND_SETS, gameEndSound, soundForSan } from '../sounds.js';
+import { MOVE_SOUND_SETS, gameEndSound, setForSound, soundForSan } from '../sounds.js';
 import { DEFAULT_PREFERENCES } from '../preferences.js';
 
 /**
- * Board sounds (2026-08-12): the piano set — the only subtle lila set
- * that is actually free (AGPLv3+; the "standard" lichess sounds are in
- * COPYING.md's non-free exceptions). These tests pin the pure mapping
- * layer: which SAN gets which sound, and who hears which verdict.
+ * Board sounds: SAN → sample, who hears which verdict, and which
+ * folder a preference actually plays from. The original palettes carry
+ * their own endings; the move-only lichess leftovers still fall back
+ * to piano for those.
  */
 
 describe('soundForSan', () => {
@@ -49,9 +49,23 @@ describe('gameEndSound', () => {
   });
 });
 
-describe('move sound sets (2026-08-12)', () => {
-  it('offers exactly the freely licensed sets, sfx by default', () => {
-    expect([...MOVE_SOUND_SETS]).toEqual(['sfx', 'piano', 'futuristic', 'nes']);
-    expect(DEFAULT_PREFERENCES.moveSoundSet).toBe('sfx');
+describe('move sound sets (2026-08-12, originals 2026-08-18)', () => {
+  it('offers the original palettes first, then the lichess leftovers, felt by default', () => {
+    expect([...MOVE_SOUND_SETS]).toEqual([
+      'felt', 'walnut', 'marble', 'clock', 'study', 'slate',
+      'sfx', 'piano', 'futuristic', 'nes',
+    ]);
+    expect(DEFAULT_PREFERENCES.moveSoundSet).toBe('felt');
+  });
+
+  it('a full palette plays its own endings; a move-only leftover falls back to piano', () => {
+    expect(setForSound('move', 'felt')).toBe('felt');
+    expect(setForSound('victory', 'felt')).toBe('felt');
+    expect(setForSound('explosion', 'slate')).toBe('slate');
+    expect(setForSound('notify', 'piano')).toBe('piano');
+    expect(setForSound('move', 'sfx')).toBe('sfx');
+    expect(setForSound('victory', 'sfx')).toBe('piano');
+    expect(setForSound('defeat', 'nes')).toBe('piano');
+    expect(setForSound('draw', 'futuristic')).toBe('piano');
   });
 });

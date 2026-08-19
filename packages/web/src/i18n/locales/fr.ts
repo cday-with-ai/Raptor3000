@@ -79,6 +79,9 @@ const fr: Messages = {
   'login.shot.seek': 'le graphe des seeks en direct',
 
   // ---- language control --------------------------------------------------
+  'options.session.appIcon': 'Icône de l’application',
+  'options.session.appIconNote':
+    'Change l’icône de l’onglet du navigateur et le badge dans l’application. L’icône du lanceur du bureau se règle en dehors de l’application.',
   'lang.label': 'Langue',
   'lang.auto': 'Automatique',
   'lang.note':
@@ -137,6 +140,9 @@ const fr: Messages = {
   'options.board.coordinates': 'Afficher les coordonnées',
   'options.board.flipAsBlack': 'Retourner l’échiquier quand vous jouez les noirs',
   'options.board.moveList': 'Liste des coups visible',
+  'options.board.frame': 'Cadre',
+  'options.board.frameNote':
+    'Le rebord autour des cases. Shadow est l’original. Bois et Mat mettent les lettres sur le rebord.',
   // Board palettes: the four plain colors translate, IC and Horsey are
   // names (lichess's), and Custom is the escape hatch.
   'boardTheme.brown': 'Brun',
@@ -145,12 +151,13 @@ const fr: Messages = {
   'boardTheme.purple': 'Violet',
   'boardTheme.custom': 'Personnalisé',
 
-  'options.clock': 'Couleurs de la pendule',
+  'options.clock': 'Pendules',
+  'options.clock.design': 'Apparence',
   'options.clock.active': 'Active',
   'options.clock.low': 'Manque de temps',
   'options.clock.idle': 'Inactive',
   'options.clock.note':
-    'Auto suit le thème de l’app (inactive) et les pastilles verte/rouge d’origine (active, manque de temps). Choisissez des couleurs pour passer outre — le fond, puis le texte.',
+    'Une apparence, c’est tout le cadran — police, boîtier, jour et nuit. Les couleurs Auto suivent cette apparence ; choisissez des couleurs pour passer outre un état.',
   'options.color.background': 'Fond',
   'options.color.text': 'Texte',
   'options.color.hex': '{title} (hex)',
@@ -195,7 +202,7 @@ const fr: Messages = {
   'options.sound.alertPreviewTitle':
     'joue tell, arrivée d’un ami et départ d’un ami dans le style du jeu sélectionné',
   'options.sound.note':
-    'Coups, prises et échecs utilisent le jeu sélectionné ; les sons de fin de partie restent sur Piano. Tous les jeux sont ceux de lichess, sous licence libre — le fameux jeu « standard », lui, ne l’est pas. Les alertes — un tell qui arrive, un ami qui se connecte ou s’en va — sont nos propres notes synthétisées, stylées d’après le jeu sélectionné.',
+    'Coups, prises et échecs utilisent le jeu sélectionné. Felt, Walnut, Marble, Clock, Study, Slate et Piano jouent aussi leurs propres sons de fin de partie ; Sfx / Futuristic / Nes retombent sur Piano pour ceux-là. Les six palettes nommées sont originales ; les quatre autres sont les jeux libres d’Enigmahack chez lichess — le fameux jeu « standard », lui, ne l’est pas. Les alertes — un tell qui arrive, un ami qui se connecte ou s’en va — sont nos propres notes synthétisées, stylées d’après le jeu sélectionné.',
 
   'options.pgnJournal': 'Sauvegarde PGN automatique',
   'options.pgnJournal.append': 'Ajouter les parties que je joue',
@@ -307,7 +314,7 @@ const fr: Messages = {
     '— la bibliothèque d’échecs de lichess : SAN, légalité des coups, relecture (GPL-3.0-or-later).',
   'help.about.openings': '— les noms d’ouvertures et les codes ECO (CC0, domaine public).',
   'help.about.lichess':
-    '— le jeu de sons piano d’Enigmahack (AGPL-3.0+) et les jeux de pièces (cburnett de Colin M.L. Burnett, entre autres, chacun sous sa propre licence).',
+    '— les jeux restants piano / sfx / futuristic / nes d’Enigmahack (AGPL-3.0+) et les jeux de pièces (cburnett de Colin M.L. Burnett, entre autres, chacun sous sa propre licence). Les sons Felt, Walnut, Marble, Clock, Study et Slate, ainsi que le jeux de pièces Of Course I Still Love You, Just Read The Instructions et A Shortfall Of Gravitas, So Much For Subtlety, Very Little Gravitas Indeed, sont originaux à Raptor3000.',
   'help.about.fics':
     '— le Free Internet Chess Server, celui-là même à qui toute cette app sert à parler. Soyez sympa sur le canal 39.',
   'help.about.outro1': 'L’inventaire complet, licences exactes comprises, se trouve dans',

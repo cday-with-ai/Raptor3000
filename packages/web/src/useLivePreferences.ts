@@ -8,7 +8,7 @@ import {
 /** Same-window notification channel. A `storage` event fires only in
  *  OTHER windows (the theme-sync lesson) — a window that changes a
  *  preference itself needs this local echo to see its own change. */
-const LOCAL_EVENT = 'raptor:prefs-changed';
+export const LOCAL_EVENT = 'raptor:prefs-changed';
 
 /**
  * Read preferences and keep them live: `storage` fires in this window

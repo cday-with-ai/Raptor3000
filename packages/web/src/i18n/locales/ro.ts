@@ -68,6 +68,9 @@ const ro: Messages = {
   'login.shot.seek': 'graficul live al provocărilor',
 
   // ---- language control --------------------------------------------------
+  'options.session.appIcon': 'Pictograma aplicației',
+  'options.session.appIconNote':
+    'Schimbă pictograma din fila browserului și insigna din aplicație. Pictograma lansatorului de pe desktop se setează în afara aplicației.',
   'lang.label': 'Limbă',
   'lang.auto': 'Automată',
   'lang.note':
@@ -126,18 +129,22 @@ const ro: Messages = {
   'options.board.coordinates': 'Arată coordonatele',
   'options.board.flipAsBlack': 'Întoarce când joci cu negrul',
   'options.board.moveList': 'Listă de mutări vizibilă',
+  'options.board.frame': 'Ramă',
+  'options.board.frameNote':
+    'Bordura din jurul pătratelor. Shadow e originalul. Lemnul și Mat pun literele pe bordură.',
   'boardTheme.brown': 'Maro',
   'boardTheme.blue': 'Albastru',
   'boardTheme.green': 'Verde',
   'boardTheme.purple': 'Violet',
   'boardTheme.custom': 'Personalizat',
 
-  'options.clock': 'Culori ceas',
+  'options.clock': 'Ceasuri',
+  'options.clock.design': 'Aspect',
   'options.clock.active': 'Activ',
   'options.clock.low': 'Timp scăzut',
   'options.clock.idle': 'Inactiv',
   'options.clock.note':
-    'Auto urmează tema aplicației (inactiv) și indicatoarele standard verde/roșu (activ, timp scăzut). Alege culori pentru a le înlocui — întâi fundalul, apoi textul.',
+    'Un aspect e tot cadranul — font, carcasă, zi și noapte. Culorile Auto urmează acel aspect; alege culori ca să înlocuiești o stare.',
   'options.color.background': 'Fundal',
   'options.color.text': 'Text',
   'options.color.hex': '{title} (hex)',
@@ -181,7 +188,8 @@ const ro: Messages = {
   'options.sound.alertPreviewTitle':
     'redă tell, sosirea și plecarea unui prieten în stilul setului selectat',
   'options.sound.note':
-    'Mutările, capturile și șahul folosesc setul selectat; sunetele de sfârșit de partidă rămân pe Piano. Toate seturile sunt cele cu licență liberă de la lichess — celebrul set „standard” nu are licență liberă. Alertele — un tell care sosește, un prieten care sosește sau pleacă — sunt notele noastre sintetizate în stilul setului selectat.','options.pgnJournal': 'Salvare automată PGN',
+    'Mutările, capturile și șahul folosesc setul selectat. Felt, Walnut, Marble, Clock, Study, Slate și Piano își cântă și sunetele de sfârșit; Sfx / Futuristic / Nes cad pe Piano acolo. Cele șase palete numite sunt originale; celelalte patru sunt seturile libere Enigmahack de la lichess — celebrul set „standard” nu are licență liberă. Alertele — un tell care sosește, un prieten care sosește sau pleacă — sunt notele noastre sintetizate în stilul setului selectat.',
+  'options.pgnJournal': 'Salvare automată PGN',
   'options.pgnJournal.append': 'Anexează partidele pe care le joc',
   'options.pgnJournal.appendNote':
     'Fiecare partidă pe care o JOCI este anexată la un singur fișier PGN la sfârșitul partidei — partidele doar urmărite sau examinate nu ajung niciodată acolo. Funcționează în Chrome, Brave și Edge; în alte browsere nu se salvează nimic.',
@@ -291,7 +299,7 @@ const ro: Messages = {
     '— biblioteca de șah a lichess: SAN, legalitate, redare (GPL-3.0-or-later).',
   'help.about.openings': '— numele deschiderilor și codurile ECO (CC0 domeniu public).',
   'help.about.lichess':
-    '— setul de sunete de pian al lui Enigmahack (AGPL-3.0+) și seturile de piese (cburnett de Colin M.L. Burnett și prieteni, fiecare sub propria licență).',
+    '— seturile rămase piano / sfx / futuristic / nes ale lui Enigmahack (AGPL-3.0+) și seturile de piese (cburnett de Colin M.L. Burnett și prieteni, fiecare sub propria licență). Sunetele Felt, Walnut, Marble, Clock, Study și Slate, și seturile de piese Of Course I Still Love You, Just Read The Instructions și A Shortfall Of Gravitas, So Much For Subtlety, Very Little Gravitas Indeed, sunt originale în Raptor3000.',
   'help.about.fics':
     '— Free Internet Chess Server cu care există toată această aplicație ca să vorbească. Fii drăguț în canalul 39.',
   'help.about.outro1': 'Inventarul complet cu licențele exacte trăiește în',

@@ -76,6 +76,9 @@ const ja: Messages = {
   'login.shot.seek': 'ライブのシークグラフ',
 
   // ---- language control --------------------------------------------------
+  'options.session.appIcon': 'アプリのアイコン',
+  'options.session.appIconNote':
+    'ブラウザーのタブのアイコンと、アプリ内のバッジを変更します。デスクトップのランチャーのアイコンはアプリの外で設定します。',
   'lang.label': '言語',
   'lang.auto': '自動',
   'lang.note':
@@ -134,6 +137,9 @@ const ja: Messages = {
   'options.board.coordinates': '座標を表示',
   'options.board.flipAsBlack': '黒番のときは盤を反転',
   'options.board.moveList': '棋譜を表示',
+  'options.board.frame': '枠',
+  'options.board.frameNote':
+    'マスのまわりの枠。Shadow がもともとの見た目です。木とマットは符号を枠に置きます。',
   // Board palettes: the four plain colors translate, IC and Horsey are
   // names (lichess's), and Custom is the escape hatch.
   'boardTheme.brown': 'ブラウン',
@@ -142,12 +148,13 @@ const ja: Messages = {
   'boardTheme.purple': 'パープル',
   'boardTheme.custom': 'カスタム',
 
-  'options.clock': '時計の色',
+  'options.clock': '時計',
+  'options.clock.design': 'デザイン',
   'options.clock.active': '動作中',
   'options.clock.low': '残り時間わずか',
   'options.clock.idle': '停止中',
   'options.clock.note':
-    '「自動」の場合、停止中はアプリのテーマに、動作中と残りわずかは標準の緑と赤のチップに従います。色を選べば上書きできます。順序は背景、次に文字です。',
+    'デザインは文字盤そのものです。書体、筐体、昼と夜。自動色はそのデザインに従い、色を選べば状態を上書きできます。',
   'options.color.background': '背景',
   'options.color.text': '文字',
   'options.color.hex': '{title}（hex）',
@@ -192,7 +199,7 @@ const ja: Messages = {
   'options.sound.alertPreviewTitle':
     '選択中のセットの雰囲気で tell・フレンド到着・フレンド退出の音を再生します',
   'options.sound.note':
-    '移動・キャプチャ・チェックには選択したセットを使い、対局終了の音は Piano のままです。収録しているのはすべて lichess の自由なライセンスのセットで、有名な「standard」セットは自由なライセンスではないため入っていません。アラート（tell の受信、フレンドの到着・退出）は、選択中のセットの響きに寄せて自前で合成した音です。',
+    '移動・キャプチャ・チェックには選択したセットを使います。Felt、Walnut、Marble、Clock、Study、Slate、Piano は終局音も自前で、Sfx / Futuristic / Nes の終局は Piano に戻します。名前のついた六つはオリジナル、残り四つは lichess の自由ライセンスの Enigmahack セットです。有名な「standard」セットは自由なライセンスではないため入っていません。アラート（tell の受信、フレンドの到着・退出）は、選択中のセットの響きに寄せて自前で合成した音です。',
 
   'options.pgnJournal': 'PGN 自動保存',
   'options.pgnJournal.append': '自分が指した対局を追加',
@@ -304,7 +311,7 @@ const ja: Messages = {
     '— lichess のチェスライブラリ。SAN、合法手の判定、リプレイを担います（GPL-3.0-or-later）。',
   'help.about.openings': '— オープニング名と ECO コード（CC0 パブリックドメイン）。',
   'help.about.lichess':
-    '— Enigmahack による piano サウンドセット（AGPL-3.0+）と各種の駒セット（Colin M.L. Burnett とその仲間たちによる cburnett をはじめ、それぞれ独自のライセンス）。',
+    '— Enigmahack による残りの piano / sfx / futuristic / nes セット（AGPL-3.0+）と各種の駒セット（Colin M.L. Burnett とその仲間たちによる cburnett をはじめ、それぞれ独自のライセンス）。Felt、Walnut、Marble、Clock、Study、Slate の効果音と駒セット Of Course I Still Love You、Just Read The Instructions、A Shortfall Of Gravitas, So Much For Subtlety, Very Little Gravitas Indeed は Raptor3000 のオリジナルです。',
   'help.about.fics':
     '— このアプリがその相手として存在している Free Internet Chess Server。チャンネル 39 では仲良くやりましょう。',
   'help.about.outro1': '正確なライセンスをすべて記した完全な一覧は、',
