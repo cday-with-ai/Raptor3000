@@ -335,17 +335,118 @@ describe('WindowManager — slot windows', () => {
     expect(params.get('slot')).toBe('follow');
   });
 
-  it('retargets the same slot window to a new game instead of opening another', () => {
+  it('replaces the slot window when the game changes, rather than navigating it', () => {
+    // Was a navigation until 2026-08-19. A navigated window stays where it
+    // is in the window stack, and `focus()` on it is at the mercy of the
+    // OS focus-stealing prevention; a window the browser has just created
+    // is raised. Your next game should be in front of you.
     const wm = new WindowManager();
-    const popup = new FakePopup();
-    nextPopup(popup);
-    wm.open(followSlot('42'));
+    const first = new FakePopup();
+    const second = new FakePopup();
+    nextPopup(first);
+    nextPopup(second);
 
+    wm.open(followSlot('42'));
     wm.open(followSlot('77'));
 
-    expect(openCalls).toHaveLength(1);
-    expect(popup.location.href).toBe('/app/?window=board&id=77&slot=follow');
-    expect(popup.focusCount).toBe(1);
+    expect(openCalls).toHaveLength(2);
+    expect(first.closeCount).toBe(1);
+    expect(second.location.href).toBe('/app/?window=board&id=77&slot=follow');
+    // The predecessor is never navigated on its way out.
+    expect(first.location.href).toBe('/app/?window=board&id=42&slot=follow');
+  });
+
+  it('opens the replacement under a different name than the window it replaces', () => {
+    // `window.open` handed an existing window's name navigates that window
+    // instead of opening one — which is the behaviour being replaced. The
+    // storage key stays 'board:follow' either way.
+    const wm = new WindowManager();
+    wm.open(followSlot('42'));
+    wm.open(followSlot('77'));
+    wm.open(followSlot('91'));
+
+    expect(openCalls.map((c) => c.name)).toEqual([
+      'board:follow',
+      'board:follow#1',
+      'board:follow#2',
+    ]);
+  });
+
+  it('does not fire onClose when a slot window is replaced', () => {
+    // The follow window's onClose sends FICS's bare `follow` off-switch.
+    // A replacement is the manager's doing, not the user closing anything;
+    // firing here would silently stop the follow on every new game.
+    const wm = new WindowManager();
+    const first = new FakePopup();
+    nextPopup(first);
+    const onClose = vi.fn();
+
+    wm.open({ ...followSlot('42'), onClose });
+    wm.open({ ...followSlot('77'), onClose });
+    vi.advanceTimersByTime(2000);
+
+    expect(onClose).not.toHaveBeenCalled();
+  });
+
+  it('leaves the successor in place when the retired window is noticed closed', () => {
+    // Both windows are polled under the same key. The retired one closes
+    // first, and its poll must not evict the live window from the map or
+    // the next open would pile a third window on top of it.
+    const wm = new WindowManager();
+    const first = new FakePopup();
+    const second = new FakePopup();
+    nextPopup(first);
+    nextPopup(second);
+
+    wm.open(followSlot('42'));
+    wm.open(followSlot('77'));
+    vi.advanceTimersByTime(2000);
+
+    expect(wm.isOpen(followSlot('77'))).toBe(true);
+    wm.open(followSlot('77'));
+    expect(openCalls).toHaveLength(2);
+    expect(second.focusCount).toBe(1);
+  });
+
+  it('keeps the old window when the replacement is blocked', () => {
+    // Replacing costs a real popup where navigating cost none. If the
+    // browser refuses, a slot showing last game beats a slot showing
+    // nothing — and the caller still hears about the block.
+    const wm = new WindowManager();
+    const first = new FakePopup();
+    nextPopup(first);
+    nextPopup(null);
+
+    wm.open(followSlot('42'));
+    expect(wm.open(followSlot('77'))).toBeNull();
+
+    expect(first.closed).toBe(false);
+    expect(wm.isOpen(followSlot('42'))).toBe(true);
+  });
+
+  it('opens the replacement where the user last dragged the window', () => {
+    // Position is polled every 1.5s, so the stored record trails a drag.
+    // A window moved and then replaced inside that window would otherwise
+    // jump back to where it used to be.
+    const wm = new WindowManager();
+    const first = new FakePopup();
+    nextPopup(first);
+    wm.open(followSlot('42'));
+
+    Object.assign(first, {
+      screenX: 640,
+      screenY: 120,
+      outerWidth: 500,
+      outerHeight: 560,
+    });
+    wm.open(followSlot('77'));
+
+    expect(geometryOf(openCalls[1])).toEqual({
+      left: 640,
+      top: 120,
+      width: 500,
+      height: 560,
+    });
   });
 
   it('leaves the slot window alone when the game has not changed', () => {

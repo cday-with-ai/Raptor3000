@@ -68,7 +68,8 @@ export class GameManager {
 
   /** Playing our own game — full interactive board + play controls. One
    *  playing window, reused across our games: the next game (rematch or
-   *  otherwise) takes over the same popup instead of piling up windows. */
+   *  otherwise) takes the slot instead of piling up windows — as a fresh
+   *  popup in the old one's place, so it comes to the front. */
   onPlayingGameStart(gameId: string): void {
     this.openSlotWindow('playing', gameId);
   }
@@ -148,8 +149,10 @@ export class GameManager {
 
   /**
    * Open a board window for `gameId` in a stable slot ('follow' or
-   * 'playing'). The same slot window is reused across games, retargeted
-   * to each new gameId. Safe to call twice for the same game.
+   * 'playing'). One window per slot, holding its size and position across
+   * games; a new game closes the old popup and opens a new one in its
+   * place. Safe to call twice for the same game — the second call finds
+   * the game already on screen and only focuses it.
    */
   protected openSlotWindow(slot: 'follow' | 'playing', gameId: string): void {
     if (this.disposed) return;

@@ -33,11 +33,11 @@ export interface OpenWindowSpec {
   kind: WindowKind;
   /** For 'board' — the game id. For everything else, stable singleton. */
   id?: string;
-  /** Stable identity shared across games: the window keeps its name and
-   *  position while the game it shows changes. A slot window ('follow',
-   *  'playing') retargets to each new `id` by navigating instead of
-   *  opening a fresh popup, so following a player never piles up windows.
-   *  The storage key and window-open name come from the slot, not the id. */
+  /** Stable identity shared across games: the window keeps its position
+   *  while the game it shows changes. A slot window ('follow', 'playing')
+   *  is *replaced* when the game changes — the old popup closes and a new
+   *  one opens in its place — so following a player never piles up
+   *  windows. The storage key comes from the slot, not the id. */
   slot?: string;
   /** Fired when this window closes. Only poll-detected user closes fire
    *  it — a close the manager itself initiates does not. */
@@ -93,33 +93,67 @@ export class WindowManager {
   private readonly openWindows = new Map<string, Window>();
   /** onClose callbacks by window key — see OpenWindowSpec.onClose. */
   private readonly closeCallbacks = new Map<string, () => void>();
+  /** How many times each slot has been replaced — see `windowName`. */
+  private readonly generation = new Map<string, number>();
   private cascadeIndex = 0;
 
   /**
    * Open (or focus, if already open) a subordinate window.
    * Returns the Window reference, or null if the browser blocked the popup.
+   *
+   * A slot window whose game has changed is **replaced**, not navigated:
+   * the old popup is closed and a fresh one opened in its place. That is a
+   * deliberate trade for one thing a navigation cannot buy — a brand-new
+   * popup is raised to the front by the browser, where `focus()` on a
+   * window that already exists is subject to the OS window manager's
+   * focus-stealing prevention and commonly does nothing but flash a
+   * taskbar entry (Carson, 2026-08-19). A game starting is exactly when
+   * the board needs to be in front of you.
    */
   open(spec: OpenWindowSpec): Window | null {
     const key = storageKeyFor(spec);
-    if (spec.onClose) this.closeCallbacks.set(key, spec.onClose);
     const existing = this.openWindows.get(key);
-    if (existing && !existing.closed) {
-      existing.focus();
-      // A slot window keeps its name while the game it shows changes, so
-      // retarget by navigating to the new id rather than opening a second
-      // popup. No-op when the id is unchanged.
-      if (spec.slot) this.retarget(existing, spec);
-      return existing;
+    const live = existing && !existing.closed ? existing : null;
+    // Only a slot window is ever replaced, and only when the game on
+    // screen is not the one being asked for.
+    const superseded = live && spec.slot && !this.showsSameGame(live, spec) ? live : null;
+
+    if (live && !superseded) {
+      if (spec.onClose) this.closeCallbacks.set(key, spec.onClose);
+      live.focus();
+      return live;
+    }
+
+    if (superseded) {
+      // The user's most recent drag is up to a poll interval newer than
+      // the stored record, so read the geometry off the window that is
+      // about to go. The replacement then opens exactly on top of it.
+      this.captureGeometry(key, superseded);
+      // The successor cannot share the doomed window's name: `window.open`
+      // targeting an existing name navigates that window instead of
+      // opening one, which is the behaviour being replaced.
+      this.generation.set(key, (this.generation.get(key) ?? 0) + 1);
     }
 
     const url = this.urlFor(spec);
     const features = this.featuresFor(spec);
-    const win = window.open(url, key, features);
-    if (!win) return null;
+    const win = window.open(url, this.windowName(key), features);
+    if (!win) {
+      // Blocked. The old window is still standing and still shows a game;
+      // that beats a slot with nothing in it, so it is left alone and the
+      // caller hears about the block as it would for any other open.
+      return null;
+    }
 
+    if (superseded) this.retire(key, superseded);
+    if (spec.onClose) this.closeCallbacks.set(key, spec.onClose);
     this.openWindows.set(key, win);
     this.attachPersistence(key, win);
     this.watchForClose(key, win);
+    // No focus() here on purpose. A window the browser has just created is
+    // raised by the browser; `focus()` is reserved for the one case it is
+    // actually needed — a window that already existed — so a test asserting
+    // on it is asserting about the path taken, not about noise.
     return win;
   }
 
@@ -159,21 +193,55 @@ export class WindowManager {
   }
 
   /**
-   * Navigate an existing slot window to a new game. Cross-origin handles
-   * cannot be read or navigated; leave them alone in that case.
+   * Is this window already showing the game the spec asks for?
    *
    * Comparison is on the query string, not the whole href: a browser
    * resolves `location.href` to an absolute URL, so a relative compare
-   * would never match and would reload the popup on every focus.
+   * would never match and every focus would replace the window.
+   *
+   * A handle that cannot be read is cross-origin, and the answer is
+   * "yes" — deliberately the conservative direction, because the cost of
+   * guessing wrong here is closing a window we know nothing about.
    */
-  private retarget(win: Window, spec: OpenWindowSpec): void {
-    const url = this.urlFor(spec);
+  private showsSameGame(win: Window, spec: OpenWindowSpec): boolean {
     try {
-      const target = new URL(url, 'https://raptor.invalid');
-      if (win.location.search !== target.search) win.location.href = url;
+      const target = new URL(this.urlFor(spec), 'https://raptor.invalid');
+      return win.location.search === target.search;
     } catch {
-      // cross-origin — nothing we can do
+      return true;
     }
+  }
+
+  /** The name handed to `window.open`. Bare key until the slot has been
+   *  replaced at least once; the generation suffix only exists to keep a
+   *  successor from being handed to its predecessor's name. */
+  private windowName(key: string): string {
+    const gen = this.generation.get(key) ?? 0;
+    return gen === 0 ? key : `${key}#${gen}`;
+  }
+
+  /** Store a live window's geometry under `key` right now. */
+  private captureGeometry(key: string, win: Window): void {
+    savePosition(key, {
+      x: win.screenX,
+      y: win.screenY,
+      width: win.outerWidth,
+      height: win.outerHeight,
+    });
+  }
+
+  /**
+   * Close a window the manager itself is replacing.
+   *
+   * The handle leaves the map *before* it is closed, so the close poller
+   * sees a key that no longer belongs to it and stays quiet. That matters
+   * beyond tidiness: `onClose` on the follow slot sends FICS's `follow`
+   * off-switch, and a replacement is not the user closing anything.
+   */
+  private retire(key: string, win: Window): void {
+    this.openWindows.delete(key);
+    this.closeCallbacks.delete(key);
+    win.close();
   }
 
   private featuresFor(spec: OpenWindowSpec): string {
@@ -312,12 +380,15 @@ export class WindowManager {
 
   private watchForClose(key: string, win: Window): void {
     const interval = setInterval(() => {
-      if (win.closed) {
-        this.openWindows.delete(key);
-        clearInterval(interval);
-        this.closeCallbacks.get(key)?.();
-        this.closeCallbacks.delete(key);
-      }
+      if (!win.closed) return;
+      clearInterval(interval);
+      // Identity, not the key: a slot that has been replaced still has a
+      // window under this key, and it is the successor. Firing here would
+      // evict a live window from the map and run its onClose.
+      if (this.openWindows.get(key) !== win) return;
+      this.openWindows.delete(key);
+      this.closeCallbacks.get(key)?.();
+      this.closeCallbacks.delete(key);
     }, 500);
   }
 }
