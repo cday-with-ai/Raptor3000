@@ -78,11 +78,16 @@ describe('migration from the pre-port roster', () => {
     expect(loadPreferences().boardTheme).toBe('blue');
   });
 
-  it("renames the stored 'spire' and 'grokton' piece sets to 'asog'", () => {
-    localStorage.setItem('pref.pieceSet', 'spire');
-    expect(loadPreferences().pieceSet).toBe('asog');
-    localStorage.setItem('pref.pieceSet', 'grokton');
-    expect(loadPreferences().pieceSet).toBe('asog');
+  it('migrates every retired piece-set id to the one that survived', () => {
+    // Four sets were removed on 2026-08-19 and two more had been renamed
+    // before that. A retired id with no entry in the rename table does not
+    // fail loudly — the reader rejects it and the user quietly loses their
+    // choice to the default, so every one of them is pinned here.
+    for (const retired of ['spire', 'grokton', 'club', 'match',
+                           'asog', 'jrti', 'ocisly', 'subtlety']) {
+      localStorage.setItem('pref.pieceSet', retired);
+      expect(loadPreferences().pieceSet, `${retired} did not migrate`).toBe('vlgi');
+    }
   });
 });
 

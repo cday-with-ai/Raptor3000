@@ -12,19 +12,21 @@ each set keeps its own:
 - **leipzig** — Armando Hernandez Marroquin, GPL.
 - **cardinal** — sadsnake1, CC BY-NC-SA 4.0.
 - **mpchess** — Maxime Chupin, GPLv3+.
-- **ocisly** (*Of Course I Still Love You*) — original, MIT. Staunton
-  close to cburnett, cleft two-top bishop.
-- **jrti** (*Just Read The Instructions*) — original, MIT. Slimmer
-  Staunton cousin.
-- **asog** (*A Shortfall Of Gravitas*) — original, MIT. Earlier
-  experiment (cleft mitre, three-merlon rook).
-- **subtlety** (*So Much For Subtlety*) — original, MIT. No-ball queen,
-  classic ball bishop.
-- **vlgi** (*Very Little Gravitas Indeed*) — original, MIT. Same
-  language as OCISLY with a ball-and-slit bishop.
+- **vlgi** (*Very Little Gravitas Indeed*) — original, MIT. Soft,
+  inflated Staunton with a thick outline: lobed king crown, ball-and-slit
+  bishop on a splayed foot, banded skirts on the royalty only. Named
+  after an Iain M. Banks Culture ship.
 
-  Names after Iain M. Banks Culture ships (Elon used three of these on
-  the droneships).
+  Four siblings — `ocisly`, `jrti`, `asog`, `subtlety` — were removed on
+  2026-08-19 (Carson: "the only grok set he added that was worth a damn
+  is Very Little Gravitas Indeed"). Every retired id migrates to `vlgi`
+  in `RENAMED_PIECE_SETS`, so nobody's stored choice silently resets.
+
+  Its knight was cburnett's — see the note under `talon` — and was
+  replaced the same day by one drawn in vlgi's own language:
+  `piece-sets/vlgi-knight.py`. One path from ear to base the way the
+  pawn is one path, a bell foot with a waist, and no bands, because in
+  this set only the king and queen wear them.
 
 If distribution terms ever matter beyond personal use, re-check each
 license upstream (lichess documents them in `COPYING.md` / their piece

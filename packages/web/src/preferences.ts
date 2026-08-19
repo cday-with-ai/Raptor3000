@@ -56,14 +56,10 @@ export const AUTO_PROMOTE_VALUES: readonly AutoPromote[] = [
 ];
 export type PieceSet =
   | 'alpha'
-  | 'asog'
   | 'cardinal'
   | 'cburnett'
-  | 'jrti'
   | 'leipzig'
   | 'mpchess'
-  | 'ocisly'
-  | 'subtlety'
   | 'talon'
   | 'vlgi';
 
@@ -82,14 +78,10 @@ export const BOARD_THEMES: readonly BoardTheme[] = [
 ];
 export const PIECE_SETS: readonly PieceSet[] = [
   'alpha',
-  'asog',
   'cardinal',
   'cburnett',
-  'jrti',
   'leipzig',
   'mpchess',
-  'ocisly',
-  'subtlety',
   'talon',
   'vlgi',
 ];
@@ -145,11 +137,25 @@ const RENAMED_LAYOUTS: Readonly<Record<string, ChatLayout>> = {
   seek: 'seeks',
 };
 
+/**
+ * Every id that has ever been stored and is no longer a set, mapped to what
+ * a user on it should get now.
+ *
+ * They all land on `vlgi` because they were all the same family and it is
+ * the one that survived (Carson, 2026-08-19: "the only grok set he added
+ * that was worth a damn is Very Little Gravitas Indeed"). Dropping an id
+ * without an entry here is not neutral — the reader rejects the unknown
+ * value and silently resets the user to cburnett.
+ */
 const RENAMED_PIECE_SETS: Readonly<Record<string, PieceSet>> = {
-  spire: 'asog',
-  grokton: 'asog',
-  club: 'ocisly',
-  match: 'jrti',
+  spire: 'vlgi',
+  grokton: 'vlgi',
+  club: 'vlgi',
+  match: 'vlgi',
+  asog: 'vlgi',
+  jrti: 'vlgi',
+  ocisly: 'vlgi',
+  subtlety: 'vlgi',
 };
 
 export interface AppPreferences {

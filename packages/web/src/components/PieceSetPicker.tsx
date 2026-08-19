@@ -26,14 +26,10 @@ const BLACK = ['bK', 'bQ', 'bR', 'bB', 'bN', 'bP'] as const;
 
 export const PIECE_SET_LABELS: Record<PieceSet, string> = {
   alpha: 'Alpha',
-  asog: 'A Shortfall Of Gravitas',
   cardinal: 'Cardinal',
   cburnett: 'Cburnett',
-  jrti: 'Just Read The Instructions',
   leipzig: 'Leipzig',
   mpchess: 'MPChess',
-  ocisly: 'Of Course I Still Love You',
-  subtlety: 'So Much For Subtlety',
   talon: 'Talon',
   vlgi: 'Very Little Gravitas Indeed',
 };

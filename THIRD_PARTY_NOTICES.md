@@ -73,11 +73,18 @@ set keeps its own license:
 - **leipzig** — Armando Hernández Marroquín. **GPL.**
 - **cardinal** — sadsnake1. **CC BY-NC-SA 4.0** (non-commercial).
 - **mpchess** — Maxime Chupin. **GPLv3+.**
-- **ocisly**, **jrti**, **asog**, **subtlety**, **vlgi** — original to
-  Raptor3000. **MIT.** Staunton variations named after Iain M. Banks
-  Culture ships (Of Course I Still Love You, Just Read The Instructions,
-  A Shortfall Of Gravitas, So Much For Subtlety, Very Little Gravitas
-  Indeed).
+- **vlgi** — original to Raptor3000. **MIT.** A Staunton variation named
+  after an Iain M. Banks Culture ship (Very Little Gravitas Indeed). Its
+  four siblings (ocisly, jrti, asog, subtlety) were removed on
+  2026-08-19.
+
+  Its knight was a derivative of cburnett's — same path topology, every
+  coordinate within 0.4 of a 45-unit box — so the MIT line did not hold
+  for that one file while cburnett is GPLv2+. Redrawn from scratch on
+  2026-08-19; the set is MIT throughout again. See
+  `packages/web/public/pieces/README.md`.
+- **talon** — original to Raptor3000. **MIT.** Drawn for this repo,
+  derived from nothing; source in `piece-sets/talon.py`.
 
 Raptor3000 is free and non-commercial, which is what the NC-restricted
 sets require. If that ever changes, drop `cardinal` and `alpha` first.

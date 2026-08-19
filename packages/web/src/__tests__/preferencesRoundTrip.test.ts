@@ -66,7 +66,7 @@ describe('preferences round-trip', () => {
     // value drawn from its own reader, via a save/load cycle per key.
     const cases: Partial<AppPreferences> = {
       appIcon: 'ranger',
-      pieceSet: 'ocisly',
+      pieceSet: 'talon',
       boardTheme: 'green',
       clockSet: 'dgt',
       boardFrame: 'mat',
