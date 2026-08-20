@@ -13,7 +13,20 @@ the roster's 1.5), because that is what elegant costs.
 """
 import os, re, sys
 OUT = sys.argv[1]
-SW, SWA = 1.15, 0.8
+SW, SWA = 1.15, 0.55
+#: How solid the interior detail is.
+#:
+#: It was opaque, and that is what made the set unplayable. Blurred to
+#: peripheral acuity, cburnett's pieces stay big bright white masses with
+#: a hard rim; Lathe's went grey and mushy, because a dozen thin black
+#: lines inside a small white shape average out to grey and the piece
+#: loses its tone. Five of six pieces then read as the WRONG cburnett
+#: piece, four of them as a bishop.
+#:
+#: A real turned ring behaves the way this now does: you see it in the
+#: hand and it is gone from across the table. The detail survives at
+#: fovea, the mass survives everywhere else.
+DETAIL = 0.42
 
 #: Every piece used to share one foot and one collar, and that is what a
 #: set is — but it cost more than it bought. Measured at 32px, the bottom
@@ -36,7 +49,7 @@ BASES = {
     'Q': (1.00, 30.2),
     'R': (1.04, 31.8),   # squat: a rook is a tower standing on the floor
     'B': (0.98, 29.2),   # broad mitre, so a broad foot under it
-    'N': (0.92, 30.8),
+    'N': (0.78, 31.4),   # small foot: the head has to win the blur
     'P': (0.68, 32.4),   # the runt, and it should look like one
 }
 
@@ -112,30 +125,31 @@ def scale_x(d: str, k: float, c: float = 22.5) -> str:
 #: How wide each piece is, relative to what it was. The mean of the five
 #: turned pieces is 1.00 — the set is exactly as slim as it was, and only
 #: the differences between pieces have grown.
-WIDTH = {'K': 1.16, 'Q': 1.10, 'R': 1.14, 'B': 1.00, 'P': 0.68, 'N': 1.00}
+WIDTH = {'K': 1.16, 'Q': 1.10, 'R': 1.14, 'B': 1.00, 'P': 0.68, 'N': 0.84}
 
 
 KING = [
     ("M 21.5 4.2 H 23.5 V 7.0 H 26.6 V 9.0 H 23.5 V 13.2 H 21.5 V 9.0 "
      "H 18.4 V 7.0 H 21.5 Z", 'fill'),
-    ("M 16.6 18.6 C 16.0 14.2 18.8 11.8 22.5 11.8 C 26.2 11.8 29.0 14.2 "
-     "28.4 18.6 Z", 'fill'),
-    ("M 16.8 21.0 H 28.2 L 28.4 18.6 H 16.6 Z", 'fill'),
+    ("M 15.0 18.6 C 13.6 13.8 15.6 10.8 18.6 10.8 C 20.7 10.8 21.9 12.4 "
+     "22.5 14.0 C 23.1 12.4 24.3 10.8 26.4 10.8 C 29.4 10.8 31.4 13.8 "
+     "30.0 18.6 Z", 'fill'),
+    ("M 16.4 21.0 H 28.6 L 30.0 18.6 H 15.0 Z", 'fill'),
     ("M 16.4 30.6 C 15.2 27.0 15.6 23.4 16.8 21.0 H 28.2 C 29.4 23.4 "
      "29.8 27.0 28.6 30.6 Z", 'fill'),
-    ("M 16.8 21.0 H 28.2", 'seam'),
+    ("M 16.4 21.0 H 28.6", 'seam'),
     ("M 16.0 26.4 H 29.0", 'line'),
 ]
 
 QUEEN = [
-    ("M 14.0 18.6 L 12.6 11.4 L 16.4 15.0 L 17.2 9.8 L 20.6 14.2 "
-     "L 22.5 8.4 L 24.4 14.2 L 27.8 9.8 L 28.6 15.0 L 32.4 11.4 "
-     "L 31.0 18.6 Z", 'fill'),
-    ("M 14.8 21.0 H 30.2 L 31.0 18.6 H 14.0 Z", 'fill'),
-    ("M 16.4 30.6 C 15.0 27.0 14.4 23.6 14.8 21.0 H 30.2 C 30.6 23.6 "
-     "30.0 27.0 28.6 30.6 Z", 'fill'),
-    ("M 14.8 21.0 H 30.2", 'seam'),
-    ("M 15.2 25.8 H 29.8", 'line'),
+    ("M 13.4 18.6 L 11.6 8.6 L 16.2 14.4 L 17.0 6.8 L 20.6 13.4 "
+     "L 22.5 5.4 L 24.4 13.4 L 28.0 6.8 L 28.8 14.4 L 33.4 8.6 "
+     "L 31.6 18.6 Z", 'fill'),
+    ("M 15.6 21.0 H 29.4 L 31.6 18.6 H 13.4 Z", 'fill'),
+    ("M 17.0 30.6 C 15.8 27.0 15.2 23.6 15.6 21.0 H 29.4 C 29.8 23.6 "
+     "29.2 27.0 28.0 30.6 Z", 'fill'),
+    ("M 15.6 21.0 H 29.4", 'seam'),
+    ("M 15.9 25.8 H 29.1", 'line'),
     ('', 'beads'),
 ]
 
@@ -150,14 +164,22 @@ ROOK = [
 ]
 
 BISHOP = [
-    ("M 22.5 9.8 C 25.6 12.0 28.4 15.8 28.4 19.6 C 28.4 22.4 26.8 24.2 "
-     "25.8 25.2 H 19.2 C 18.2 24.2 16.6 22.4 16.6 19.6 C 16.6 15.8 "
-     "19.4 12.0 22.5 9.8 Z", 'fill'),
+    # A POINT, not a dome. Blurred to peripheral acuity the old mitre and
+    # the pawn's ball became the same blob — bishop/pawn was this set's
+    # worst pair at sigma 3.0 (0.053, half of cburnett's worst) even
+    # though at full resolution it was only third worst. The slit and the
+    # mitre seam are the things that say "bishop", and they are exactly
+    # the things that vanish where you are not looking. So the difference
+    # has to be in the silhouette: steep tangents at the apex give a cone
+    # where the pawn gives a sphere, and that survives any blur.
+    ("M 22.5 7.8 C 24.4 11.0 28.6 15.4 28.6 19.8 C 28.6 22.6 27.0 24.4 "
+     "26.0 25.4 H 19.0 C 18.0 24.4 16.4 22.6 16.4 19.8 C 16.4 15.4 "
+     "20.6 11.0 22.5 7.8 Z", 'fill'),
     ("M 18.6 25.2 H 26.4 L 25.6 27.6 H 19.4 Z", 'fill'),
     ("M 20.0 27.6 H 25.0 C 26.4 28.6 27.6 29.6 28.6 30.6 H 16.4 "
      "C 17.4 29.6 18.6 28.6 20.0 27.6 Z", 'fill'),
     ("M 18.6 25.2 H 26.4 M 19.4 27.6 H 25.6", 'seam'),
-    ("M 24.6 12.4 C 22.4 15.0 20.8 18.0 19.8 21.4", 'slit'),
+    ("M 24.8 11.6 C 22.4 14.6 20.8 17.8 19.8 21.4", 'slit'),
     ('', 'finial'),
 ]
 
@@ -181,16 +203,16 @@ KNIGHT = [
 ]
 
 PAWN = [
-    ("M 22.5 10.6 A 4.0 4.0 0 0 1 25.2 17.5 "
-     "C 26.0 19.4 26.4 21.4 26.6 23.4 "
-     "C 26.8 26.2 27.4 28.7 28.6 30.6 H 16.4 "
-     "C 17.6 28.7 18.2 26.2 18.4 23.4 "
-     "C 18.6 21.4 19.0 19.4 19.8 17.5 "
-     "A 4.0 4.0 0 0 1 22.5 10.6 Z", 'fill'),
-    ("M 18.5 23.2 H 26.5", 'line'),
+    ("M 22.5 12.4 A 3.7 3.7 0 0 1 25.0 18.8 "
+     "C 25.7 20.4 26.2 22.0 26.4 23.8 "
+     "C 26.6 26.4 27.4 28.8 28.6 30.6 H 16.4 "
+     "C 17.4 28.8 18.2 26.4 18.4 23.8 "
+     "C 18.8 22.0 19.3 20.4 20.0 18.8 "
+     "A 3.7 3.7 0 0 1 22.5 12.4 Z", 'fill'),
+    ("M 18.6 23.6 H 26.4", 'line'),
 ]
 
-BEADS = [(12.6, 10.0), (17.2, 8.4), (22.5, 7.0), (27.8, 8.4), (32.4, 10.0)]
+BEADS = [(11.6, 7.2), (17.0, 5.4), (22.5, 4.0), (28.0, 5.4), (33.4, 7.2)]
 PIECES = {'K': KING, 'Q': QUEEN, 'R': ROOK, 'B': BISHOP, 'N': KNIGHT, 'P': PAWN}
 
 
@@ -198,13 +220,14 @@ def render(letter, black):
     body, acc = ('#000', '#ececec') if black else ('#fff', '#000')
     foot, collar, grooves = base(letter)
     p = [f'<path fill="{body}" d="{foot}"/>', f'<path fill="{body}" d="{collar}"/>',
-         f'<path stroke="{acc}" stroke-width="{SWA}" d="{grooves}"/>']
+         f'<path stroke="{acc}" stroke-width="{SWA}" stroke-opacity="{DETAIL}" d="{grooves}"/>']
     for d, kind in PIECES[letter]:
         k = WIDTH[letter]
         if kind == 'fill':
             p.append(f'<path fill="{body}" d="{scale_x(d, k)}"/>')
         elif kind in ('seam', 'line'):
-            p.append(f'<path stroke="{acc}" stroke-width="{SWA}" d="{scale_x(d, k)}"/>')
+            p.append(f'<path stroke="{acc}" stroke-width="{SWA}" stroke-opacity="{DETAIL}" '
+                     f'd="{scale_x(d, k)}"/>')
         elif kind == 'slit':
             p.append(f'<path stroke="{acc}" stroke-width="1.15" d="{scale_x(d, k)}"/>')
         elif kind == 'dot':
@@ -213,7 +236,7 @@ def render(letter, black):
             p += [f'<circle fill="{body}" cx="{22.5 + (x - 22.5) * k:.2f}" cy="{y}" r="1.7"/>'
                   for x, y in BEADS]
         elif kind == 'finial':
-            p.append(f'<circle fill="{body}" cx="22.5" cy="7.9" r="1.7"/>')
+            p.append(f'<circle fill="{body}" cx="22.5" cy="5.9" r="1.6"/>')
     return ('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 45 45">'
             f'<g fill="none" fill-rule="evenodd" stroke="#000" stroke-linecap="round" '
             f'stroke-linejoin="round" stroke-width="{SW}">' + ''.join(p) + '</g></svg>')
