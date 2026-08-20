@@ -58,6 +58,7 @@ export type PieceSet =
   | 'alpha'
   | 'cardinal'
   | 'cburnett'
+  | 'lathe'
   | 'leipzig'
   | 'mpchess'
   | 'talon'
@@ -80,6 +81,7 @@ export const PIECE_SETS: readonly PieceSet[] = [
   'alpha',
   'cardinal',
   'cburnett',
+  'lathe',
   'leipzig',
   'mpchess',
   'talon',

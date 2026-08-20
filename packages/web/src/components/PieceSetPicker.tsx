@@ -28,6 +28,7 @@ export const PIECE_SET_LABELS: Record<PieceSet, string> = {
   alpha: 'Alpha',
   cardinal: 'Cardinal',
   cburnett: 'Cburnett',
+  lathe: 'Lathe',
   leipzig: 'Leipzig',
   mpchess: 'MPChess',
   talon: 'Talon',

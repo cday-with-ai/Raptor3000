@@ -96,8 +96,8 @@ set keeps its own license:
   for that one file while cburnett is GPLv2+. Redrawn from scratch on
   2026-08-19; the set is MIT throughout again. See
   `packages/web/public/pieces/README.md`.
-- **talon** — original to Raptor3000. **MIT.** Drawn for this repo,
-  derived from nothing; source in `piece-sets/talon.py`.
+- **talon**, **lathe** — original to Raptor3000. **MIT.** Drawn for this
+  repo, derived from nothing; sources in `piece-sets/`.
 
 Raptor3000 is free and non-commercial, which is what the NC-restricted
 sets require. If that ever changes, drop `cardinal` and `alpha` first.
