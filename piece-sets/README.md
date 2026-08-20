@@ -66,6 +66,54 @@ the piece loses its tone while cburnett's stays a bright mass. At 42%
 opacity they behave like real turned rings — visible in the hand, gone from
 across the table. 1/6 to 2/6.
 
+### Talon 2.0, attempted and abandoned (2026-08-19)
+
+Worth writing down because the attempt failed in an informative direction.
+
+**The fault, stated precisely.** Bounding-box width of each piece as a
+percentage of the square:
+
+    cburnett   78  88  66  78  75  56     spread 32
+    alpha      84  88  62  81  73  56     spread 32
+    vlgi       75  81  62  69  59  53     spread 28
+    talon      66  72  66  66  67  66     spread  6
+    lathe      53  55  53  53  59  53     spread  6
+
+Traditional sets let the *piece* set the width — the queen is widest
+because her crown is, the pawn narrowest because it is a small ball. Both
+sets original to this repo have a shared base that is the widest part of
+every piece, so the base sets the bounding box and the bounding box never
+varies. At the acuity a board is actually read with, six pieces of
+identical width are six of the same object. Talon's plinth is **61% of
+the square, on all six**.
+
+**What tuning bought.** Scaling the plinth and the body separately per
+piece moved talon from 2/6 to 3/6 and the margin from -0.072 to -0.010, a
+sevenfold improvement, with the width spread going 6 to 38. The queen and
+bishop started reading true.
+
+**Where it stopped.** 3/6, and no parameter reaches further. The king's
+crown is 30% of the square and its plinth 61%; the crown cannot out-widen
+the plinth by scaling without distorting into a squashed blob, and the
+same holds for the bishop's mitre. Shrinking the plinth instead improves
+the margin monotonically (-0.020, -0.015, -0.010 at 78%, 66%, 56% of
+original) but leaves every misread in place, because by then the bodies
+are the widest part and the bodies are the wrong shape. To go further the
+king's crown and the bishop's mitre have to be **redrawn wider**, which is
+design work rather than a number.
+
+**Why nothing shipped.** The tuned set measures better and looks worse:
+with the plinth cut, the pieces are perched on tiny feet — the king a
+mushroom on a stick, the bishop a balloon on a pinhead. Which is the
+result worth keeping from the whole exercise:
+
+> **Optimising this metric directly makes a set uglier.** It measures one
+> real thing well. It is a diagnostic — use it to find out *which piece*
+> is doing the damage and *why* — and it is not a design objective. A set
+> that maximises it is a set that has been dragged toward the prototype
+> until it has no character of its own, which is the opposite of the brief
+> every original set here was drawn to.
+
 ### Three caveats, and they matter
 
 - **The prototype does the work.** cburnett scoring 6/6 is tautological; it
