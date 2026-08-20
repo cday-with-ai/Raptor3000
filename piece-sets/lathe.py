@@ -11,16 +11,109 @@ them, and at 25px they are what you recognise the set by.
 Slimmer and taller than everything else, and a finer outline (1.15 against
 the roster's 1.5), because that is what elegant costs.
 """
-import os, sys
+import os, re, sys
 OUT = sys.argv[1]
 SW, SWA = 1.15, 0.8
 
-FOOT = ("M 11.2 39.4 H 33.8 V 38.2 C 33.8 37.4 33.0 36.8 31.8 36.8 "
-        "H 13.2 C 12.0 36.8 11.2 37.4 11.2 38.2 Z")
-COLLAR = ("M 13.2 36.8 C 14.4 34.6 15.8 32.6 16.4 30.6 H 28.6 "
-          "C 29.2 32.6 30.6 34.6 31.8 36.8 Z")
-#: The turner's grooves. Three, shrinking with the collar they ride on.
-GROOVES = "M 14.3 34.9 H 30.7 M 15.3 33.1 H 29.7 M 16.1 31.6 H 28.9"
+#: Every piece used to share one foot and one collar, and that is what a
+#: set is — but it cost more than it bought. Measured at 32px, the bottom
+#: 38% of a lathe piece differed from another lathe piece by 0.105, where
+#: cburnett's differ by 0.394. Four times less. Two thirds of every piece
+#: was carrying no information about which piece it was, and the worst
+#: pair (knight/pawn, 0.142) came out at half cburnett's worst (0.279).
+#:
+#: Carson felt it before it was measured: "i duno if i can play on it".
+#:
+#: A real turned set solves this without giving up the lathe — the king's
+#: base is wider than the pawn's, the rook's is squatter, the bishop's
+#: narrower. Same tool, different profile. So the base is now a function
+#: of two numbers per piece and the three grooves survive on all of them.
+#:
+#:   w  foot width, as a fraction of the widest (the king)
+#:   y  where the collar tops out; lower means a taller base
+BASES = {
+    'K': (1.06, 30.6),   # widest and tallest — it is the king
+    'Q': (1.00, 30.2),
+    'R': (1.04, 31.8),   # squat: a rook is a tower standing on the floor
+    'B': (0.98, 29.2),   # broad mitre, so a broad foot under it
+    'N': (0.92, 30.8),
+    'P': (0.68, 32.4),   # the runt, and it should look like one
+}
+
+
+def base(letter):
+    """Foot, collar and the turner's three grooves, sized for one piece."""
+    w, top = BASES[letter]
+    C = 22.5
+    fo = 11.3 * w          # foot half-width
+    fi = 10.3 * w          # foot half-width at the bevel
+    ct = 6.1 * WIDTH[letter]   # collar top must meet the body it carries
+    cb = 9.3 * w           # collar half-width where it meets the foot
+    foot = (f"M {C-fo:.1f} 39.4 H {C+fo:.1f} V 38.2 "
+            f"C {C+fo:.1f} 37.4 {C+fi:.1f} 36.8 {C+fi-0.6:.1f} 36.8 "
+            f"H {C-fi+0.6:.1f} C {C-fi:.1f} 36.8 {C-fo:.1f} 37.4 {C-fo:.1f} 38.2 Z")
+    collar = (f"M {C-cb:.1f} 36.8 C {C-cb+1.2:.1f} {top+4.0:.1f} "
+              f"{C-ct-0.6:.1f} {top+2.0:.1f} {C-ct:.1f} {top:.1f} "
+              f"H {C+ct:.1f} C {C+ct+0.6:.1f} {top+2.0:.1f} "
+              f"{C+cb-1.2:.1f} {top+4.0:.1f} {C+cb:.1f} 36.8 Z")
+    # three grooves, evenly spaced up the collar, each sized to it
+    gs = []
+    for i, f in enumerate((0.78, 0.50, 0.24)):
+        y = top + (36.8 - top) * f
+        hw = ct + (cb - ct) * f
+        gs.append(f"M {C-hw+0.9:.1f} {y:.1f} H {C+hw-0.9:.1f}")
+    return foot, collar, ' '.join(gs)
+
+
+def scale_x(d: str, k: float, c: float = 22.5) -> str:
+    """Scale a path's x-coordinates about `c`, leaving y alone.
+
+    Only absolute commands appear in the bodies below (M C L H V), which is
+    what makes this safe to do textually. Arcs and relative commands are
+    used only for the knight's eye and nostril, which are never scaled.
+
+    Widening the king and narrowing the pawn is not the same as fattening
+    the set. The mean body width across the six is held where it was — what
+    changes is the SPREAD, and spread is the whole of legibility. A set
+    whose pieces are all the same width is a set you read by the finial
+    alone, which is a thing you cannot do at 32px with ten seconds left.
+    """
+    out, i = [], 0
+    tokens = re.findall(r'[A-Za-z]|-?\d*\.?\d+', d)
+    cmd = None
+    pending = []
+    for t in tokens:
+        if t.isalpha():
+            cmd = t
+            out.append(t)
+            pending = []
+            continue
+        v = float(t)
+        if cmd in ('M', 'L', 'C', 'S', 'Q', 'T'):
+            # x is every other number, starting with the first
+            isx = (len(pending) % 2 == 0)
+        elif cmd == 'H':
+            isx = True
+        elif cmd == 'V':
+            isx = False
+        else:
+            isx = False
+        out.append(f'{c + (v - c) * k:.2f}' if isx else f'{v:g}')
+        pending.append(v)
+    res, prev_alpha = [], False
+    for t in out:
+        if t.isalpha():
+            res.append(' ' + t + ' ')
+        else:
+            res.append(t + ' ')
+    return re.sub(r'\s+', ' ', ''.join(res)).strip()
+
+
+#: How wide each piece is, relative to what it was. The mean of the five
+#: turned pieces is 1.00 — the set is exactly as slim as it was, and only
+#: the differences between pieces have grown.
+WIDTH = {'K': 1.16, 'Q': 1.10, 'R': 1.14, 'B': 1.00, 'P': 0.68, 'N': 1.00}
+
 
 KING = [
     ("M 21.5 4.2 H 23.5 V 7.0 H 26.6 V 9.0 H 23.5 V 13.2 H 21.5 V 9.0 "
@@ -103,21 +196,22 @@ PIECES = {'K': KING, 'Q': QUEEN, 'R': ROOK, 'B': BISHOP, 'N': KNIGHT, 'P': PAWN}
 
 def render(letter, black):
     body, acc = ('#000', '#ececec') if black else ('#fff', '#000')
-    p = [f'<path fill="{body}" d="{FOOT}"/>', f'<path fill="{body}" d="{COLLAR}"/>',
-         f'<path stroke="{acc}" stroke-width="{SWA}" d="{GROOVES}"/>']
+    foot, collar, grooves = base(letter)
+    p = [f'<path fill="{body}" d="{foot}"/>', f'<path fill="{body}" d="{collar}"/>',
+         f'<path stroke="{acc}" stroke-width="{SWA}" d="{grooves}"/>']
     for d, kind in PIECES[letter]:
+        k = WIDTH[letter]
         if kind == 'fill':
-            p.append(f'<path fill="{body}" d="{d}"/>')
-        elif kind == 'seam':
-            p.append(f'<path stroke="{acc}" stroke-width="{SWA}" d="{d}"/>')
-        elif kind == 'line':
-            p.append(f'<path stroke="{acc}" stroke-width="{SWA}" d="{d}"/>')
+            p.append(f'<path fill="{body}" d="{scale_x(d, k)}"/>')
+        elif kind in ('seam', 'line'):
+            p.append(f'<path stroke="{acc}" stroke-width="{SWA}" d="{scale_x(d, k)}"/>')
         elif kind == 'slit':
-            p.append(f'<path stroke="{acc}" stroke-width="1.15" d="{d}"/>')
+            p.append(f'<path stroke="{acc}" stroke-width="1.15" d="{scale_x(d, k)}"/>')
         elif kind == 'dot':
             p.append(f'<path fill="{acc}" stroke="{acc}" stroke-width="0.4" d="{d}"/>')
         elif kind == 'beads':
-            p += [f'<circle fill="{body}" cx="{x}" cy="{y}" r="1.6"/>' for x, y in BEADS]
+            p += [f'<circle fill="{body}" cx="{22.5 + (x - 22.5) * k:.2f}" cy="{y}" r="1.7"/>'
+                  for x, y in BEADS]
         elif kind == 'finial':
             p.append(f'<circle fill="{body}" cx="22.5" cy="7.9" r="1.7"/>')
     return ('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 45 45">'
